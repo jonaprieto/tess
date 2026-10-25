@@ -87,17 +87,28 @@ extension World {
 /// Subsequence match of `query` in `text`, ignoring case; higher is better, nil if no match.
 /// Consecutive letters and letters starting a word (or a camel-case hump) count extra.
 public func fuzzyScore(_ query: String, _ text: String) -> Int? {
+    fuzzy(query, text)?.score
+}
+
+/// Which characters of `text` the query matched (indices into `Array(text)`), for highlighting.
+public func fuzzyPositions(_ query: String, _ text: String) -> [Int]? {
+    fuzzy(query, text)?.positions
+}
+
+private func fuzzy(_ query: String, _ text: String) -> (score: Int, positions: [Int])? {
     let q = query.lowercased().map(String.init)
-    guard !q.isEmpty else { return 0 }
+    guard !q.isEmpty else { return (0, []) }
     let t = Array(text)
     var score = 0, qi = 0, last = -2
+    var positions: [Int] = []
     for (i, c) in t.enumerated() where qi < q.count {
         guard String(c).lowercased() == q[qi] else { continue }
         score += 1
         if i == last + 1 { score += 3 }
         if i == 0 || !t[i - 1].isLetter || (c.isUppercase && t[i - 1].isLowercase) { score += 2 }
+        positions.append(i)
         last = i
         qi += 1
     }
-    return qi == q.count ? score : nil
+    return qi == q.count ? (score, positions) : nil
 }

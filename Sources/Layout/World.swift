@@ -100,7 +100,7 @@ public struct World: Equatable, Sendable {
     var focusedPosition: Position? { focused.flatMap(locate) }
 
     /// The most recently focused window among `candidates`, else the first one.
-    func pick(_ candidates: [WindowID]) -> WindowID? {
+    public func pick(_ candidates: [WindowID]) -> WindowID? {
         mru.first(where: candidates.contains) ?? candidates.first
     }
 }

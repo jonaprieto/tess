@@ -89,3 +89,10 @@ import Testing
     #expect(github > gather)
     #expect(fuzzyScore("cal", "Calendar")! > fuzzyScore("cal", "Musical")!)
 }
+
+@Test func fuzzyPositionsMarkTheMatchedCharacters() {
+    #expect(fuzzyPositions("cal", "Calendar") == [0, 1, 2])
+    #expect(fuzzyPositions("gh", "GitHub") == [0, 3])
+    #expect(fuzzyPositions("zz", "GitHub") == nil)
+    #expect(fuzzyPositions("", "GitHub") == [])
+}

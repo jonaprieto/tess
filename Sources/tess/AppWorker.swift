@@ -159,6 +159,14 @@ final class AppWorker {
         }
     }
 
+    /// The app's focused window, read fresh; `done` runs on the main thread.
+    func focusedWindow(_ done: @escaping (WindowID?) -> Void) {
+        perform { [self] in
+            let id = axApp.element(kAXFocusedWindowAttribute)?.windowID
+            DispatchQueue.main.async { done(id) }
+        }
+    }
+
     func close(_ id: WindowID) {
         perform { [self] in windows[id]?.press(kAXCloseButtonAttribute) }
     }

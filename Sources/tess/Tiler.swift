@@ -43,6 +43,21 @@ final class Tiler {
     private var preexisting: WindowID = 0
     private var seen: Set<WindowID> = []
     private lazy var hotkeys = Hotkeys { [weak self] commands in _ = self?.run(commands) }
+    private lazy var picker: Picker = {
+        let p = Picker()
+        p.onDone = { [weak self] item, choice in self?.picked(item, choice) }
+        p.onCancel = { [weak self] in self?.pickerClosed(cancelled: true) }
+        return p
+    }()
+    /// The picker is open (or about to open): no hotkeys, no focus changes.
+    private var picking = false
+    /// The picker was opened by close-replace; cancelling it focuses what tess picked.
+    private var closeReplacing = false
+    /// An app opened from the picker: its first new window goes to `spot`.
+    private var pending: (bundle: String, spot: Spot, until: Date)?
+    /// Windows the picker listed from the window server only, with their app.
+    private var unseen: [WindowID: pid_t] = [:]
+    private var appCache: (apps: [(url: URL, name: String, bundleID: String?, icon: NSImage)], at: Date)?
     let overlay = Overlay()
 
     static let configURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/tess/config.json")
@@ -158,7 +173,15 @@ final class Tiler {
             switch kind(info) {
             case .skip: if world.contains(info.id) { world.remove(info.id) }
             case .tile where !world.contains(info.id):
-                if info.id <= preexisting || known.contains(info.id) { found.append(info) } else { world.insert(info.id) }
+                if info.id <= preexisting || known.contains(info.id) {
+                    found.append(info)
+                } else if let p = pending, p.bundle == bundle(pid), Date() < p.until {
+                    // The app picked in the picker: its first window goes where step 2 said.
+                    pending = nil
+                    world.place(info.id, p.spot)
+                } else {
+                    world.insert(info.id)
+                }
             case .float: if !world.contains(info.id) { world.floating.insert(info.id) }
             case .tile: break
             }
@@ -195,7 +218,9 @@ final class Tiler {
         DispatchQueue.main.async { [weak self] in self?.focus(next) }
     }
 
+    /// Never while the picker is open: another app taking focus would close it.
     private func focus(_ id: WindowID) {
+        guard !picking else { return }
         intent = (id, Date().addingTimeInterval(0.3), false)
         workerFocus(id)
     }
@@ -344,6 +369,25 @@ final class Tiler {
         case .pause: setPaused(!paused)
         case .tree: return tree()
         case .nop: break
+        case .pick:
+            if picker.isOpen {
+                picker.close()
+                pickerClosed(cancelled: true)
+            } else {
+                openPicker(fixed: nil)
+            }
+        case .closeReplace:
+            guard let id = world.focused, let s = world.slot(of: id), let info = infos[id] else {
+                return "error: no tiled window focused"
+            }
+            beginPicking()
+            closeReplacing = true
+            world.remove(id)
+            workers[info.pid]?.close(id)
+            // Let macOS settle on whatever it focuses next, then take the keyboard.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                self?.showPicker(fixed: .slot(s.position, alone: s.alone))
+            }
         }
         if world.focused != before, let f = world.focused { focus(f) }
         if flash {
@@ -460,6 +504,150 @@ final class Tiler {
     }
 
     func toast(_ s: String) { overlay.toast(s, on: activeFrame) }
+
+    // MARK: Picker
+
+    private func openPicker(fixed: Spot?) {
+        guard !picking else { return }
+        beginPicking()
+        showPicker(fixed: fixed)
+    }
+
+    private func beginPicking() {
+        picking = true
+        hotkeys.unregisterAll()
+        overlay.hideMode()
+    }
+
+    private func showPicker(fixed: Spot?) {
+        picker.open(pickerItems(), on: activeFrame, fixed: fixed) { [weak self] in
+            self?.pickerMap() ?? Picker.Map(monitors: [], windows: [], labels: [:])
+        }
+        Browsers.tabs { [weak self] tabs in self?.picker.add(tabs) }
+    }
+
+    private func pickerClosed(cancelled: Bool) {
+        picking = false
+        setMode(mode)
+        if cancelled && closeReplacing { afterFocusChange() }
+        closeReplacing = false
+    }
+
+    private func picked(_ item: Picker.Item, _ choice: Picker.Choice) {
+        pickerClosed(cancelled: false)
+        switch item.kind {
+        case .window(let id):
+            use(id, choice)
+        case .tab(let t):
+            Browsers.select(t) { [weak self] in
+                guard let self, let app = NSRunningApplication.runningApplications(withBundleIdentifier: t.bundleID).first else { return }
+                // The browser raises the tab's window; once it has, that window is the pick.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self.workers[app.processIdentifier]?.focusedWindow { id in
+                        if let id { self.use(id, choice) }
+                    }
+                }
+            }
+        case .app(let url):
+            let running = NSWorkspace.shared.runningApplications.first { $0.bundleURL == url }
+            let windows = infos.values.filter { $0.pid == running?.processIdentifier && $0.standard }.map(\.id)
+            if let id = world.pick(windows) {
+                use(id, choice)
+                return
+            }
+            if case .place(let spot) = choice, let b = Bundle(url: url)?.bundleIdentifier {
+                pending = (b, spot, Date().addingTimeInterval(10))
+            }
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        }
+    }
+
+    /// Places (or just jumps to) a window. One on another Space brings its app forward
+    /// first, so macOS switches there, and is focused once it has.
+    private func use(_ id: WindowID, _ choice: Picker.Choice) {
+        let away = offSpace.contains(id) || infos[id] == nil
+        if away, let pid = infos[id]?.pid ?? unseen[id] { NSRunningApplication(processIdentifier: pid)?.activate() }
+        if case .place(let spot) = choice { world.place(id, spot) } else if world.contains(id) { world.focused = id }
+        if away {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.focus(id) }
+        } else {
+            focus(id)
+        }
+        scheduleApply()
+        let frames = world.frames(inner: config.inner, outer: config.outer)
+        if let r = frames[id] ?? infos[id]?.frame { overlay.flash(r) }
+    }
+
+    /// Windows (most recently focused first), then apps.
+    private func pickerItems() -> [Picker.Item] {
+        var items: [Picker.Item] = []
+        var listed = Set<WindowID>()
+        for id in world.mru + infos.keys.sorted() where listed.insert(id).inserted {
+            guard let info = infos[id], info.standard || info.nativeFullscreen, let app = workers[info.pid]?.app else { continue }
+            let name = app.localizedName ?? "?"
+            let place = offSpace.contains(id) ? "other Space"
+                : "monitor \((world.locate(id)?.m ?? world.monitorIndex(for: info.frame) ?? 0) + 1)"
+            items.append(Picker.Item(kind: .window(id), title: info.title.isEmpty ? name : info.title,
+                                     detail: "\(name) · \(place)", icon: app.icon, search: "\(name) \(info.title)"))
+        }
+        // Windows on a Space tess has not seen since it started: AX cannot list them, the
+        // window server can (titles only with Screen Recording access).
+        unseen = [:]
+        let all = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        for w in all {
+            guard (w[kCGWindowLayer as String] as? Int) == 0,
+                  let id = (w[kCGWindowNumber as String] as? NSNumber)?.uint32Value, !listed.contains(id),
+                  let pid = (w[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value, let app = workers[pid]?.app,
+                  let b = w[kCGWindowBounds as String] as? [String: Any],
+                  ((b["Width"] as? NSNumber)?.doubleValue ?? 0) > 150, ((b["Height"] as? NSNumber)?.doubleValue ?? 0) > 150
+            else { continue }
+            let title = w[kCGWindowName as String] as? String ?? ""
+            // Untitled ones are mostly helper windows; keep one only for an app with no
+            // window tess knows, so the app can still be reached on its Space.
+            if title.isEmpty && (infos.values.contains { $0.pid == pid } || unseen.values.contains(pid)) { continue }
+            unseen[id] = pid
+            let name = app.localizedName ?? "?"
+            items.append(Picker.Item(kind: .window(id), title: title.isEmpty ? name : title,
+                                     detail: "\(name) · other Space", icon: app.icon, search: "\(name) \(title)"))
+        }
+        for a in apps() {
+            let open = a.bundleID.map { !NSRunningApplication.runningApplications(withBundleIdentifier: $0).isEmpty } ?? false
+            items.append(Picker.Item(kind: .app(a.url), title: a.name, detail: open ? "app (open)" : "app",
+                                     icon: a.icon, search: a.name))
+        }
+        return items
+    }
+
+    /// Every app in the usual folders, read again after a minute.
+    private func apps() -> [(url: URL, name: String, bundleID: String?, icon: NSImage)] {
+        if let c = appCache, Date().timeIntervalSince(c.at) < 60 { return c.apps }
+        let fm = FileManager.default
+        let dirs = ["/Applications", "/Applications/Utilities", "/System/Applications", "/System/Applications/Utilities",
+                    fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications").path]
+        var out: [(url: URL, name: String, bundleID: String?, icon: NSImage)] = []
+        for dir in dirs {
+            for entry in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] where entry.hasSuffix(".app") {
+                let url = URL(fileURLWithPath: dir).appendingPathComponent(entry)
+                let id = Bundle(url: url)?.bundleIdentifier
+                if let id, config.ignore.contains(id) { continue }
+                let name = (fm.displayName(atPath: url.path) as NSString).deletingPathExtension
+                out.append((url, name, id, NSWorkspace.shared.icon(forFile: url.path)))
+            }
+        }
+        out.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        appCache = (out, Date())
+        return out
+    }
+
+    private func pickerMap() -> Picker.Map {
+        let frames = world.frames(inner: config.inner, outer: config.outer)
+        let windows = world.tiled.compactMap { id -> (id: WindowID, frame: CGRect, app: String, title: String, icon: NSImage?)? in
+            guard let f = frames[id] else { return nil }
+            let app = infos[id].flatMap { workers[$0.pid]?.app }
+            return (id, f, app?.localizedName ?? "", infos[id]?.title ?? "", app?.icon)
+        }
+        return Picker.Map(monitors: world.monitors.map(\.frame), windows: windows, labels: world.labels(Picker.alphabet))
+    }
 
     // MARK: Rescue from the menu
 

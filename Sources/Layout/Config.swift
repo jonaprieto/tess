@@ -99,7 +99,9 @@ public struct Config: Equatable, Sendable {
           "cmd-alt-h": "nop",
           "alt-r": "mode resize",
           "alt-shift-semicolon": "mode service",
-          "cmd-alt-ctrl-shift-t": "mode wm"
+          "cmd-alt-ctrl-shift-t": "mode wm",
+          "cmd-alt-ctrl-shift-g": "pick",
+          "alt-space": "pick"
         },
         "wm": {
           "h": "focus left",
@@ -126,6 +128,8 @@ public struct Config: Equatable, Sendable {
           "v": "flip",
           "shift-c": "close",
           "t": "exec open -a kitty",
+          "x": "close-replace",
+          "cmd-alt-ctrl-shift-g": "pick",
           "w": "rescue",
           "r": "mode resize",
           "s": "mode service",

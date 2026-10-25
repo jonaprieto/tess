@@ -11,11 +11,14 @@ public enum Command: Equatable, Sendable {
     /// Monitor numbers as written, from 1.
     case focusMonitor(Int), cycleMonitor(Int), moveToMonitor(Int)
     case exec(String), reload, mode(String), retile, rescue, pause, tree, nop
+    /// The picker; close the focused window and pick what fills its place.
+    case pick, closeReplace
 
     static let simple: [String: Command] = [
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
+        "pick": .pick, "close-replace": .closeReplace,
     ]
 
     /// Commands separated by `;`. `exec` takes the rest of the line, `;` included.

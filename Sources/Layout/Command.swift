@@ -72,8 +72,8 @@ public enum Command: Equatable, Sendable {
         case ("focus", 2): return .focus(try direction(w[1]))
         case ("move", 2): return .move(try direction(w[1]))
         case ("resize", 3):
-            guard let axis = Axis(rawValue: w[1]), let px = Double(w[2]) else { throw bad }
-            return .resize(axis, px)
+            guard let axis = Axis(rawValue: w[1]), let px = Double(w[2]), px.isFinite else { throw bad }
+            return .resize(axis, min(max(px, -10_000), 10_000))
         case ("focus-monitor", 2):
             switch w[1] {
             case "next": return .cycleMonitor(1)

@@ -7,6 +7,7 @@ extension World {
         var out: [WindowID: CGRect] = [:]
         for mon in monitors {
             let area = mon.frame.insetBy(dx: outer, dy: outer)
+            guard !area.isNull, area.width > 0, area.height > 0 else { continue }
             let along: (Double, Double) = mon.rows ? (area.minY, area.height) : (area.minX, area.width)
             let across: (Double, Double) = mon.rows ? (area.minX, area.width) : (area.minY, area.height)
             func rect(_ a: Span, _ c: Span) -> CGRect {
@@ -33,9 +34,13 @@ extension World {
     /// the active monitor. Accordion and fullscreen are not recovered.
     public mutating func rebuild(_ windows: [(id: WindowID, frame: CGRect)]) {
         guard !monitors.isEmpty else { return }
+        let full = monitors.compactMap(\.fullscreen)
         for i in monitors.indices {
             monitors[i].lanes = []
             monitors[i].fullscreen = nil
+        }
+        defer {
+            for id in full { if let p = locate(id) { monitors[p.m].fullscreen = id } }
         }
         var lost: [WindowID] = []
         var byMonitor = Array(repeating: [(id: WindowID, frame: CGRect)](), count: monitors.count)
@@ -103,7 +108,7 @@ struct Span {
 func split(_ whole: (Double, Double), _ weights: [Double], gap: Double) -> [Span] {
     guard !weights.isEmpty else { return [] }
     let total = weights.reduce(0, +)
-    let avail = whole.1 - gap * Double(weights.count - 1)
+    let avail = max(whole.1 - gap * Double(weights.count - 1), 0)
     var pos = whole.0
     return weights.map { w in
         let len = avail * w / total

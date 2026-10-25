@@ -167,6 +167,10 @@ extension World {
         let old = monitors
         monitors = infos.map { info in
             guard var m = old.first(where: { $0.id == info.id }) else { return Monitor(id: info.id, frame: info.frame) }
+            // A display rotated between landscape and portrait gets the lanes that fit it.
+            if (m.frame.height > m.frame.width) != (info.frame.height > info.frame.width) {
+                m.rows = info.frame.height > info.frame.width
+            }
             m.frame = info.frame
             return m
         }

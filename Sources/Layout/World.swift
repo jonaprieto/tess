@@ -70,7 +70,10 @@ public struct World: Equatable, Sendable {
             guard let f = focused else { return }
             mru.removeAll { $0 == f }
             mru.insert(f, at: 0)
-            if let p = locate(f) { activeMonitor = p.m }
+            guard let p = locate(f) else { return }
+            activeMonitor = p.m
+            // Another window taking focus ends tess fullscreen on its monitor.
+            if let fs = monitors[p.m].fullscreen, fs != f { monitors[p.m].fullscreen = nil }
         }
     }
     /// The monitor commands act on; follows the focused tiled window.

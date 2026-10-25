@@ -54,6 +54,13 @@ public struct Config: Equatable, Sendable {
         }
     }
 
+    /// A binding key as `KeySpec` writes it, so `shift-alt-h` and `alt-shift-h` are one key.
+    static func canonical(_ bindings: [String: String?]?) -> [String: String?]? {
+        bindings.map { b in
+            Dictionary(b.map { ((try? KeySpec.parse($0.key))?.description ?? $0.key, $0.value) }) { _, last in last }
+        }
+    }
+
     /// `top` over `base`; the result has no nulls left.
     public static func merged(_ base: Raw, _ top: Raw) -> Raw {
         func merge(_ b: [String: String?]?, _ t: [String: String?]?) -> [String: String?]? {
@@ -68,8 +75,8 @@ public struct Config: Equatable, Sendable {
         r.tile = top.tile ?? base.tile
         r.ignore = top.ignore ?? base.ignore
         r.verbs = merge(base.verbs, top.verbs)
-        var modes = base.modes ?? [:]
-        for (m, bindings) in top.modes ?? [:] { modes[m] = merge(modes[m], bindings) }
+        var modes = (base.modes ?? [:]).mapValues { canonical($0) ?? [:] }
+        for (m, bindings) in top.modes ?? [:] { modes[m] = merge(modes[m], canonical(bindings)) }
         r.modes = modes
         return r
     }
@@ -90,7 +97,7 @@ public struct Config: Equatable, Sendable {
         o.verbs = diff(edited.verbs, base.verbs)
         var modes: [String: [String: String?]] = [:]
         for m in Set((edited.modes ?? [:]).keys).union((base.modes ?? [:]).keys) {
-            if let d = diff(edited.modes?[m], base.modes?[m]) { modes[m] = d }
+            if let d = diff(canonical(edited.modes?[m]), canonical(base.modes?[m])) { modes[m] = d }
         }
         o.modes = modes.isEmpty ? nil : modes
         return o
@@ -109,8 +116,10 @@ public struct Config: Equatable, Sendable {
     static func build(_ raw: Raw) throws -> Config {
         var c = Config()
         c.raw = raw
-        c.inner = raw.gaps?.inner ?? 10
-        c.outer = raw.gaps?.outer ?? 10
+        // Whole points within reason: half points alternate 2 and 3 pt gaps, and an outer gap
+        // larger than half a screen leaves no area at all.
+        c.inner = min(max(raw.gaps?.inner ?? 10, 0), 100).rounded()
+        c.outer = min(max(raw.gaps?.outer ?? 10, 0), 100).rounded()
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
         c.ignore = raw.ignore ?? []
@@ -195,6 +204,8 @@ public struct Config: Equatable, Sendable {
           "2": "focus-monitor 2",
           "3": "focus-monitor 3",
           "tab": "focus-monitor next",
+          "shift-tab": "focus-monitor prev",
+          "alt-space": "pick",
           "shift-1": "move-to-monitor 1",
           "shift-2": "move-to-monitor 2",
           "shift-3": "move-to-monitor 3",
@@ -223,13 +234,16 @@ public struct Config: Equatable, Sendable {
           "j": "resize height +50",
           "k": "resize height -50",
           "esc": "mode main",
-          "enter": "mode main"
+          "enter": "mode main",
+          "cmd-alt-ctrl-shift-t": "mode main"
         },
         "service": {
           "r": "retile; mode main",
           "w": "rescue; mode main",
           "f": "float; mode main",
-          "esc": "mode main"
+          "esc": "mode main",
+          "enter": "mode main",
+          "cmd-alt-ctrl-shift-t": "mode main"
         }
       }
     }

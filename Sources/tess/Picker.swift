@@ -16,6 +16,10 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case file(String)
         /// A line found by content (`rg`), opened in the editor at that line.
         case match(String, line: Int)
+        /// A book or paper found with folio (`book`, `paper`), downloaded and then opened.
+        case book(md5: String)
+        /// An open-access PDF (arXiv, from `paper`), downloaded as `name` and then opened.
+        case pdf(URL, name: String)
     }
 
     struct Tab {
@@ -49,7 +53,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     static let alphabet = "asdhjklqwertyuiopzxcvbnm"
     /// `f name` searches file names, `rg text` file contents; results come from `search`.
-    static let searchVerbs: Set<String> = ["f", "rg"]
+    static let searchVerbs: Set<String> = ["f", "rg", "book", "paper"]
 
     var onDone: (Item, Choice) -> Void = { _, _ in }
     var onCancel: () -> Void = {}
@@ -174,8 +178,10 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             let query = words[1].trimmingCharacters(in: .whitespaces)
             shown = []
             list.items = []
-            list.empty = query.isEmpty ? (words[0] == "f" ? "Type part of a file name" : "Type text to find in files")
-                : "Searching…"
+            let hint = ["f": "Type part of a file name", "rg": "Type text to find in files",
+                        "book": "Type a title and an author's surname",
+                        "paper": "Type a title and an author's surname (arXiv first)"][words[0]] ?? ""
+            list.empty = query.isEmpty ? hint : "Searching…"
             list.needsDisplay = true
             guard !query.isEmpty else { return }
             // Wait for a pause in typing, and drop answers to older queries.
@@ -254,7 +260,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         list.frame = NSRect(x: 10, y: 34, width: size.width - 20, height: rows * ListView.row)
         footer.frame = NSRect(x: 0, y: 9, width: size.width, height: 16)
         footer.stringValue = fixed == nil
-            ? "↵ pick, then where     ⌃N ⌃P move     cd / code + folder (⇥ completes)     f name     rg text     esc close"
+            ? "↵ pick, then where     ⌃N ⌃P move     cd / code + folder (⇥ completes)     f name     rg text     book / paper title     esc close"
             : "↵ fill the empty place      ⌃N ⌃P move      esc leave it empty"
         for v in [magnifier, field, divider, list] as [NSView] { v.isHidden = false }
         map.isHidden = true

@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 import Layout
 
 /// Main thread. Owns the model, turns AX snapshots into model changes, runs commands, and
@@ -595,12 +596,27 @@ final class Tiler {
                 }
             }
         case .file(let path):
-            let url = URL(fileURLWithPath: path)
-            if case .place(let spot) = choice, let app = NSWorkspace.shared.urlForApplication(toOpen: url),
-               let b = Bundle(url: app)?.bundleIdentifier {
-                pending = (b, spot, Date().addingTimeInterval(10))
+            openFile(path, choice)
+        case .pdf(let url, let name):
+            toast("downloading \(item.title)")
+            let dest = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads/\(name)")
+            URLSession.shared.downloadTask(with: url) { [weak self] tmp, _, _ in
+                let ok = tmp.map { (try? FileManager.default.moveItem(at: $0, to: dest)) != nil
+                    || FileManager.default.fileExists(atPath: dest.path) } ?? false
+                DispatchQueue.main.async {
+                    if ok { self?.openFile(dest.path, choice) } else { self?.toast("could not download it") }
+                }
+            }.resume()
+        case .book(let md5):
+            toast("downloading \(item.title)")
+            Self.shell("folio get \"$1\"", md5, timeout: 600) { [weak self] out in
+                let path = out?.split(separator: "\n").last.map(String.init) ?? ""
+                guard FileManager.default.fileExists(atPath: path) else {
+                    self?.toast("folio could not download it")
+                    return
+                }
+                self?.openFile(path, choice)
             }
-            NSWorkspace.shared.open(url)
         case .match(let path, let line):
             if case .place(let spot) = choice { pending = ("com.microsoft.VSCode", spot, Date().addingTimeInterval(10)) }
             let code = ["/usr/local/bin/code", "/opt/homebrew/bin/code"].first { FileManager.default.isExecutableFile(atPath: $0) }
@@ -645,6 +661,73 @@ final class Tiler {
         flashFocus(after: away ? 0.8 : 0.18)
     }
 
+    /// Opens a file with its default app; with a place, that app's next window goes there.
+    private func openFile(_ path: String, _ choice: Picker.Choice) {
+        let url = URL(fileURLWithPath: path)
+        if case .place(let spot) = choice, let app = NSWorkspace.shared.urlForApplication(toOpen: url),
+           let b = Bundle(url: app)?.bundleIdentifier {
+            pending = (b, spot, Date().addingTimeInterval(10))
+        }
+        NSWorkspace.shared.open(url)
+    }
+
+    /// `script` under sh with `arg` as $1 and a PATH that finds Homebrew tools; stdout on the
+    /// main thread, nil on failure or after `timeout` seconds.
+    static func shell(_ script: String, _ arg: String, timeout: Double, _ done: @escaping (String?) -> Void) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", script, "sh", arg]
+        p.environment = ["PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+                         "HOME": FileManager.default.homeDirectoryForCurrentUser.path]
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        DispatchQueue.global().async {
+            do { try p.run() } catch {
+                DispatchQueue.main.async { done(nil) }
+                return
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { if p.isRunning { p.terminate() } }
+            let data = out.fileHandleForReading.readDataToEndOfFile()
+            p.waitUntilExit()
+            let text = p.terminationStatus == 0 ? String(decoding: data, as: UTF8.self) : nil
+            DispatchQueue.main.async { done(text) }
+        }
+    }
+
+    /// arXiv's API for `query`: open-access papers, best match first.
+    static func arxiv(_ query: String, _ done: @escaping ([Picker.Item]) -> Void) {
+        // arXiv finds nothing when a required term is a stopword ("attention is all you need").
+        let stop: Set<String> = ["a", "an", "the", "is", "are", "of", "in", "on", "for", "and", "or", "to", "with", "all",
+                                 "you", "we", "your", "by", "at", "as", "from", "what", "how", "be", "it", "its"]
+        let terms = query.lowercased().split(separator: " ").filter { !stop.contains(String($0)) }
+            .map { "all:\($0)" }.joined(separator: " AND ")
+        var c = URLComponents(string: "https://export.arxiv.org/api/query")!
+        c.queryItems = [.init(name: "search_query", value: terms), .init(name: "max_results", value: "10")]
+        guard let url = c.url else { return done([]) }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            let xml = String(decoding: data ?? Data(), as: UTF8.self)
+            func field(_ tag: String, in s: Substring) -> String? {
+                guard let a = s.range(of: "<\(tag)>"), let b = s.range(of: "</\(tag)>", range: a.upperBound..<s.endIndex) else { return nil }
+                return s[a.upperBound..<b.lowerBound].split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            }
+            let items = xml.components(separatedBy: "<entry>").dropFirst().compactMap { e -> Picker.Item? in
+                let entry = Substring(e)
+                guard let id = field("id", in: entry)?.components(separatedBy: "/abs/").last, let title = field("title", in: entry),
+                      let pdf = URL(string: "https://arxiv.org/pdf/\(id)") else { return nil }
+                let authors = entry.components(separatedBy: "<name>").dropFirst().compactMap { $0.components(separatedBy: "</name>").first }
+                let year = String(field("published", in: entry)?.prefix(4) ?? "")
+                let surname = authors.first?.split(separator: " ").last.map { $0.lowercased() } ?? "arxiv"
+                let slug = title.lowercased().split { !$0.isLetter && !$0.isNumber }.prefix(6).joined(separator: "-")
+                let detail = (["arXiv", authors.prefix(2).joined(separator: ", ") + (authors.count > 2 ? " et al." : ""), year])
+                    .filter { !$0.isEmpty }.joined(separator: " · ")
+                return Picker.Item(kind: .pdf(pdf, name: "\(year)-\(surname)-\(slug).pdf"), title: title, detail: detail,
+                                   icon: NSWorkspace.shared.icon(for: .pdf), search: "")
+            }
+            DispatchQueue.main.async { done(items) }
+        }.resume()
+    }
+
     private var searchProcess: Process?
 
     /// `f`: file names from Spotlight, ranked by fzf when it is installed. `rg`: file contents
@@ -664,6 +747,9 @@ final class Tiler {
                 cd "$HOME" && rg --line-number --no-heading --smart-case --max-count 1 --max-filesize 1M \
                   --max-columns 160 --max-columns-preview \(skip) -- "$1" . 2>/dev/null | head -n 80
                 """
+        case "book", "paper":
+            // Query words as separate arguments, no globbing.
+            script = "set -f; set -- $1; folio search --json -n 25 --ext \(verb == "paper" ? "pdf" : "pdf,epub") \"$@\""
         default: return
         }
         let p = Process()
@@ -677,11 +763,25 @@ final class Tiler {
         searchProcess = p
         DispatchQueue.global().async {
             do { try p.run() } catch { return }
-            DispatchQueue.global().asyncAfter(deadline: .now() + 8) { if p.isRunning { p.terminate() } }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 20) { if p.isRunning { p.terminate() } }
             let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
             p.waitUntilExit()
             DispatchQueue.main.async {
                 func short(_ path: String) -> String { path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path }
+                if verb == "book" || verb == "paper" {
+                    let found = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [[String: Any]] ?? []
+                    let books: [Picker.Item] = found.compactMap { b in
+                        guard let md5 = b["md5"] as? String else { return nil }
+                        let ext = b["ext"] as? String ?? ""
+                        let detail = [b["author"] as? String, b["year"] as? String, ext, b["size"] as? String]
+                            .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+                        return Picker.Item(kind: .book(md5: md5), title: b["title"] as? String ?? md5, detail: detail,
+                                           icon: NSWorkspace.shared.icon(for: ext == "epub" ? .epub : .pdf), search: "")
+                    }
+                    guard verb == "paper" else { return done(books) }
+                    Self.arxiv(query) { papers in done(papers + books) }
+                    return
+                }
                 let items = text.split(separator: "\n").compactMap { line -> Picker.Item? in
                     if verb == "f" {
                         let path = String(line)

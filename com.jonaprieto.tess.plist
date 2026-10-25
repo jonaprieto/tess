@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- make install fills in BIN and HOME and loads it. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jonaprieto.tess</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>BIN</string>
+        <string>serve</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <!-- Restart after a crash or a watchdog exit, not after Quit. -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <key>StandardErrorPath</key>
+    <string>HOME/Library/Logs/tess.err.log</string>
+</dict>
+</plist>

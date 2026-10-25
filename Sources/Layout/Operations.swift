@@ -1,0 +1,271 @@
+import CoreGraphics
+
+extension World {
+    // MARK: Windows in and out
+
+    /// A new window: a lane right of the focused lane on the active monitor, focused.
+    public mutating func insert(_ id: WindowID) {
+        guard !contains(id), monitors.indices.contains(activeMonitor) else { return }
+        let m = activeMonitor
+        let at = focusedPosition.flatMap { $0.m == m ? $0.l + 1 : nil } ?? monitors[m].lanes.count
+        monitors[m].lanes.insert(newLane(id, on: m), at: at)
+        focused = id
+    }
+
+    /// Focus goes to the next window in the stack, else the previous one, else the lane that
+    /// took this lane's place, else the one before it, else the most recently focused window.
+    public mutating func remove(_ id: WindowID) {
+        let wasFocused = focused == id
+        var next: WindowID?
+        if floating.remove(id) == nil {
+            guard let p = locate(id) else { return }
+            let shared = monitors[p.m].lanes[p.l].windows.count > 1
+            detach(id)
+            let lanes = monitors[p.m].lanes
+            if shared {
+                let ws = lanes[p.l].windows
+                next = ws[min(p.w, ws.count - 1)]
+            } else if !lanes.isEmpty {
+                next = pick(lanes[min(p.l, lanes.count - 1)].windows)
+            }
+        }
+        mru.removeAll { $0 == id }
+        if wasFocused { focused = next ?? mru.first(where: contains) }
+        if focused == id { focused = nil }
+    }
+
+    public mutating func toggleFloating(_ id: WindowID) {
+        if floating.contains(id) {
+            floating.remove(id)
+            insert(id)
+        } else if detach(id) != nil {
+            floating.insert(id)
+        }
+    }
+
+    // MARK: Focus
+
+    public mutating func focus(_ d: Direction) {
+        guard let p = focusedPosition else {
+            if let w = pick(monitors.indices.contains(activeMonitor) ? monitors[activeMonitor].windows : []) {
+                focused = w
+            } else {
+                enter(neighbor(of: activeMonitor, d), from: d)
+            }
+            return
+        }
+        let mon = monitors[p.m]
+        if mon.isMajor(d) {
+            let t = p.l + d.sign
+            if mon.lanes.indices.contains(t) { focused = pick(mon.lanes[t].windows); return }
+        } else {
+            let ws = mon.lanes[p.l].windows
+            let t = p.w + d.sign
+            if ws.indices.contains(t) { focused = ws[t]; return }
+        }
+        enter(neighbor(of: p.m, d), from: d)
+    }
+
+    public mutating func focusMonitor(_ n: Int) {
+        guard monitors.indices.contains(n) else { return }
+        activeMonitor = n
+        focused = pick(monitors[n].windows)
+    }
+
+    public mutating func cycleMonitor(_ step: Int) {
+        let c = monitors.count
+        guard c > 0 else { return }
+        focusMonitor(((activeMonitor + step) % c + c) % c)
+    }
+
+    // MARK: Moving
+
+    /// Along the lanes: pop out of a shared lane, else join the neighbor lane, else cross to
+    /// the neighbor monitor. Along the stack: swap, else cross to the neighbor monitor.
+    public mutating func move(_ d: Direction) {
+        guard let id = focused, let p = locate(id) else { return }
+        let mon = monitors[p.m]
+        let lane = mon.lanes[p.l]
+        if mon.isMajor(d) {
+            if lane.windows.count > 1 {
+                detach(id)
+                monitors[p.m].lanes.insert(newLane(id, on: p.m), at: d.sign > 0 ? p.l + 1 : p.l)
+            } else if mon.lanes.indices.contains(p.l + d.sign) {
+                detach(id)
+                append(id, toLane: d.sign > 0 ? p.l : p.l - 1, on: p.m)
+            } else if let n = neighbor(of: p.m, d) {
+                detach(id)
+                place(id, on: n, from: d)
+            }
+        } else {
+            let t = p.w + d.sign
+            if lane.windows.indices.contains(t) {
+                monitors[p.m].lanes[p.l].windows.swapAt(p.w, t)
+                monitors[p.m].lanes[p.l].sizes.swapAt(p.w, t)
+            } else if let n = neighbor(of: p.m, d) {
+                detach(id)
+                place(id, on: n, from: d)
+            }
+        }
+        focused = id
+    }
+
+    /// The focused window goes to the right end of monitor `n`.
+    public mutating func moveToMonitor(_ n: Int) {
+        guard monitors.indices.contains(n), let id = focused, let p = locate(id), p.m != n else { return }
+        detach(id)
+        monitors[n].lanes.append(newLane(id, on: n))
+        focused = id
+    }
+
+    // MARK: Sizes and modes
+
+    /// `px` along a screen axis: the lane's size on the lanes' axis, else the window's size in its stack.
+    public mutating func resize(_ axis: Axis, by px: Double) {
+        guard let p = focusedPosition else { return }
+        let mon = monitors[p.m]
+        if mon.isMajor(axis) {
+            let extent = mon.rows ? mon.frame.height : mon.frame.width
+            let s = grown(mon.lanes.map(\.size), at: p.l, by: px, extent: extent)
+            for i in s.indices { monitors[p.m].lanes[i].size = s[i] }
+        } else {
+            let extent = mon.rows ? mon.frame.width : mon.frame.height
+            monitors[p.m].lanes[p.l].sizes = grown(mon.lanes[p.l].sizes, at: p.w, by: px, extent: extent)
+        }
+    }
+
+    public mutating func balance() {
+        guard monitors.indices.contains(activeMonitor) else { return }
+        for i in monitors[activeMonitor].lanes.indices {
+            monitors[activeMonitor].lanes[i].size = 1
+            monitors[activeMonitor].lanes[i].sizes = monitors[activeMonitor].lanes[i].sizes.map { _ in 1 }
+        }
+    }
+
+    public mutating func flip() {
+        guard monitors.indices.contains(activeMonitor) else { return }
+        monitors[activeMonitor].rows.toggle()
+    }
+
+    public mutating func toggleAccordion() {
+        guard let p = focusedPosition else { return }
+        monitors[p.m].lanes[p.l].accordion.toggle()
+    }
+
+    public mutating func toggleFullscreen() {
+        guard let id = focused, let p = locate(id) else { return }
+        monitors[p.m].fullscreen = monitors[p.m].fullscreen == id ? nil : id
+    }
+
+    // MARK: Monitors
+
+    /// The displays now attached, in monitor-number order. An unplugged monitor's lanes go to
+    /// the right end of `main` (else the first monitor) and are remembered by display UUID;
+    /// when that display comes back, its windows still alive go back to it.
+    public mutating func setMonitors(_ infos: [(id: String, frame: CGRect)], main: String? = nil) {
+        guard !infos.isEmpty else { return }  // displays flapping: keep the layout
+        let old = monitors
+        monitors = infos.map { info in
+            guard var m = old.first(where: { $0.id == info.id }) else { return Monitor(id: info.id, frame: info.frame) }
+            m.frame = info.frame
+            return m
+        }
+        let target = monitors.firstIndex { $0.id == main } ?? 0
+        for gone in old where !monitors.contains(where: { $0.id == gone.id }) {
+            parked[gone.id] = gone.lanes
+            monitors[target].lanes += gone.lanes
+        }
+        for i in monitors.indices where !old.contains(where: { $0.id == monitors[i].id }) {
+            for var lane in parked.removeValue(forKey: monitors[i].id) ?? [] {
+                let alive = lane.windows.indices.filter { locate(lane.windows[$0]) != nil }
+                guard !alive.isEmpty else { continue }
+                lane.windows = alive.map { lane.windows[$0] }
+                lane.sizes = alive.map { lane.sizes[$0] }
+                for id in lane.windows { detach(id) }
+                monitors[i].lanes.append(lane)
+            }
+        }
+        activeMonitor = focusedPosition?.m ?? min(activeMonitor, monitors.count - 1)
+    }
+
+    /// The nearest monitor whose center lies mostly in direction `d`.
+    func neighbor(of m: Int, _ d: Direction) -> Int? {
+        guard monitors.indices.contains(m) else { return nil }
+        let c = monitors[m].frame
+        func delta(_ i: Int) -> (dx: Double, dy: Double) {
+            (monitors[i].frame.midX - c.midX, monitors[i].frame.midY - c.midY)
+        }
+        return monitors.indices.filter { i in
+            guard i != m else { return false }
+            let (dx, dy) = delta(i)
+            switch d {
+            case .left: return dx < 0 && abs(dx) >= abs(dy)
+            case .right: return dx > 0 && abs(dx) >= abs(dy)
+            case .up: return dy < 0 && abs(dy) > abs(dx)
+            case .down: return dy > 0 && abs(dy) > abs(dx)
+            }
+        }.min { a, b in
+            let (ax, ay) = delta(a), (bx, by) = delta(b)
+            return ax * ax + ay * ay < bx * bx + by * by
+        }
+    }
+
+    // MARK: Helpers
+
+    /// Takes the window out of its lane (dropping the lane if it empties). Focus is untouched.
+    @discardableResult
+    mutating func detach(_ id: WindowID) -> Position? {
+        guard let p = locate(id) else { return nil }
+        monitors[p.m].lanes[p.l].windows.remove(at: p.w)
+        monitors[p.m].lanes[p.l].sizes.remove(at: p.w)
+        if monitors[p.m].lanes[p.l].windows.isEmpty { monitors[p.m].lanes.remove(at: p.l) }
+        if monitors[p.m].fullscreen == id { monitors[p.m].fullscreen = nil }
+        return p
+    }
+
+    /// Focus arrives on monitor `n` moving in `d`: the lane at the near edge, else the most recent window.
+    mutating func enter(_ n: Int?, from d: Direction) {
+        guard let n else { return }
+        activeMonitor = n
+        let mon = monitors[n]
+        guard let first = mon.lanes.first, let last = mon.lanes.last else { focused = nil; return }
+        focused = mon.isMajor(d) ? pick((d.sign > 0 ? first : last).windows) : pick(mon.windows)
+    }
+
+    /// A window arriving on monitor `n` moving in `d` gets its own lane at the near edge.
+    mutating func place(_ id: WindowID, on n: Int, from d: Direction) {
+        let lane = newLane(id, on: n)
+        if monitors[n].isMajor(d) && d.sign > 0 {
+            monitors[n].lanes.insert(lane, at: 0)
+        } else {
+            monitors[n].lanes.append(lane)
+        }
+    }
+
+    mutating func append(_ id: WindowID, toLane l: Int, on m: Int) {
+        monitors[m].lanes[l].sizes.append(mean(monitors[m].lanes[l].sizes) ?? 1)
+        monitors[m].lanes[l].windows.append(id)
+    }
+
+    /// A lane as big as the average lane on monitor `m`.
+    func newLane(_ id: WindowID, on m: Int) -> Lane {
+        Lane([id], size: mean(monitors[m].lanes.map(\.size)) ?? 1)
+    }
+}
+
+func mean(_ xs: [Double]) -> Double? {
+    xs.isEmpty ? nil : xs.reduce(0, +) / Double(xs.count)
+}
+
+/// Weights as shares of 1, with entry `i` grown by `px` out of `extent` (kept within 5-95%)
+/// and the others scaled to fill the rest.
+func grown(_ sizes: [Double], at i: Int, by px: Double, extent: Double) -> [Double] {
+    guard sizes.count > 1, extent > 0 else { return sizes }
+    let total = sizes.reduce(0, +)
+    let share = min(max(sizes[i] / total + px / extent, 0.05), 0.95)
+    let rest = total - sizes[i]
+    return sizes.indices.map { j in
+        if j == i { return share }
+        return rest > 0 ? sizes[j] / rest * (1 - share) : (1 - share) / Double(sizes.count - 1)
+    }
+}

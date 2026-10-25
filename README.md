@@ -4,6 +4,16 @@ A tiling window manager for macOS 27 that never hides a window. Each monitor is 
 columns, each column a stack (or an accordion); no virtual workspaces, so a crash, a hang
 or an unplugged monitor cannot strand a window off-screen.
 
+Install (macOS 27, Apple Silicon):
+
+```sh
+brew tap jonaprieto/tap
+brew install jonaprieto/tap/tess
+brew services start tess   # now and at login; grant Accessibility once
+```
+
+From source:
+
 ```sh
 make install   # build, sign, start at login and after crashes; grant Accessibility once
 make test

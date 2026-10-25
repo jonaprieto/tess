@@ -1,4 +1,5 @@
 import AppKit
+import Layout
 
 /// On-screen feedback: the keys of the current mode, a border flash on the focused window,
 /// and short toasts. Click-through panels above all windows that never take focus.
@@ -10,21 +11,21 @@ final class Overlay {
     private var toastHide: DispatchWorkItem?
     private var flashHide: DispatchWorkItem?
 
-    func showMode(_ name: String, _ rows: [(key: String, command: String)], on screen: CGRect) {
-        let width = rows.map(\.key.count).max() ?? 0
-        let text = NSMutableAttributedString(string: name + "\n", attributes: [
-            .font: NSFont.systemFont(ofSize: 15, weight: .semibold), .foregroundColor: NSColor.labelColor,
-        ])
-        for r in rows {
-            text.append(NSAttributedString(string: "\n" + r.key.padding(toLength: width + 3, withPad: " ", startingAt: 0), attributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .bold), .foregroundColor: NSColor.controlAccentColor,
-            ]))
-            text.append(NSAttributedString(string: r.command, attributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular), .foregroundColor: NSColor.labelColor,
-            ]))
-        }
+    /// The keys of a mode as a glass cheat sheet in the bottom-right corner of `screen`:
+    /// grouped columns of keycaps and plain labels, so the windows being arranged stay visible.
+    func showMode(_ name: String, _ bindings: [KeySpec: [Command]], on screen: CGRect) {
         modePanel?.orderOut(nil)
-        modePanel = bubble(text, on: screen, at: .center)
+        let view = ModeSheet(name: name, bindings: bindings)
+        let size = view.fittingSize
+        let r = CGRect(x: screen.maxX - size.width - 24, y: screen.maxY - size.height - 24, width: size.width, height: size.height)
+        let p = Self.panel()
+        let glass = NSGlassEffectView()
+        glass.cornerRadius = 18
+        glass.contentView = view
+        p.contentView = glass
+        p.setFrame(Screens.flip(r), display: true)
+        p.orderFrontRegardless()
+        modePanel = p
     }
 
     func hideMode() {
@@ -94,15 +95,13 @@ final class Overlay {
         let x = screen.midX - box.width / 2
         let y = place == .center ? screen.midY - box.height / 2 : screen.maxY - box.height - 40
         let p = Self.panel()
-        let bg = NSVisualEffectView()
-        bg.material = .hudWindow
-        bg.state = .active
-        bg.wantsLayer = true
-        bg.layer?.cornerRadius = 12
-        bg.layer?.masksToBounds = true
+        let content = NSView()
         label.frame = NSRect(x: pad, y: pad, width: size.width, height: size.height)
-        bg.addSubview(label)
-        p.contentView = bg
+        content.addSubview(label)
+        let glass = NSGlassEffectView()
+        glass.cornerRadius = 14
+        glass.contentView = content
+        p.contentView = glass
         p.setFrame(Screens.flip(CGRect(x: x, y: y, width: box.width, height: box.height)), display: true)
         p.orderFrontRegardless()
         return p
@@ -119,5 +118,114 @@ final class Overlay {
         p.hidesOnDeactivate = false
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         return p
+    }
+}
+
+/// The mode overlay's content: a title, then one column per group of bindings.
+final class ModeSheet: NSView {
+    private struct Row { var cap: String; var label: String; var order: (Int, String) }
+    private let title: String
+    private var columns: [(title: String, rows: [Row])] = []
+    private var back: [String] = []
+    private static let capFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .semibold)
+    private static let labelFont = NSFont.systemFont(ofSize: 13)
+    private static let headFont = NSFont.systemFont(ofSize: 11, weight: .semibold)
+    private static let rowHeight: CGFloat = 24
+    private static let pad: CGFloat = 18
+
+    init(name: String, bindings: [KeySpec: [Command]]) {
+        title = name == "wm" ? "tess mode" : "\(name.prefix(1).uppercased())\(name.dropFirst()) mode"
+        super.init(frame: .zero)
+        var groups: [Command.Group: [Row]] = [:]
+        for (key, commands) in bindings {
+            if commands == [.mode("main")] {
+                back.append(key.symbol)
+                continue
+            }
+            guard let label = Command.label(of: commands), let first = commands.first(where: { $0.label != nil }) else { continue }
+            groups[first.group, default: []].append(Row(cap: key.symbol, label: label, order: Self.order(first, label)))
+        }
+        back.sort { $0.count < $1.count }
+        columns = Command.Group.allCases.compactMap { g in
+            groups[g].map { (g.title, $0.sorted { $0.order < $1.order }) }
+        }
+        frame.size = fittingSize
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override var isFlipped: Bool { true }
+
+    /// Directions read left, down, up, right; screens by number; the rest alphabetically.
+    private static func order(_ c: Command, _ label: String) -> (Int, String) {
+        let dirs: [Direction] = [.left, .down, .up, .right]
+        switch c {
+        case .focus(let d), .move(let d): return (dirs.firstIndex(of: d) ?? 0, "")
+        case .focusMonitor(let n), .moveToMonitor(let n): return (10 + n, "")
+        case .cycleMonitor(let s): return (s > 0 ? 20 : 21, "")
+        default: return (100, label)
+        }
+    }
+
+    private func width(_ s: String, _ f: NSFont) -> CGFloat { (s as NSString).size(withAttributes: [.font: f]).width }
+
+    private func columnWidth(_ rows: [Row], _ head: String) -> (cap: CGFloat, total: CGFloat) {
+        let cap = (rows.map { width($0.cap, Self.capFont) }.max() ?? 0) + 14
+        let label = rows.map { width($0.label, Self.labelFont) }.max() ?? 0
+        return (cap, max(cap + 8 + label, width(head.uppercased(), Self.headFont)))
+    }
+
+    override var fittingSize: NSSize {
+        let widths = columns.map { columnWidth($0.rows, $0.title).total }
+        let tallest = CGFloat(columns.map(\.rows.count).max() ?? 0)
+        let w = widths.reduce(0, +) + CGFloat(max(columns.count - 1, 0)) * 26 + 2 * Self.pad
+        let h = Self.pad + 26 + 20 + tallest * Self.rowHeight + (back.isEmpty ? 0 : 30) + Self.pad - 4
+        return NSSize(width: max(w, 220), height: h)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        (title as NSString).draw(at: NSPoint(x: Self.pad, y: Self.pad - 2), withAttributes: [
+            .font: NSFont.systemFont(ofSize: 15, weight: .semibold), .foregroundColor: NSColor.labelColor,
+        ])
+        var x = Self.pad
+        let top = Self.pad + 30
+        for column in columns {
+            let (capW, total) = columnWidth(column.rows, column.title)
+            (column.title.uppercased() as NSString).draw(at: NSPoint(x: x, y: top), withAttributes: [
+                .font: Self.headFont, .foregroundColor: NSColor.secondaryLabelColor, .kern: 0.6,
+            ])
+            for (i, row) in column.rows.enumerated() {
+                let y = top + 20 + CGFloat(i) * Self.rowHeight
+                keycap(row.cap, NSRect(x: x, y: y + 2, width: capW, height: 19))
+                (row.label as NSString).draw(at: NSPoint(x: x + capW + 8, y: y + 3), withAttributes: [
+                    .font: Self.labelFont, .foregroundColor: NSColor.labelColor,
+                ])
+            }
+            x += total + 26
+        }
+        if !back.isEmpty {
+            let y = bounds.height - Self.pad - 16
+            var bx = Self.pad
+            for cap in back {
+                let w = width(cap, Self.capFont) + 14
+                keycap(cap, NSRect(x: bx, y: y - 2, width: w, height: 19))
+                bx += w + 5
+            }
+            ("back to tiling" as NSString).draw(at: NSPoint(x: bx + 4, y: y - 1), withAttributes: [
+                .font: Self.labelFont, .foregroundColor: NSColor.secondaryLabelColor,
+            ])
+        }
+    }
+
+    private func keycap(_ text: String, _ r: NSRect) {
+        NSColor.labelColor.withAlphaComponent(0.1).setFill()
+        let path = NSBezierPath(roundedRect: r, xRadius: 5, yRadius: 5)
+        path.fill()
+        NSColor.labelColor.withAlphaComponent(0.18).setStroke()
+        path.lineWidth = 0.5
+        path.stroke()
+        let attrs: [NSAttributedString.Key: Any] = [.font: Self.capFont, .foregroundColor: NSColor.labelColor]
+        let s = (text as NSString).size(withAttributes: attrs)
+        (text as NSString).draw(at: NSPoint(x: r.midX - s.width / 2, y: r.midY - s.height / 2), withAttributes: attrs)
     }
 }

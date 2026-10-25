@@ -495,12 +495,7 @@ final class Tiler {
         if m == "main" {
             overlay.hideMode()
         } else {
-            let rows = (config.modes[m] ?? [:]).map { binding in
-                let all = binding.key.mods.count == Mod.allCases.count
-                return (key: all ? "hyper-\(binding.key.key)" : binding.key.description,
-                        command: binding.value.map(\.description).joined(separator: "; "))
-            }
-            overlay.showMode(m, rows.sorted { $0.key < $1.key }, on: lookedAtFrame)
+            overlay.showMode(m, config.modes[m] ?? [:], on: lookedAtFrame)
         }
         onChange()
     }
@@ -809,7 +804,7 @@ final class Tiler {
             guard let info = infos[id], info.standard || info.nativeFullscreen, let app = workers[info.pid]?.app else { continue }
             let name = app.localizedName ?? "?"
             let place = offSpace.contains(id) ? "other Space"
-                : "monitor \((world.locate(id)?.m ?? world.monitorIndex(for: info.frame) ?? 0) + 1)"
+                : "screen \((world.locate(id)?.m ?? world.monitorIndex(for: info.frame) ?? 0) + 1)"
             items.append(Picker.Item(kind: .window(id), title: info.title.isEmpty ? name : info.title,
                                      detail: "\(name) · \(place)", icon: app.icon, search: "\(name) \(info.title)"))
         }

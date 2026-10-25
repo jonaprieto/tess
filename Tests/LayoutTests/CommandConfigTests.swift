@@ -72,3 +72,13 @@ import Testing
     #expect(c.inner == 10 && c.outer == 10)
     #expect(c.ignore.isEmpty)
 }
+
+@Test func descriptionsParseBack() throws {
+    for (_, bindings) in Config.defaults.modes {
+        for (_, commands) in bindings {
+            for c in commands { #expect(try Command.parse(c.description) == [c], "\(c)") }
+        }
+    }
+    #expect(Command.resize(.width, -50).description == "resize width -50")
+    #expect(Command.resize(.height, 12.5).description == "resize height +12.5")
+}

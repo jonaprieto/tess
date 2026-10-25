@@ -104,3 +104,20 @@ public struct KeySpec: Hashable, Sendable, CustomStringConvertible {
         (Mod.allCases.filter(mods.contains).map(\.rawValue) + [key]).joined(separator: "-")
     }
 }
+
+extension Command: CustomStringConvertible {
+    /// The command as written in the config; `parse` reads it back.
+    public var description: String {
+        switch self {
+        case .focus(let d): "focus \(d.rawValue)"
+        case .move(let d): "move \(d.rawValue)"
+        case .resize(let a, let px): "resize \(a.rawValue) \(px >= 0 ? "+" : "")\(px == px.rounded() ? String(Int(px)) : String(px))"
+        case .focusMonitor(let n): "focus-monitor \(n)"
+        case .cycleMonitor(let s): "focus-monitor \(s > 0 ? "next" : "prev")"
+        case .moveToMonitor(let n): "move-to-monitor \(n)"
+        case .exec(let s): "exec \(s)"
+        case .mode(let m): "mode \(m)"
+        default: Command.simple.first { $0.value == self }?.key ?? "nop"
+        }
+    }
+}

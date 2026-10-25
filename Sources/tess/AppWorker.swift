@@ -41,18 +41,7 @@ final class AppWorker {
         runLoop = CFRunLoopGetCurrent()
         axApp = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(axApp, 0.25)
-        var obs: AXObserver?
-        let callback: AXObserverCallback = { _, _, _, refcon in
-            Unmanaged<AppWorker>.fromOpaque(refcon!).takeUnretainedValue().scheduleRefresh()
-        }
-        if AXObserverCreate(pid, callback, &obs) == .success, let obs {
-            observer = obs
-            CFRunLoopAddSource(runLoop, AXObserverGetRunLoopSource(obs), .defaultMode)
-            for n in [kAXWindowCreatedNotification, kAXFocusedWindowChangedNotification] {
-                AXObserverAddNotification(obs, axApp, n as CFString, refcon)
-            }
-        }
-        // Keeps the run loop alive when the app refuses observers.
+        // Keeps the run loop alive while the app refuses observers.
         let keepAlive = CFRunLoopTimerCreateWithHandler(nil, .infinity, 0, 0, 0) { _ in }
         CFRunLoopAddTimer(runLoop, keepAlive, .defaultMode)
         ready.signal()
@@ -61,6 +50,24 @@ final class AppWorker {
     }
 
     private var refcon: UnsafeMutableRawPointer { Unmanaged.passUnretained(self).toOpaque() }
+
+    /// A just-launched app may not answer yet; the next refresh tries again.
+    private func ensureObserver() {
+        guard observer == nil else { return }
+        var obs: AXObserver?
+        let callback: AXObserverCallback = { _, _, _, refcon in
+            Unmanaged<AppWorker>.fromOpaque(refcon!).takeUnretainedValue().scheduleRefresh()
+        }
+        guard AXObserverCreate(pid, callback, &obs) == .success, let obs else { return }
+        var ok = false
+        for n in [kAXWindowCreatedNotification, kAXFocusedWindowChangedNotification] {
+            ok = AXObserverAddNotification(obs, axApp, n as CFString, refcon) == .success || ok
+        }
+        guard ok else { return }
+        observer = obs
+        CFRunLoopAddSource(runLoop, AXObserverGetRunLoopSource(obs), .defaultMode)
+        windows = [:]  // subscribe the windows again on this observer
+    }
 
     private func perform(_ block: @escaping () -> Void) {
         CFRunLoopPerformBlock(runLoop, CFRunLoopMode.defaultMode.rawValue, block)
@@ -89,6 +96,7 @@ final class AppWorker {
             scheduleRefresh(after: 0.2)
             return
         }
+        ensureObserver()
         let hidden = app.isHidden
         var seen: [WindowID: AXUIElement] = [:]
         var infos: [WinInfo] = []

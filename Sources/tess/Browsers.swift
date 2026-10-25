@@ -95,6 +95,7 @@ enum Browsers {
         var all: [Picker.Item] = []
         var seen = Set<String>()
         var left = sources.count
+        var answered = false
         for source in sources {
             // Parsed where it arrives, off the main thread; merged on it.
             source.run { text in
@@ -114,7 +115,9 @@ enum Browsers {
                     let fresh = items.filter { seen.insert(($0.detail.hasPrefix("Brave") ? "b" : "s") + $0.search).inserted }
                     all += fresh
                     left -= 1
-                    if left == 0 { cache = (all, Date()) }
+                    if text != nil { answered = true }
+                    // Not cached when every source failed (no permission yet): try again next open.
+                    if left == 0, answered { cache = (all, Date()) }
                     if !fresh.isEmpty { done(fresh) }
                 }
             }
@@ -134,6 +137,8 @@ enum Browsers {
                 deliver(onMain) { done(nil) }
                 return
             }
+            // A browser stuck on a dialog would otherwise hold this for the 2 minute Apple event timeout.
+            DispatchQueue.global().asyncAfter(deadline: .now() + 10) { if p.isRunning { p.terminate() } }
             let data = out.fileHandleForReading.readDataToEndOfFile()
             let problem = err.fileHandleForReading.readDataToEndOfFile()
             p.waitUntilExit()
@@ -173,6 +178,8 @@ enum Browsers {
                 deliver(onMain) { done(nil) }
                 return
             }
+            // A browser stuck on a dialog would otherwise hold this for the 2 minute Apple event timeout.
+            DispatchQueue.global().asyncAfter(deadline: .now() + 10) { if p.isRunning { p.terminate() } }
             let data = out.fileHandleForReading.readDataToEndOfFile()
             let problem = err.fileHandleForReading.readDataToEndOfFile()
             p.waitUntilExit()

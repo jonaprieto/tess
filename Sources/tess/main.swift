@@ -16,6 +16,8 @@ let usage = """
     """
 
 func serve() -> Never {
+    // A CLI that gave up before its answer must not take the app down with it.
+    signal(SIGPIPE, SIG_IGN)
     if Socket.send("nop") != nil {
         print("tess is already running")
         exit(0)

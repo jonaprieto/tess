@@ -34,6 +34,14 @@ final class Tiler {
     /// own). Windows that drop out of an AX list but still exist are on another Space: they
     /// keep their place and get no frame writes until they are back.
     private var offSpace: Set<WindowID> = []
+    /// Space changes counted, and the count when each off-Space window was last listed: a
+    /// window unlisted across several Space changes was closed (kept ordered out by its app).
+    private var spaceChanges = 0
+    private var unlistedSince: [WindowID: Int] = [:]
+    /// Windows floated by the classifier rather than the user; reconsidered as they settle.
+    private var autoFloated: Set<WindowID> = []
+    /// Windows whose app refused the frame tess asked for (a minimum size, usually).
+    private var refused: Set<WindowID> = []
     /// A window that leaves the AX list right after a Space change went to another Space;
     /// otherwise it was closed (apps often keep closed windows around, ordered out, so the
     /// window server list alone cannot tell).
@@ -43,7 +51,12 @@ final class Tiler {
     /// placed where it is when it shows up; only brand new windows get a new lane.
     private var preexisting: WindowID = 0
     private var seen: Set<WindowID> = []
-    private lazy var hotkeys = Hotkeys { [weak self] commands in _ = self?.run(commands) }
+    /// From a hotkey there is no terminal: an error becomes a toast.
+    private lazy var hotkeys = Hotkeys { [weak self] commands in
+        guard let self else { return }
+        let out = self.run(commands)
+        if out.hasPrefix("error: ") { self.toast(String(out.dropFirst(7))) }
+    }
     private lazy var picker: Picker = {
         let p = Picker()
         p.onDone = { [weak self] item, choice in self?.picked(item, choice) }
@@ -85,6 +98,7 @@ final class Tiler {
         }
         ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.spaceChangedAt = Date()
+            self?.spaceChanges += 1
             self?.sweep(all: true)
         }
         ws.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -125,9 +139,12 @@ final class Tiler {
     }
 
     private func untrack(_ pid: pid_t) {
-        workers.removeValue(forKey: pid)?.stop()
+        // didTerminate fires for every process, helpers and ignored apps included.
+        guard let worker = workers.removeValue(forKey: pid) else { return }
+        worker.stop()
+        let hadFocus = world.focused
         for (id, info) in infos where info.pid == pid { forget(id) }
-        afterFocusChange()
+        if let hadFocus, !world.contains(hadFocus) { afterFocusChange() }
         scheduleApply()
     }
 
@@ -135,6 +152,9 @@ final class Tiler {
         infos[id] = nil
         writes[id] = nil
         offSpace.remove(id)
+        unlistedSince[id] = nil
+        autoFloated.remove(id)
+        refused.remove(id)
         world.remove(id)
     }
 
@@ -169,12 +189,18 @@ final class Tiler {
             let live = Self.liveWindowIDs()
             let spaceChange = Date().timeIntervalSince(spaceChangedAt) < 1.5
             for id in missing {
-                if spaceChange && live.contains(id) { offSpace.insert(id) } else if !offSpace.contains(id) { forget(id) }
+                if spaceChange && live.contains(id) {
+                    offSpace.insert(id)
+                    unlistedSince[id] = unlistedSince[id] ?? spaceChanges
+                } else if !offSpace.contains(id) {
+                    forget(id)
+                }
             }
         }
         for info in list {
             infos[info.id] = info
             offSpace.remove(info.id)
+            unlistedSince[info.id] = nil
         }
         let frontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier == pid
         if frontmost { osFocused = focused }
@@ -195,8 +221,18 @@ final class Tiler {
                 } else {
                     world.insert(info.id)
                 }
-            case .float: if !world.contains(info.id) { world.floating.insert(info.id) }
-            case .tile: break
+            case .float:
+                if !world.contains(info.id) {
+                    world.floating.insert(info.id)
+                    autoFloated.insert(info.id)
+                }
+            case .tile:
+                // Floated only because it looked like a dialog at first (no fullscreen button
+                // yet, a slow read): it is a normal window now.
+                if autoFloated.remove(info.id) != nil, world.floating.contains(info.id) {
+                    world.floating.remove(info.id)
+                    world.insert(info.id)
+                }
             }
         }
         if !found.isEmpty { adopt(found) }
@@ -213,11 +249,10 @@ final class Tiler {
 
     /// macOS moved focus (a click, cmd-tab, a window closing).
     private func syncFocus(_ id: WindowID) {
-        if let it = intent, Date() < it.until, it.id != id, world.contains(it.id) {
-            if !it.reasserted {
-                intent?.reasserted = true
-                workerFocus(it.id)
-            }
+        // Overrule macOS once; a second contrary report is the user's own choice.
+        if let it = intent, Date() < it.until, it.id != id, world.contains(it.id), !it.reasserted {
+            intent?.reasserted = true
+            workerFocus(it.id)
             return
         }
         guard world.contains(id) else { return }
@@ -252,9 +287,17 @@ final class Tiler {
         let everything = all || sweeps % 6 == 0
         NSWorkspace.shared.runningApplications.forEach(track)
         if let c = appCache, Date().timeIntervalSince(c.at) > 600 { refreshApps() }
-        if everything, !offSpace.isEmpty {
-            let live = Self.liveWindowIDs()
-            for id in offSpace where !live.contains(id) { forget(id) }
+        if everything {
+            if !offSpace.isEmpty {
+                let live = Self.liveWindowIDs()
+                for id in offSpace where !live.contains(id) || spaceChanges - (unlistedSince[id] ?? spaceChanges) >= 4 {
+                    forget(id)
+                }
+            }
+            // Nothing in the layout without a window behind it, and writes refused earlier
+            // get another three tries.
+            for id in world.tiled + Array(world.floating) where infos[id] == nil && !offSpace.contains(id) { world.remove(id) }
+            writes = [:]
             scheduleApply()
         }
         let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
@@ -295,11 +338,15 @@ final class Tiler {
             guard let info = infos[id], let worker = workers[info.pid] else { continue }
             if Self.near(info.frame, target) {
                 writes[id] = (target, 0)
+                refused.remove(id)
                 continue
             }
             var w = writes[id] ?? (target, 0)
             if w.target != target { w = (target, 0) }
-            guard w.tries < 3 else { continue }
+            guard w.tries < 3 else {
+                if refused.insert(id).inserted { Log.write("window \(id) keeps its own size (\(info.frame), wanted \(target))") }
+                continue
+            }
             w.tries += 1
             writes[id] = w
             worker.setFrame(id, target)
@@ -355,6 +402,7 @@ final class Tiler {
         if paused, ![.pause, .tree, .reload].contains(c) { return "error: paused" }
         Log.write("command: \(c)")
         let before = world.focused
+        let beforeMonitor = world.activeMonitor
         var flash = false
         switch c {
         case .focus(let d): world.focus(d); flash = true
@@ -365,7 +413,7 @@ final class Tiler {
         case .accordion: world.toggleAccordion()
         case .fullscreen:
             world.toggleFullscreen()
-            if let f = world.focused {
+            if let f = world.focused, world.locate(f) != nil {
                 focus(f)
                 let on = world.locate(f).map { world.monitors[$0.m].fullscreen == f } ?? false
                 toast(on ? "fullscreen" : "fullscreen off")
@@ -434,6 +482,10 @@ final class Tiler {
         }
         if world.focused != before, let f = world.focused { focus(f) }
         if flash { flashFocus() }
+        // The cheat sheet follows to the screen being worked on.
+        if mode != "main", world.activeMonitor != beforeMonitor, let m = world.monitors[safe: world.activeMonitor] {
+            overlay.showMode(mode, config.modes[mode] ?? [:], on: m.frame)
+        }
         scheduleApply()
         return ""
     }
@@ -661,6 +713,13 @@ final class Tiler {
     private func use(_ id: WindowID, _ choice: Picker.Choice) {
         let away = offSpace.contains(id) || infos[id] == nil
         if away, let pid = infos[id]?.pid ?? unseen[id] { NSRunningApplication(processIdentifier: pid)?.activate() }
+        guard infos[id] != nil else {
+            // Known only to the window server: place it once its app has listed it, if ever.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                if self?.infos[id] != nil { self?.use(id, choice) }
+            }
+            return
+        }
         if case .place(let spot) = choice { world.place(id, spot) } else if world.contains(id) { world.focused = id }
         if away {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.focus(id) }
@@ -692,17 +751,29 @@ final class Tiler {
         let out = Pipe()
         p.standardOutput = out
         p.standardError = FileHandle.nullDevice
+        do { try p.run() } catch {
+            done(nil)
+            return
+        }
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { stop(p) }
         DispatchQueue.global().async {
-            do { try p.run() } catch {
-                DispatchQueue.main.async { done(nil) }
-                return
-            }
-            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { if p.isRunning { p.terminate() } }
             let data = out.fileHandleForReading.readDataToEndOfFile()
             p.waitUntilExit()
             let text = p.terminationStatus == 0 ? String(decoding: data, as: UTF8.self) : nil
             DispatchQueue.main.async { done(text) }
         }
+    }
+
+    /// Stops a `sh -c` process and what it started (rg, fzf, folio), which would otherwise keep
+    /// running and keep the output pipe open.
+    static func stop(_ p: Process?) {
+        guard let p, p.isRunning else { return }
+        let kids = Process()
+        kids.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        kids.arguments = ["-TERM", "-P", "\(p.processIdentifier)"]
+        try? kids.run()
+        kids.waitUntilExit()
+        p.terminate()
     }
 
     /// arXiv's API for `query`: open-access papers, best match first.
@@ -743,7 +814,7 @@ final class Tiler {
     /// `f`: file names from Spotlight, ranked by fzf when it is installed. `rg`: file contents
     /// with ripgrep. Both under the home folder, in the background, the previous one stopped.
     private func search(_ verb: String, _ query: String, _ done: @escaping ([Picker.Item]) -> Void) {
-        searchProcess?.terminate()
+        Self.stop(searchProcess)
         let skip = "-g '!Library' -g '!Movies' -g '!Music' -g '!Pictures' -g '!Applications'"
         let script: String
         switch verb {
@@ -759,7 +830,7 @@ final class Tiler {
                 """
         case "book", "paper":
             // Query words as separate arguments, no globbing.
-            script = "set -f; set -- $1; folio search --json -n 25 --ext \(verb == "paper" ? "pdf" : "pdf,epub") \"$@\""
+            script = "set -f; set -- $1; folio search --json -n 25 --ext \(verb == "paper" ? "pdf" : "pdf,epub") -- \"$@\""
         default: return
         }
         let p = Process()
@@ -770,10 +841,13 @@ final class Tiler {
         let out = Pipe()
         p.standardOutput = out
         p.standardError = FileHandle.nullDevice
+        do { try p.run() } catch {
+            done([])
+            return
+        }
         searchProcess = p
+        DispatchQueue.global().asyncAfter(deadline: .now() + 20) { Self.stop(p) }
         DispatchQueue.global().async {
-            do { try p.run() } catch { return }
-            DispatchQueue.global().asyncAfter(deadline: .now() + 20) { if p.isRunning { p.terminate() } }
             let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
             p.waitUntilExit()
             DispatchQueue.main.async {
@@ -901,7 +975,10 @@ final class Tiler {
     }
 
     private func pickerMap() -> Picker.Map {
-        let frames = world.frames(inner: config.inner, outer: config.outer)
+        // Without tess fullscreen, so no window is drawn over the others' letters.
+        var flat = world
+        for i in flat.monitors.indices { flat.monitors[i].fullscreen = nil }
+        let frames = flat.frames(inner: config.inner, outer: config.outer)
         var windows: [(id: WindowID, frame: CGRect, app: String, title: String, icon: NSImage?)] = []
         for mon in world.monitors {
             for lane in mon.lanes {
@@ -937,6 +1014,8 @@ final class Tiler {
 
     /// Validates and writes what the settings window changed, then reloads; the error if not.
     func saveSettings(_ raw: Config.Raw) -> String? {
+        // Saving now would replace the hand-edited file with these settings.
+        if let e = configError { return "config.json has an error, fix it or delete it first: \(e)" }
         do {
             _ = try Config.validate(raw)
             try FileManager.default.createDirectory(at: Self.configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -970,7 +1049,7 @@ final class Tiler {
                 for id in lane.windows {
                     let r = frames[id] ?? .zero
                     out.append("    \(name(id))  [\(Int(r.minX)),\(Int(r.minY)) \(Int(r.width))x\(Int(r.height))]"
-                        + (mon.fullscreen == id ? " fullscreen" : ""))
+                        + (mon.fullscreen == id ? " fullscreen" : "") + (refused.contains(id) ? " (keeps its own size)" : ""))
                 }
             }
         }
@@ -989,4 +1068,8 @@ final class Tiler {
         out.append("apps: \(workers.count)")
         return out.joined(separator: "\n")
     }
+}
+
+extension Array {
+    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }

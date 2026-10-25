@@ -6,6 +6,8 @@ enum Screens {
     struct Info {
         var id: String
         var frame: CGRect
+        /// The whole screen: numbering follows it, so a Dock on one side does not reorder.
+        var full: CGRect
         var isMain: Bool
     }
 
@@ -15,8 +17,8 @@ enum Screens {
             guard let n = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
                   let uuid = CGDisplayCreateUUIDFromDisplayID(n.uint32Value)?.takeRetainedValue(),
                   let id = CFUUIDCreateString(nil, uuid) as String? else { return nil }
-            return Info(id: id, frame: flip(s.visibleFrame), isMain: s == main)
-        }.sorted { ($0.frame.minX, $0.frame.minY) < ($1.frame.minX, $1.frame.minY) }
+            return Info(id: id, frame: flip(s.visibleFrame), full: flip(s.frame), isMain: s == main)
+        }.sorted { ($0.full.minX, $0.full.minY) < ($1.full.minX, $1.full.minY) }
     }
 
     /// Between AppKit's bottom-left origin and AX's top-left origin (an involution).

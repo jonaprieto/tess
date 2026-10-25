@@ -20,6 +20,12 @@ extension AXUIElement {
         return (v as! AXUIElement)
     }
 
+    /// nil when the read failed (a timeout), as opposed to an empty list.
+    func elementsIfRead(_ name: String) -> [AXUIElement]? {
+        guard let v = attribute(name), CFGetTypeID(v) == CFArrayGetTypeID() else { return nil }
+        return (v as! [CFTypeRef]).compactMap { CFGetTypeID($0) == AXUIElementGetTypeID() ? ($0 as! AXUIElement) : nil }
+    }
+
     func elements(_ name: String) -> [AXUIElement] {
         guard let v = attribute(name), CFGetTypeID(v) == CFArrayGetTypeID() else { return [] }
         return (v as! [CFTypeRef]).compactMap { CFGetTypeID($0) == AXUIElementGetTypeID() ? ($0 as! AXUIElement) : nil }

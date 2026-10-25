@@ -68,9 +68,9 @@ final class AppWorker {
             Unmanaged<AppWorker>.fromOpaque(refcon!).takeUnretainedValue().notified(name as String)
         }
         guard AXObserverCreate(pid, callback, &obs) == .success, let obs else { return }
-        var ok = false
-        for n in [kAXWindowCreatedNotification, kAXFocusedWindowChangedNotification] {
-            ok = AXObserverAddNotification(obs, axApp, n as CFString, refcon) == .success || ok
+        // Both or neither: missing window-created would leave new windows to the sweep.
+        let ok = [kAXWindowCreatedNotification, kAXFocusedWindowChangedNotification].allSatisfy {
+            AXObserverAddNotification(obs, axApp, $0 as CFString, refcon) == .success
         }
         guard ok else { return }
         observer = obs
@@ -120,7 +120,13 @@ final class AppWorker {
         let hidden = app.isHidden
         var seen: [WindowID: AXUIElement] = [:]
         var infos: [WinInfo] = []
-        for el in axApp.elements(kAXWindowsAttribute) {
+        // An app busy past the AX timeout answers nothing: that is not every window closing.
+        guard let list = axApp.elementsIfRead(kAXWindowsAttribute) else {
+            scheduleRefresh(after: 1)
+            return
+        }
+        let previous = Dictionary((sent?.infos ?? []).map { ($0.id, $0) }) { a, _ in a }
+        for el in list {
             guard let id = el.windowID else { continue }
             if windows[id] == nil {
                 AXUIElementSetMessagingTimeout(el, 0.25)
@@ -133,14 +139,22 @@ final class AppWorker {
             let v = el.attributes([kAXPositionAttribute, kAXSizeAttribute, kAXTitleAttribute, kAXMinimizedAttribute, "AXFullScreen"])
             var origin = CGPoint.zero, size = CGSize.zero
             guard let p = v[0], CFGetTypeID(p) == AXValueGetTypeID(), AXValueGetValue(p as! AXValue, .cgPoint, &origin),
-                  let z = v[1], CFGetTypeID(z) == AXValueGetTypeID(), AXValueGetValue(z as! AXValue, .cgSize, &size) else { continue }
+                  let z = v[1], CFGetTypeID(z) == AXValueGetTypeID(), AXValueGetValue(z as! AXValue, .cgSize, &size) else {
+                // A read that failed for this window: keep what was known.
+                if let known = previous[id] { infos.append(known) }
+                continue
+            }
             let frame = CGRect(origin: origin, size: size)
             let title = v[2] as? String ?? ""
             let minimized = v[3] as? Bool == true
             let fullscreen = v[4] as? Bool == true
             var t = traits[id]
             if t == nil {
-                let read = (standard: el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
+                guard let subrole = el.string(kAXSubroleAttribute) else {
+                    if let known = previous[id] { infos.append(known) }
+                    continue
+                }
+                let read = (standard: subrole == kAXStandardWindowSubrole,
                             button: el.element(kAXFullScreenButtonAttribute)?.bool(kAXEnabledAttribute) == true)
                 if !minimized && !hidden { traits[id] = read }
                 t = read

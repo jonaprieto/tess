@@ -42,7 +42,7 @@ final class SettingsModel {
     var mode = "main"
     var message: String?
     var failed = false
-    private let original: Config.Raw
+    private var original: Config.Raw
     private let saveRaw: (Config.Raw) -> String?
 
     init(raw: Config.Raw, save: @escaping (Config.Raw) -> String?) {
@@ -74,10 +74,19 @@ final class SettingsModel {
         return r
     }
 
+    /// Rows whose key or command does not parse (Save is disabled while there are any).
+    var invalid: Int {
+        modes.values.joined().filter { !$0.key.isEmpty && ((try? KeySpec.parse($0.key)) == nil || (try? Command.parse($0.value)) == nil) }.count
+    }
+
     func save() {
-        message = saveRaw(raw)
+        let r = raw
+        message = saveRaw(r)
         failed = message != nil
-        if message == nil { message = "Saved" }
+        if message == nil {
+            message = "Saved"
+            original = r
+        }
     }
 
     func revert() {
@@ -110,6 +119,8 @@ struct SettingsView: View {
                 Button("Save") { model.save() }
                     .keyboardShortcut("s")
                     .buttonStyle(.borderedProminent)
+                    .disabled(model.invalid > 0)
+                    .help(model.invalid > 0 ? "\(model.invalid) key binding(s) need fixing" : "")
             }
             .padding()
         }
@@ -170,6 +181,13 @@ struct AppList: View {
     let title: String
     let help: String
     @Binding var ids: [String]
+    @State private var typed = ""
+
+    private func addTyped() {
+        let id = typed.trimmingCharacters(in: .whitespaces)
+        if !id.isEmpty, !ids.contains(id) { ids.append(id) }
+        typed = ""
+    }
 
     var body: some View {
         Section {
@@ -187,7 +205,14 @@ struct AppList: View {
                         .buttonStyle(.borderless)
                 }
             }
-            Menu("Add App") {
+            HStack {
+                TextField("bundle id, e.g. com.apple.Preview", text: $typed)
+                    .labelsHidden()
+                    .font(.body.monospaced())
+                    .onSubmit(addTyped)
+                Button("Add", action: addTyped).disabled(typed.isEmpty)
+            }
+            Menu("Add Running App") {
                 ForEach(NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
                     .compactMap { app in app.bundleIdentifier.map { (id: $0, name: app.localizedName ?? $0) } }
                     .filter { !ids.contains($0.id) }.sorted { $0.name < $1.name }, id: \.id) { app in

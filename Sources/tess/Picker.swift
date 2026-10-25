@@ -149,7 +149,14 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             return false
         }
         items.insert(contentsOf: more, at: apps ?? items.count)
-        if picked == nil { filter() }
+        guard picked == nil else { return }
+        // Keep the row the user is on: a late batch must not move Enter onto another item.
+        let current = shown.indices.contains(list.selected) ? shown[list.selected] : nil
+        filter()
+        if let current, let i = shown.firstIndex(where: { $0.title == current.title && $0.detail == current.detail }) {
+            list.selected = i
+            list.move(0)
+        }
     }
 
     func close() {
@@ -481,7 +488,7 @@ final class MapView: NSView {
             ])
         }
         for w in model.windows {
-            let r = mini(w.frame).insetBy(dx: 4, dy: 3)
+            let r = mini(w.frame).insetBy(dx: 4, dy: 4)
             guard r.width > 4, r.height > 4 else { continue }
             let isPicked = w.id == picked
             let path = NSBezierPath(roundedRect: r, xRadius: min(9, r.height / 3), yRadius: min(9, r.height / 3))

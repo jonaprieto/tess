@@ -68,7 +68,15 @@ enum Socket {
         let thread = Thread {
             while true {
                 let client = accept(fd, nil, nil)
-                guard client >= 0 else { continue }
+                guard client >= 0 else {
+                    usleep(100_000)  // a persistent error (out of descriptors) must not spin
+                    continue
+                }
+                // A client that connects and never finishes its line must not block the next one.
+                var timeout = timeval(tv_sec: 2, tv_usec: 0)
+                setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+                var one: Int32 = 1
+                setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &one, socklen_t(MemoryLayout<Int32>.size))
                 let line = readAll(client).trimmingCharacters(in: .whitespacesAndNewlines)
                 var reply = ""
                 DispatchQueue.main.sync { reply = handler(line) }

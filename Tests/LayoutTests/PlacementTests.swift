@@ -1,0 +1,91 @@
+import CoreGraphics
+import Testing
+@testable import Layout
+
+@Test func replaceSwapsTwoTiledWindows() {
+    var w = world([[1, 2], [3]], [[4]], focused: 1)
+    w.place(4, .replace(2))
+    #expect(lanes(w) == [[1, 4], [3]])
+    #expect(lanes(w, 1) == [[2]])
+    #expect(w.focused == 4)
+}
+
+@Test func replaceWithANewWindowPushesTheOtherRight() {
+    var w = world([[1, 2], [3]], focused: 1)
+    w.place(9, .replace(2))
+    #expect(lanes(w) == [[1, 9], [2], [3]])
+    #expect(w.focused == 9)
+    w.floating.insert(8)
+    w.place(8, .replace(3))
+    #expect(lanes(w) == [[1, 9], [2], [8], [3]])
+    #expect(w.floating.isEmpty)
+}
+
+@Test func besideMakesANewLaneRightOfTheTarget() {
+    var w = world([[1], [2, 3]], [[4]], focused: 1)
+    w.place(4, .beside(2))
+    #expect(lanes(w) == [[1], [2, 3], [4]])
+    #expect(lanes(w, 1).isEmpty)
+    w.place(1, .beside(3))
+    #expect(lanes(w) == [[2, 3], [1], [4]])
+    w.place(3, .beside(3))
+    #expect(lanes(w) == [[2, 3], [1], [4]])
+}
+
+@Test func hereGoesNextToTheFocusedWindow() {
+    var w = world([[1], [2]], [[4]], focused: 1)
+    w.place(4, .here)
+    #expect(lanes(w) == [[1], [4], [2]])
+    #expect(w.focused == 4)
+    w.focused = 1
+    w.place(1, .here)
+    #expect(lanes(w) == [[1], [4], [2]])
+}
+
+@Test func monitorAppendsAtTheRightEnd() {
+    var w = world([[1], [2]], [[4]], focused: 1)
+    w.place(1, .monitor(1))
+    #expect(lanes(w) == [[2]])
+    #expect(lanes(w, 1) == [[4], [1]])
+    #expect(w.activeMonitor == 1)
+    w.place(7, .monitor(5))
+    #expect(!w.contains(7))
+}
+
+@Test func slotFillsTheGapOfAClosedWindow() {
+    var w = world([[1], [2, 3, 4]], focused: 3)
+    let s = w.slot(of: 3)!
+    w.remove(3)
+    w.place(9, .slot(s.position, alone: s.alone))
+    #expect(lanes(w) == [[1], [2, 9, 4]])
+
+    w = world([[1], [2], [3]], focused: 2)
+    let t = w.slot(of: 2)!
+    #expect(t.alone)
+    w.remove(2)
+    w.place(9, .slot(t.position, alone: t.alone))
+    #expect(lanes(w) == [[1], [9], [3]])
+}
+
+@Test func floatTakesAWindowOutOfTheLayout() {
+    var w = world([[1], [2]], focused: 2)
+    w.place(2, .float)
+    #expect(lanes(w) == [[1]])
+    #expect(w.floating == [2])
+}
+
+@Test func labelsFollowMonitorsLanesAndStacks() {
+    let w = world([[1, 2], [3]], [[4]])
+    let l = w.labels("asd")
+    #expect(l == [1: "a", 2: "s", 3: "d"])
+}
+
+@Test func fuzzyMatchesSubsequencesBestFirst() {
+    #expect(fuzzyScore("brv", "Brave Browser") != nil)
+    #expect(fuzzyScore("xyz", "Brave Browser") == nil)
+    #expect(fuzzyScore("", "anything") == 0)
+    let github = fuzzyScore("gh", "GitHub")!
+    let gather = fuzzyScore("gh", "gather")!
+    #expect(github > gather)
+    #expect(fuzzyScore("cal", "Calendar")! > fuzzyScore("cal", "Musical")!)
+}

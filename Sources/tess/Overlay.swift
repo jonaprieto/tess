@@ -5,32 +5,34 @@ import Layout
 /// and short toasts. Click-through panels above all windows that never take focus.
 /// Rects are in AX coordinates (top-left origin), like everything else in tess.
 final class Overlay {
-    private var modePanel: NSPanel?
+    private var modePanels: [NSPanel] = []
     private var toastPanel: NSPanel?
     private var flashPanel: NSPanel?
     private var toastHide: DispatchWorkItem?
     private var flashHide: DispatchWorkItem?
 
-    /// The keys of a mode as a glass cheat sheet in the bottom-right corner of `screen`:
+    /// The keys of a mode as a glass cheat sheet in the bottom-right corner of each of `screens`:
     /// grouped columns of keycaps and plain labels, so the windows being arranged stay visible.
-    func showMode(_ name: String, _ bindings: [KeySpec: [Command]], on screen: CGRect) {
-        modePanel?.orderOut(nil)
-        let view = ModeSheet(name: name, bindings: bindings)
-        let size = view.fittingSize
-        let r = CGRect(x: screen.maxX - size.width - 24, y: screen.maxY - size.height - 24, width: size.width, height: size.height)
-        let p = Self.panel()
-        let glass = NSGlassEffectView()
-        glass.cornerRadius = 18
-        glass.contentView = view
-        p.contentView = glass
-        p.setFrame(Screens.flip(r), display: true)
-        p.orderFrontRegardless()
-        modePanel = p
+    func showMode(_ name: String, _ bindings: [KeySpec: [Command]], on screens: [CGRect]) {
+        hideMode()
+        for screen in screens {
+            let view = ModeSheet(name: name, bindings: bindings)
+            let size = view.fittingSize
+            let r = CGRect(x: screen.maxX - size.width - 24, y: screen.maxY - size.height - 24, width: size.width, height: size.height)
+            let p = Self.panel()
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = 18
+            glass.contentView = view
+            p.contentView = glass
+            p.setFrame(Screens.flip(r), display: true)
+            p.orderFrontRegardless()
+            modePanels.append(p)
+        }
     }
 
     func hideMode() {
-        modePanel?.orderOut(nil)
-        modePanel = nil
+        modePanels.forEach { $0.orderOut(nil) }
+        modePanels = []
     }
 
     func toast(_ message: String, on screen: CGRect) {

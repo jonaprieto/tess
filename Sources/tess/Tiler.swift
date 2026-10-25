@@ -411,6 +411,11 @@ final class Tiler {
             : (Screens.current().first?.frame ?? .zero)
     }
 
+    /// Where a mode's keys show: every screen, or (overlay.all_screens false) the one in use.
+    private var modeScreens: [CGRect] {
+        config.overlayAllScreens && !world.monitors.isEmpty ? world.monitors.map(\.frame) : [lookedAtFrame]
+    }
+
     /// The screen being looked at: the one with macOS's focused window (also when it is a
     /// fullscreen app tess leaves alone), else the one with the mouse.
     private var lookedAtFrame: CGRect {
@@ -524,9 +529,10 @@ final class Tiler {
         }
         if world.focused != before, let f = world.focused { focus(f) }
         if flash { flashFocus() }
-        // The cheat sheet follows to the screen being worked on.
-        if mode != "main", world.activeMonitor != beforeMonitor, let m = world.monitors[safe: world.activeMonitor] {
-            overlay.showMode(mode, config.modes[mode] ?? [:], on: m.frame)
+        // A single cheat sheet follows to the screen being worked on.
+        if mode != "main", !config.overlayAllScreens, world.activeMonitor != beforeMonitor,
+           let m = world.monitors[safe: world.activeMonitor] {
+            overlay.showMode(mode, config.modes[mode] ?? [:], on: [m.frame])
         }
         scheduleApply()
         return ""
@@ -605,7 +611,7 @@ final class Tiler {
         if m == "main" {
             overlay.hideMode()
         } else {
-            overlay.showMode(m, config.modes[m] ?? [:], on: lookedAtFrame)
+            overlay.showMode(m, config.modes[m] ?? [:], on: modeScreens)
         }
         onChange()
     }

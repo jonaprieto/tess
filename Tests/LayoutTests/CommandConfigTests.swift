@@ -132,3 +132,13 @@ import Testing
     #expect(wm[KeySpec(key: "x", mods: [])] == [.closeReplace])
     #expect(c.modes["main"]?[KeySpec(key: "g", mods: [.cmd, .alt, .ctrl, .shift])] == [.pick("")])
 }
+
+@Test func cheatSheetOnEveryScreenIsTheDefault() throws {
+    #expect(Config.defaults.overlayAllScreens)
+    let off = try Config.load(Data(#"{"overlay": {"all_screens": false}}"#.utf8))
+    #expect(!off.overlayAllScreens)
+    var edited = Config.defaultRaw
+    edited.overlay = .init(allScreens: false)
+    #expect(Config.overrides(edited, over: Config.defaultRaw).overlay?.allScreens == false)
+    #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).overlay == nil)
+}

@@ -14,6 +14,8 @@ public struct Config: Equatable, Sendable {
     public var ignore: [String] = []
     /// Picker verbs: `cd ~/x` opens the folder with the app named here.
     public var verbs: [String: String] = [:]
+    /// The keys of a mode on every screen, rather than only the one being worked on.
+    public var overlayAllScreens = true
     /// Mode -> key -> commands. `main` is where tess starts.
     public var modes: [String: [KeySpec: [Command]]] = [:]
     /// The merged config as written, for the settings window.
@@ -28,7 +30,13 @@ public struct Config: Equatable, Sendable {
                 self.outer = outer
             }
         }
+        public struct Overlay: Codable, Equatable, Sendable {
+            public var allScreens: Bool?
+            enum CodingKeys: String, CodingKey { case allScreens = "all_screens" }
+            public init(allScreens: Bool? = nil) { self.allScreens = allScreens }
+        }
         public var gaps: Gaps?
+        public var overlay: Overlay?
         public var float: [String]?
         public var tile: [String]?
         public var ignore: [String]?
@@ -71,6 +79,7 @@ public struct Config: Equatable, Sendable {
         }
         var r = base
         if let g = top.gaps { r.gaps = Raw.Gaps(inner: g.inner ?? base.gaps?.inner, outer: g.outer ?? base.gaps?.outer) }
+        r.overlay = top.overlay ?? base.overlay
         r.float = top.float ?? base.float
         r.tile = top.tile ?? base.tile
         r.ignore = top.ignore ?? base.ignore
@@ -91,6 +100,7 @@ public struct Config: Equatable, Sendable {
         }
         var o = Raw()
         if edited.gaps != base.gaps { o.gaps = edited.gaps }
+        if edited.overlay != base.overlay { o.overlay = edited.overlay }
         if edited.float != base.float { o.float = edited.float }
         if edited.tile != base.tile { o.tile = edited.tile }
         if edited.ignore != base.ignore { o.ignore = edited.ignore }
@@ -120,6 +130,7 @@ public struct Config: Equatable, Sendable {
         // larger than half a screen leaves no area at all.
         c.inner = min(max(raw.gaps?.inner ?? 10, 0), 100).rounded()
         c.outer = min(max(raw.gaps?.outer ?? 10, 0), 100).rounded()
+        c.overlayAllScreens = raw.overlay?.allScreens ?? true
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
         c.ignore = raw.ignore ?? []
@@ -149,6 +160,7 @@ public struct Config: Equatable, Sendable {
     public static let defaultJSON = #"""
     {
       "gaps": {"inner": 10, "outer": 10},
+      "overlay": {"all_screens": true},
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": ["io.github.ender-wang.EdgeMark"],

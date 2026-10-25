@@ -82,3 +82,18 @@ import Testing
     #expect(Command.resize(.width, -50).description == "resize width -50")
     #expect(Command.resize(.height, 12.5).description == "resize height +12.5")
 }
+
+@Test func hyperTTogglesTheWMMode() throws {
+    let c = Config.defaults
+    let hyperT = KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])
+    #expect(c.modes["main"]?[hyperT] == [.mode("wm")])
+    let wm = try #require(c.modes["wm"])
+    #expect(wm[hyperT] == [.mode("main")])
+    #expect(wm[KeySpec(key: "esc", mods: [])] == [.mode("main")])
+    #expect(wm[KeySpec(key: "h", mods: [])] == [.focus(.left)])
+    #expect(wm[KeySpec(key: "l", mods: [.shift])] == [.move(.right)])
+    #expect(wm[KeySpec(key: "2", mods: [.shift])] == [.moveToMonitor(2)])
+    #expect(wm[KeySpec(key: "c", mods: [.shift])] == [.close])
+    #expect(wm[KeySpec(key: "c", mods: [])] == nil)
+    #expect(wm.count == 30)
+}

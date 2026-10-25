@@ -34,6 +34,7 @@ final class StatusItem: NSObject {
         case "main": return .controlAccentColor
         case "resize": return .systemOrange
         case "service": return .systemPurple
+        case "wm": return .systemGreen
         default: return .systemTeal
         }
     }

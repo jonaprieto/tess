@@ -417,7 +417,11 @@ final class Tiler {
         if m == "main" {
             overlay.hideMode()
         } else {
-            let rows = (config.modes[m] ?? [:]).map { (key: $0.key.description, command: $0.value.map(\.description).joined(separator: "; ")) }
+            let rows = (config.modes[m] ?? [:]).map { binding in
+                let all = binding.key.mods.count == Mod.allCases.count
+                return (key: all ? "hyper-\(binding.key.key)" : binding.key.description,
+                        command: binding.value.map(\.description).joined(separator: "; "))
+            }
             overlay.showMode(m, rows.sorted { $0.key < $1.key }, on: activeFrame)
         }
         onChange()

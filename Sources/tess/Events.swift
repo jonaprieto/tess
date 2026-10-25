@@ -7,6 +7,8 @@ enum Events {
     static let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/tess")
     static let url = dir.appendingPathComponent("events.jsonl")
     private static let lock = NSLock()
+    /// Writes happen here, so a slow disk or a rotation never stalls the main thread.
+    private static let queue = DispatchQueue(label: "tess.events", qos: .utility)
     nonisolated(unsafe) private static var handle: FileHandle?
     nonisolated(unsafe) private static var written = 0
     private static let time: ISO8601DateFormatter = {
@@ -25,9 +27,13 @@ enum Events {
               var line = try? JSONSerialization.data(withJSONObject: event, options: [.sortedKeys, .withoutEscapingSlashes])
         else { return }
         line.append(0x0A)
-        if handle == nil || written > 20_000_000 { reopen(rotate: handle != nil) }
-        try? handle?.write(contentsOf: line)
-        written += line.count
+        queue.async {
+            lock.lock()
+            defer { lock.unlock() }
+            if handle == nil || written > 20_000_000 { reopen(rotate: handle != nil) }
+            try? handle?.write(contentsOf: line)
+            written += line.count
+        }
     }
 
     private static func reopen(rotate: Bool) {

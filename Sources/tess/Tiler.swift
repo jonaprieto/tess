@@ -170,10 +170,17 @@ final class Tiler {
     }
 
     /// Every window that exists, on any Space.
+    /// Every window that exists, on any Space. About 15 ms with a few hundred windows, and a
+    /// Space switch asks once per app: one answer serves a second.
     static func liveWindowIDs() -> Set<WindowID> {
+        if let c = liveCache, Date().timeIntervalSince(c.at) < 1 { return c.ids }
         let list = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
-        return Set(list.compactMap { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value })
+        let ids = Set(list.compactMap { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value })
+        liveCache = (ids, Date())
+        return ids
     }
+
+    nonisolated(unsafe) private static var liveCache: (ids: Set<WindowID>, at: Date)?
 
     /// Windows that were already open when tess started: tiled by where they are, next to
     /// where everything else is going.
@@ -557,6 +564,8 @@ final class Tiler {
     private func flashFocus(after delay: Double = 0.18) {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self else { return }
+            // With labels always on, the focused window's border already says it.
+            if self.config.windowLabels == .always, self.world.focused != nil { return }
             self.overlay.flash(self.world.focused.flatMap { self.infos[$0]?.frame } ?? self.activeFrame)
         }
     }
@@ -608,6 +617,7 @@ final class Tiler {
             overlay.hideMode()
         } else {
             mode = "main"
+            jumping = false
             registerMode()
             rebuild()
         }
@@ -655,6 +665,7 @@ final class Tiler {
         }
         for (pid, w) in workers where config.ignore.contains(w.app.bundleIdentifier ?? "") { untrack(pid) }
         mode = "main"
+        jumping = false
         overlay.hideMode()
         registerMode()
         if announce { sweep(all: true) }

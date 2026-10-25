@@ -18,21 +18,27 @@ final class Decorations {
         while panels.count > screens.count { panels.removeLast().orderOut(nil) }
         for (n, screen) in screens.enumerated() {
             let p = panels[n]
-            let view = (p.contentView as? DecorationView) ?? DecorationView()
+            let view: DecorationView
+            if let v = p.contentView as? DecorationView {
+                view = v
+            } else {
+                view = DecorationView()
+                p.contentView = view
+            }
             view.screen = screen
             view.number = n + 1
             view.jumping = jumping
             view.windows = windows.filter { screen.intersects($0.frame) }
-            p.contentView = view
-            p.setFrame(Screens.flip(screen), display: false)
+            let frame = Screens.flip(screen)
+            if p.frame != frame { p.setFrame(frame, display: false) }
             view.needsDisplay = true
-            p.orderFrontRegardless()
+            if !p.isVisible { p.orderFrontRegardless() }
         }
     }
 
+    /// Hidden, but kept for the next time (jump mode shows them again).
     func hide() {
         panels.forEach { $0.orderOut(nil) }
-        panels = []
     }
 
     private static func panel() -> NSPanel {

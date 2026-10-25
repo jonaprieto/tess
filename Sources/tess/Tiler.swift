@@ -403,12 +403,18 @@ final class Tiler {
             }
         }
         if world.focused != before, let f = world.focused { focus(f) }
-        if flash {
-            let frames = world.frames(inner: config.inner, outer: config.outer)
-            overlay.flash(world.focused.flatMap { frames[$0] ?? infos[$0]?.frame } ?? activeFrame)
-        }
+        if flash { flashFocus() }
         scheduleApply()
         return ""
+    }
+
+    /// Outlines the focused window (or the active monitor when it has none) once the move has
+    /// landed: by then the window's own report says where it really is.
+    private func flashFocus(after delay: Double = 0.18) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self else { return }
+            self.overlay.flash(self.world.focused.flatMap { self.infos[$0]?.frame } ?? self.activeFrame)
+        }
     }
 
     private func moveFloating(_ id: WindowID, to m: Int) {
@@ -591,8 +597,7 @@ final class Tiler {
             focus(id)
         }
         scheduleApply()
-        let frames = world.frames(inner: config.inner, outer: config.outer)
-        if let r = frames[id] ?? infos[id]?.frame { overlay.flash(r) }
+        flashFocus(after: away ? 0.8 : 0.18)
     }
 
     /// Windows (most recently focused first), then apps.

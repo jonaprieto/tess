@@ -46,23 +46,41 @@ final class Overlay {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: hide)
     }
 
-    /// A border around `rect` for 300 ms.
+    /// A rounded, softly glowing border on `rect` that fades in and out.
     func flash(_ rect: CGRect) {
         flashHide?.cancel()
         let p = flashPanel ?? Self.panel()
         flashPanel = p
-        let border = NSView()
-        border.wantsLayer = true
-        border.layer?.borderWidth = 4
-        border.layer?.cornerRadius = 10
-        border.layer?.borderColor = NSColor.controlAccentColor.cgColor
-        p.contentView = border
-        p.setFrame(Screens.flip(rect).insetBy(dx: -3, dy: -3), display: true)
-        p.alphaValue = 1
+        let glow: CGFloat = 10
+        let border = CAShapeLayer()
+        let box = CGRect(origin: .zero, size: rect.size).offsetBy(dx: glow, dy: glow).insetBy(dx: 1.5, dy: 1.5)
+        border.path = CGPath(roundedRect: box, cornerWidth: 14, cornerHeight: 14, transform: nil)
+        border.fillColor = nil
+        border.strokeColor = NSColor.controlAccentColor.cgColor
+        border.lineWidth = 3
+        border.shadowColor = NSColor.controlAccentColor.cgColor
+        border.shadowRadius = 6
+        border.shadowOpacity = 0.9
+        border.shadowOffset = .zero
+        let view = NSView()
+        view.wantsLayer = true
+        view.layer?.addSublayer(border)
+        p.contentView = view
+        p.setFrame(Screens.flip(rect).insetBy(dx: -glow, dy: -glow), display: true)
+        p.alphaValue = 0
         p.orderFrontRegardless()
-        let hide = DispatchWorkItem { p.orderOut(nil) }
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.08
+            p.animator().alphaValue = 1
+        }
+        let hide = DispatchWorkItem {
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.25
+                p.animator().alphaValue = 0
+            }, completionHandler: { if p.alphaValue == 0 { p.orderOut(nil) } })
+        }
         flashHide = hide
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: hide)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: hide)
     }
 
     private enum Place { case center, bottom }

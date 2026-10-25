@@ -1,7 +1,8 @@
 import Foundation
 
-/// `~/.config/tess/config.json`. A file replaces the defaults as a whole; start from
-/// `tess default-config`.
+/// The built-in defaults with `~/.config/tess/config.json` on top: gaps and app lists in
+/// the file replace the defaults, verbs and key bindings merge key by key, and a `null`
+/// removes a default. New defaults therefore reach an existing file.
 public struct Config: Equatable, Sendable {
     public var inner: Double = 10
     public var outer: Double = 10
@@ -11,42 +12,115 @@ public struct Config: Equatable, Sendable {
     public var tile: [String] = []
     /// Bundle ids tess never touches.
     public var ignore: [String] = []
+    /// Picker verbs: `cd ~/x` opens the folder with the app named here.
+    public var verbs: [String: String] = [:]
     /// Mode -> key -> commands. `main` is where tess starts.
     public var modes: [String: [KeySpec: [Command]]] = [:]
+    /// The merged config as written, for the settings window.
+    public var raw = Raw()
 
-    struct Raw: Decodable {
-        struct Gaps: Decodable { var inner: Double?, outer: Double? }
-        var gaps: Gaps?
-        var float: [String]?
-        var tile: [String]?
-        var ignore: [String]?
-        var modes: [String: [String: String]]
+    /// The config as JSON: every field optional, so a file can hold only what it changes.
+    public struct Raw: Codable, Equatable, Sendable {
+        public struct Gaps: Codable, Equatable, Sendable {
+            public var inner: Double?, outer: Double?
+            public init(inner: Double? = nil, outer: Double? = nil) {
+                self.inner = inner
+                self.outer = outer
+            }
+        }
+        public var gaps: Gaps?
+        public var float: [String]?
+        public var tile: [String]?
+        public var ignore: [String]?
+        public var verbs: [String: String?]?
+        public var modes: [String: [String: String?]]?
+        public init() {}
     }
 
-    public static func decode(_ data: Data) throws -> Config {
-        let raw: Raw
+    public static func load(_ file: Data?) throws -> Config {
+        guard let file else { return try build(defaultRaw) }
+        return try build(merged(defaultRaw, decodeRaw(file)))
+    }
+
+    static func decodeRaw(_ data: Data) throws -> Raw {
         do {
-            raw = try JSONDecoder().decode(Raw.self, from: data)
+            return try JSONDecoder().decode(Raw.self, from: data)
         } catch let DecodingError.dataCorrupted(ctx) {
             throw ParseError("config is not valid JSON: \(ctx.underlyingError.map { "\($0)" } ?? ctx.debugDescription)")
-        } catch let DecodingError.keyNotFound(key, ctx) {
-            throw ParseError("config: missing \((ctx.codingPath.map(\.stringValue) + [key.stringValue]).joined(separator: "."))")
         } catch let DecodingError.typeMismatch(_, ctx) {
             throw ParseError("config: wrong type at \(ctx.codingPath.map(\.stringValue).joined(separator: "."))")
+        } catch let DecodingError.valueNotFound(_, ctx) {
+            throw ParseError("config: missing value at \(ctx.codingPath.map(\.stringValue).joined(separator: "."))")
         }
+    }
+
+    /// `top` over `base`; the result has no nulls left.
+    public static func merged(_ base: Raw, _ top: Raw) -> Raw {
+        func merge(_ b: [String: String?]?, _ t: [String: String?]?) -> [String: String?]? {
+            guard let t else { return b }
+            var out = b ?? [:]
+            for (k, v) in t { out[k] = v.map { .some($0) } ?? nil }
+            return out.filter { $0.value != nil }
+        }
+        var r = base
+        if let g = top.gaps { r.gaps = Raw.Gaps(inner: g.inner ?? base.gaps?.inner, outer: g.outer ?? base.gaps?.outer) }
+        r.float = top.float ?? base.float
+        r.tile = top.tile ?? base.tile
+        r.ignore = top.ignore ?? base.ignore
+        r.verbs = merge(base.verbs, top.verbs)
+        var modes = base.modes ?? [:]
+        for (m, bindings) in top.modes ?? [:] { modes[m] = merge(modes[m], bindings) }
+        r.modes = modes
+        return r
+    }
+
+    /// What `edited` changes relative to `base`, as a file would hold it (removals as null).
+    public static func overrides(_ edited: Raw, over base: Raw) -> Raw {
+        func diff(_ e: [String: String?]?, _ b: [String: String?]?) -> [String: String?]? {
+            var out: [String: String?] = [:]
+            for (k, v) in e ?? [:] where b?[k] != v { out[k] = v }
+            for (k, _) in b ?? [:] where e?[k] == nil { out[k] = .some(nil) }
+            return out.isEmpty ? nil : out
+        }
+        var o = Raw()
+        if edited.gaps != base.gaps { o.gaps = edited.gaps }
+        if edited.float != base.float { o.float = edited.float }
+        if edited.tile != base.tile { o.tile = edited.tile }
+        if edited.ignore != base.ignore { o.ignore = edited.ignore }
+        o.verbs = diff(edited.verbs, base.verbs)
+        var modes: [String: [String: String?]] = [:]
+        for m in Set((edited.modes ?? [:]).keys).union((base.modes ?? [:]).keys) {
+            if let d = diff(edited.modes?[m], base.modes?[m]) { modes[m] = d }
+        }
+        o.modes = modes.isEmpty ? nil : modes
+        return o
+    }
+
+    /// The file for `edited`: only its differences from the defaults, keys sorted.
+    public static func file(for edited: Raw) throws -> Data {
+        let e = JSONEncoder()
+        e.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try e.encode(overrides(edited, over: defaultRaw))
+    }
+
+    static func build(_ raw: Raw) throws -> Config {
         var c = Config()
+        c.raw = raw
         c.inner = raw.gaps?.inner ?? 10
         c.outer = raw.gaps?.outer ?? 10
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
         c.ignore = raw.ignore ?? []
-        guard raw.modes["main"] != nil else { throw ParseError("config: modes.main is missing") }
-        for (mode, bindings) in raw.modes {
+        c.verbs = (raw.verbs ?? [:]).compactMapValues { $0 }
+        let modes = raw.modes ?? [:]
+        guard modes["main"] != nil else { throw ParseError("config: modes.main is missing") }
+        for (mode, bindings) in modes {
             var parsed: [KeySpec: [Command]] = [:]
             for (key, line) in bindings {
+                guard let line else { continue }
                 do {
                     let commands = try Command.parse(line)
-                    for case .mode(let m) in commands where raw.modes[m] == nil {
+                    for case .mode(let m) in commands where modes[m] == nil {
                         throw ParseError("no mode '\(m)'")
                     }
                     parsed[try KeySpec.parse(key)] = commands
@@ -66,6 +140,7 @@ public struct Config: Equatable, Sendable {
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": ["io.github.ender-wang.EdgeMark"],
+      "verbs": {"cd": "iTerm", "code": "Visual Studio Code"},
       "modes": {
         "main": {
           "alt-h": "focus left",
@@ -155,7 +230,11 @@ public struct Config: Equatable, Sendable {
     }
     """#
 
+    public static let defaultRaw: Raw = {
+        do { return try decodeRaw(Data(defaultJSON.utf8)) } catch { fatalError("built-in config: \(error)") }
+    }()
+
     public static let defaults: Config = {
-        do { return try decode(Data(defaultJSON.utf8)) } catch { fatalError("built-in config: \(error)") }
+        do { return try build(defaultRaw) } catch { fatalError("built-in config: \(error)") }
     }()
 }

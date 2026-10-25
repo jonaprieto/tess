@@ -483,11 +483,7 @@ final class Tiler {
     func loadConfig(announce: Bool) {
         let url = Self.configURL
         do {
-            if FileManager.default.fileExists(atPath: url.path) {
-                config = try Config.decode(Data(contentsOf: url))
-            } else {
-                config = .defaults
-            }
+            config = try Config.load(FileManager.default.fileExists(atPath: url.path) ? Data(contentsOf: url) : nil)
             configError = nil
             if announce { toast("config reloaded") }
         } catch {

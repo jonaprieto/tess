@@ -54,23 +54,48 @@ import Testing
 
 @Test func badConfigNamesThePlace() {
     let typo = #"{"modes": {"main": {"alt-h": "focus lefty"}}}"#
-    #expect(throws: ParseError.self) { try Config.decode(Data(typo.utf8)) }
+    #expect(throws: ParseError.self) { try Config.load(Data(typo.utf8)) }
     do {
-        _ = try Config.decode(Data(typo.utf8))
+        _ = try Config.load(Data(typo.utf8))
     } catch {
         #expect("\(error)".contains("modes.main.alt-h"))
     }
-    let noMode = #"{"modes": {"main": {"alt-r": "mode resize"}}}"#
-    #expect(throws: ParseError.self) { try Config.decode(Data(noMode.utf8)) }
-    let noMain = #"{"modes": {"other": {}}}"#
-    #expect(throws: ParseError.self) { try Config.decode(Data(noMain.utf8)) }
-    #expect(throws: ParseError.self) { try Config.decode(Data("{".utf8)) }
+    let noMode = #"{"modes": {"main": {"alt-r": "mode nowhere"}}}"#
+    #expect(throws: ParseError.self) { try Config.load(Data(noMode.utf8)) }
+    #expect(throws: ParseError.self) { try Config.load(Data("{".utf8)) }
 }
 
-@Test func minimalConfigUsesDefaultGaps() throws {
-    let c = try Config.decode(Data(#"{"modes": {"main": {}}}"#.utf8))
-    #expect(c.inner == 10 && c.outer == 10)
-    #expect(c.ignore.isEmpty)
+@Test func theFileGoesOnTopOfTheDefaults() throws {
+    #expect(try Config.load(Data("{}".utf8)) == Config.defaults)
+    #expect(try Config.load(nil) == Config.defaults)
+    // An old full copy of the defaults still gets bindings added since.
+    let old = #"{"modes": {"main": {"alt-h": "focus left"}}}"#
+    let c = try Config.load(Data(old.utf8))
+    #expect(c.modes["main"]?[KeySpec(key: "g", mods: [.cmd, .alt, .ctrl, .shift])] == [.pick])
+    // null removes a default binding; lists replace.
+    let edits = #"{"float": [], "gaps": {"inner": 4}, "modes": {"main": {"alt-t": null, "alt-y": "balance"}}}"#
+    let e = try Config.load(Data(edits.utf8))
+    #expect(e.float.isEmpty)
+    #expect(e.inner == 4 && e.outer == 10)
+    #expect(e.modes["main"]?[KeySpec(key: "t", mods: [.alt])] == nil)
+    #expect(e.modes["main"]?[KeySpec(key: "y", mods: [.alt])] == [.balance])
+    #expect(e.verbs["cd"] == "iTerm")
+}
+
+@Test func overridesKeepOnlyWhatChanged() throws {
+    let base = Config.defaultRaw
+    #expect(Config.overrides(base, over: base) == Config.Raw())
+    var edited = base
+    edited.gaps = .init(inner: 6, outer: 10)
+    edited.modes?["main"]?["alt-t"] = nil
+    edited.modes?["main"]?["alt-y"] = "balance"
+    edited.verbs?["ssh"] = "iTerm"
+    edited.ignore = ["io.github.ender-wang.EdgeMark", "com.example.app"]
+    let o = Config.overrides(edited, over: base)
+    #expect(o.float == nil && o.tile == nil)
+    #expect(o.modes?["main"]?.count == 2)
+    #expect(o.modes?["main"]?["alt-t"] == .some(nil))
+    #expect(Config.merged(base, o) == edited)
 }
 
 @Test func descriptionsParseBack() throws {

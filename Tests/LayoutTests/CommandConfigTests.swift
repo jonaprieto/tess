@@ -12,6 +12,12 @@ import Testing
     #expect(try Command.parse("retile; mode main") == [.retile, .mode("main")])
 }
 
+@Test func pickTakesItsStartingText() throws {
+    #expect(try Command.parse("pick") == [.pick("")])
+    #expect(try Command.parse("pick cd ~/an") == [.pick("cd ~/an")])
+    #expect(Command.pick("code ~").description == "pick code ~")
+}
+
 @Test func execTakesTheRestOfTheLine() throws {
     #expect(try Command.parse("exec open -a kitty; echo hi") == [.exec("open -a kitty; echo hi")])
     #expect(try Command.parse("balance; exec open x") == [.balance, .exec("open x")])
@@ -71,7 +77,7 @@ import Testing
     // An old full copy of the defaults still gets bindings added since.
     let old = #"{"modes": {"main": {"alt-h": "focus left"}}}"#
     let c = try Config.load(Data(old.utf8))
-    #expect(c.modes["main"]?[KeySpec(key: "g", mods: [.cmd, .alt, .ctrl, .shift])] == [.pick])
+    #expect(c.modes["main"]?[KeySpec(key: "g", mods: [.cmd, .alt, .ctrl, .shift])] == [.pick("")])
     // null removes a default binding; lists replace.
     let edits = #"{"float": [], "gaps": {"inner": 4}, "modes": {"main": {"alt-t": null, "alt-y": "balance"}}}"#
     let e = try Config.load(Data(edits.utf8))
@@ -123,5 +129,5 @@ import Testing
     #expect(wm.count == 33)
     #expect(wm[KeySpec(key: "backspace", mods: [])] == [.clearMonitor])
     #expect(wm[KeySpec(key: "x", mods: [])] == [.closeReplace])
-    #expect(c.modes["main"]?[KeySpec(key: "g", mods: [.cmd, .alt, .ctrl, .shift])] == [.pick])
+    #expect(c.modes["main"]?[KeySpec(key: "g", mods: [.cmd, .alt, .ctrl, .shift])] == [.pick("")])
 }

@@ -8,6 +8,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case window(WindowID)
         case tab(Tab)
         case app(URL)
+        /// A folder to open with an app, from a verb like `cd ~/anoma`.
+        case open(app: String, path: String)
     }
 
     struct Tab {
@@ -57,6 +59,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     private var screen = CGRect.zero
     private var monitor: Any?
     private var picked: Item?
+    private var verbs: [String: String] = [:]
 
     override init() {
         panel = KeyPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -94,12 +97,14 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     var isOpen: Bool { panel.isVisible }
 
     /// Shows step 1 on `screen`. With `fixed`, a pick goes straight there (no step 2).
-    func open(_ items: [Item], on screen: CGRect, fixed: Spot?, map: @escaping () -> Map) {
+    func open(_ items: [Item], on screen: CGRect, fixed: Spot?, verbs: [String: String], text: String = "",
+              map: @escaping () -> Map) {
         self.items = items
+        self.verbs = verbs
         self.fixed = fixed
         self.screen = screen
         mapModel = map
-        field.stringValue = ""
+        field.stringValue = text
         picked = nil
         filter()
         showList()
@@ -109,6 +114,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         panel.alphaValue = 0
         panel.makeKeyAndOrderFront(nil)
         panel.makeFirstResponder(field)
+        field.currentEditor()?.moveToEndOfDocument(nil)
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.12
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -116,6 +122,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             panel.animator().setFrame(final, display: true)
         }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in self?.key(e) ?? e }
+        Log.write("picker: open on \(screen), panel \(final), key \(panel.isKeyWindow)")
     }
 
     /// Tabs arrive after the panel is up; they go after the windows, before the apps.
@@ -137,6 +144,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     func windowDidResignKey(_ notification: Notification) {
         guard isOpen else { return }
+        Log.write("picker: lost focus to \(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?"), closing")
         close()
         onCancel()
     }
@@ -147,6 +155,14 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     private func filter() {
         let q = field.stringValue.trimmingCharacters(in: .whitespaces)
+        if let folders = folders(field.stringValue) {
+            shown = folders
+            list.items = shown
+            list.query = ""
+            list.selected = 0
+            list.needsDisplay = true
+            return
+        }
         shown = items.enumerated()
             .compactMap { i, item in fuzzyScore(q, item.search).map { (score: $0, i: i, item: item) } }
             .sorted { ($0.score, -$0.i) > ($1.score, -$1.i) }
@@ -155,6 +171,38 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         list.query = q
         list.selected = 0
         list.needsDisplay = true
+    }
+
+    /// `verb path`: the folders the path could mean, the typed one first when it exists.
+    private func folders(_ text: String) -> [Item]? {
+        let parts = text.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 2, let app = verbs[parts[0]] else { return nil }
+        let typed = parts[1]
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let path = typed.isEmpty ? home + "/" : (typed as NSString).expandingTildeInPath + (typed.hasSuffix("/") ? "/" : "")
+        let base = path.hasSuffix("/") ? String(path.dropLast()) : (path as NSString).deletingLastPathComponent
+        let prefix = path.hasSuffix("/") ? "" : (path as NSString).lastPathComponent
+        func isDir(_ p: String) -> Bool {
+            var d: ObjCBool = false
+            return FileManager.default.fileExists(atPath: p, isDirectory: &d) && d.boolValue
+        }
+        func item(_ p: String) -> Item {
+            let shown = p.hasPrefix(home) ? "~" + p.dropFirst(home.count) : p
+            return Item(kind: .open(app: app, path: p), title: shown.isEmpty ? "~" : shown, detail: "open in \(app)",
+                        icon: NSWorkspace.shared.icon(forFile: p), search: "")
+        }
+        var out: [Item] = []
+        let exact = path.hasSuffix("/") ? String(path.dropLast()) : path
+        if !typed.isEmpty, isDir(exact) { out.append(item(exact)) }
+        let names = ((try? FileManager.default.contentsOfDirectory(atPath: base.isEmpty ? "/" : base)) ?? []).sorted {
+            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+        }
+        for name in names where name.lowercased().hasPrefix(prefix.lowercased()) && (!name.hasPrefix(".") || prefix.hasPrefix(".")) {
+            let full = (base.isEmpty ? "" : base) + "/" + name
+            if full != exact, isDir(full) { out.append(item(full)) }
+            if out.count >= 60 { break }
+        }
+        return out
     }
 
     private func showList() {
@@ -167,7 +215,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         list.frame = NSRect(x: 10, y: 34, width: size.width - 20, height: rows * ListView.row)
         footer.frame = NSRect(x: 0, y: 9, width: size.width, height: 16)
         footer.stringValue = fixed == nil
-            ? "↵ pick, then choose where      ⌃N ⌃P move      esc close"
+            ? "↵ pick, then choose where      ⌃N ⌃P move      cd or code + folder, ⇥ completes      esc close"
             : "↵ fill the empty place      ⌃N ⌃P move      esc leave it empty"
         for v in [magnifier, field, divider, list] as [NSView] { v.isHidden = false }
         map.isHidden = true
@@ -237,6 +285,12 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             return nil
         }
         switch (e.keyCode, ctrl, ch) {
+        case (48, _, _):  // tab completes a folder
+            guard shown.indices.contains(list.selected), case .open = shown[list.selected].kind,
+                  let verb = field.stringValue.split(separator: " ").first else { return nil }
+            field.stringValue = "\(verb) \(shown[list.selected].title)/"
+            field.currentEditor()?.moveToEndOfDocument(nil)
+            filter()
         case (125, _, _), (_, true, "n"), (_, true, "j"): list.move(1)
         case (126, _, _), (_, true, "p"), (_, true, "k"): list.move(-1)
         case (36, _, _), (76, _, _):

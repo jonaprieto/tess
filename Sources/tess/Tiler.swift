@@ -313,6 +313,16 @@ final class Tiler {
             : (Screens.current().first?.frame ?? .zero)
     }
 
+    /// The screen being looked at: the one with macOS's focused window (also when it is a
+    /// fullscreen app tess leaves alone), else the one with the mouse.
+    private var lookedAtFrame: CGRect {
+        if let f = osFocused.flatMap({ infos[$0]?.frame }), let m = world.monitorIndex(for: f) { return world.monitors[m].frame }
+        let mouse = NSEvent.mouseLocation
+        let h = NSScreen.screens.first?.frame.height ?? 0
+        let p = CGPoint(x: mouse.x, y: h - mouse.y)
+        return world.monitors.first { $0.frame.insetBy(dx: 0, dy: -40).contains(p) }?.frame ?? activeFrame
+    }
+
     // MARK: Commands
 
     /// Runs commands from a hotkey or the CLI; returns what to print.
@@ -369,12 +379,12 @@ final class Tiler {
         case .pause: setPaused(!paused)
         case .tree: return tree()
         case .nop: break
-        case .pick:
+        case .pick(let text):
             if picker.isOpen {
                 picker.close()
                 pickerClosed(cancelled: true)
             } else {
-                openPicker(fixed: nil)
+                openPicker(fixed: nil, text: text)
             }
         case .clearMonitor:
             world.clearMonitor()
@@ -469,7 +479,7 @@ final class Tiler {
                 return (key: all ? "hyper-\(binding.key.key)" : binding.key.description,
                         command: binding.value.map(\.description).joined(separator: "; "))
             }
-            overlay.showMode(m, rows.sorted { $0.key < $1.key }, on: activeFrame)
+            overlay.showMode(m, rows.sorted { $0.key < $1.key }, on: lookedAtFrame)
         }
         onChange()
     }
@@ -502,14 +512,14 @@ final class Tiler {
         onChange()
     }
 
-    func toast(_ s: String) { overlay.toast(s, on: activeFrame) }
+    func toast(_ s: String) { overlay.toast(s, on: lookedAtFrame) }
 
     // MARK: Picker
 
-    private func openPicker(fixed: Spot?) {
+    private func openPicker(fixed: Spot?, text: String = "") {
         guard !picking else { return }
         beginPicking()
-        showPicker(fixed: fixed)
+        showPicker(fixed: fixed, text: text)
     }
 
     private func beginPicking() {
@@ -518,8 +528,8 @@ final class Tiler {
         overlay.hideMode()
     }
 
-    private func showPicker(fixed: Spot?) {
-        picker.open(pickerItems(), on: activeFrame, fixed: fixed) { [weak self] in
+    private func showPicker(fixed: Spot?, text: String = "") {
+        picker.open(pickerItems(), on: lookedAtFrame, fixed: fixed, verbs: config.verbs, text: text) { [weak self] in
             self?.pickerMap() ?? Picker.Map(monitors: [], windows: [], labels: [:])
         }
         Browsers.tabs { [weak self] tabs in self?.picker.add(tabs) }
@@ -547,6 +557,14 @@ final class Tiler {
                     }
                 }
             }
+        case .open(let name, let path):
+            guard let app = apps().first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) else {
+                toast("no app named \(name)")
+                return
+            }
+            if case .place(let spot) = choice, let b = app.bundleID { pending = (b, spot, Date().addingTimeInterval(10)) }
+            NSWorkspace.shared.open([URL(fileURLWithPath: path)], withApplicationAt: app.url,
+                                    configuration: NSWorkspace.OpenConfiguration())
         case .app(let url):
             let running = NSWorkspace.shared.runningApplications.first { $0.bundleURL == url }
             let windows = infos.values.filter { $0.pid == running?.processIdentifier && $0.standard }.map(\.id)

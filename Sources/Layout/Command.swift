@@ -12,7 +12,7 @@ public enum Command: Equatable, Sendable {
     case focusMonitor(Int), cycleMonitor(Int), moveToMonitor(Int)
     case exec(String), reload, mode(String), retile, rescue, pause, tree, nop
     /// The picker; close the focused window and pick what fills its place.
-    case pick, closeReplace
+    case pick(String), closeReplace
     /// Send every window on the active monitor to the next one.
     case clearMonitor
 
@@ -20,7 +20,7 @@ public enum Command: Equatable, Sendable {
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
-        "pick": .pick, "close-replace": .closeReplace, "clear-monitor": .clearMonitor,
+        "pick": .pick(""), "close-replace": .closeReplace, "clear-monitor": .clearMonitor,
     ]
 
     /// Commands separated by `;`. `exec` takes the rest of the line, `;` included.
@@ -29,6 +29,11 @@ public enum Command: Equatable, Sendable {
         var rest = Substring(line)
         while true {
             let part = rest.drop(while: \.isWhitespace)
+            if part.hasPrefix("pick ") {
+                // Like exec, the rest of the line: the text the picker starts with.
+                out.append(.pick(part.dropFirst(5).trimmingCharacters(in: .whitespaces)))
+                return out
+            }
             if part == "exec" || part.hasPrefix("exec ") {
                 let cmd = part.dropFirst(4).trimmingCharacters(in: .whitespaces)
                 guard !cmd.isEmpty else { throw ParseError("exec needs a shell command") }
@@ -122,6 +127,7 @@ extension Command: CustomStringConvertible {
         case .moveToMonitor(let n): "move-to-monitor \(n)"
         case .exec(let s): "exec \(s)"
         case .mode(let m): "mode \(m)"
+        case .pick(let text): text.isEmpty ? "pick" : "pick \(text)"
         default: Command.simple.first { $0.value == self }?.key ?? "nop"
         }
     }

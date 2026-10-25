@@ -1139,7 +1139,8 @@ final class Tiler {
     /// Borders and letters on every window, numbers on every screen (overlay.window_labels).
     private func refreshDecorations() {
         labels = stableLabels(labels, windows: labeledWindows, alphabet: Picker.alphabet)
-        guard config.overlayWindowLabels, !paused, !starting else {
+        let show = config.windowLabels == .always || (config.windowLabels == .jump && jumping)
+        guard show, !paused, !starting else {
             if !drawn.isEmpty { decorations.hide() }
             drawn = []
             return

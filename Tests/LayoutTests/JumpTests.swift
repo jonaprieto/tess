@@ -11,9 +11,14 @@ import Testing
     #expect(Command.jump.label == "Jump to a window")
 }
 
-@Test func windowLabelsAreOnByDefaultAndBound() throws {
-    #expect(Config.defaults.overlayWindowLabels)
-    #expect(!(try Config.load(Data(#"{"overlay": {"window_labels": false}}"#.utf8))).overlayWindowLabels)
+@Test func windowLabelsShowWhenJumpingByDefault() throws {
+    #expect(Config.defaults.windowLabels == .jump)
+    #expect(try Config.load(Data(#"{"overlay": {"window_labels": "always"}}"#.utf8)).windowLabels == .always)
+    #expect(try Config.load(Data(#"{"overlay": {"window_labels": "off"}}"#.utf8)).windowLabels == .off)
+    // The earlier on/off switch still reads.
+    #expect(try Config.load(Data(#"{"overlay": {"window_labels": true}}"#.utf8)).windowLabels == .always)
+    #expect(try Config.load(Data(#"{"overlay": {"window_labels": false}}"#.utf8)).windowLabels == .off)
+    #expect(throws: ParseError.self) { try Config.load(Data(#"{"overlay": {"window_labels": "sometimes"}}"#.utf8)) }
     #expect(Config.defaults.modes["main"]?[KeySpec(key: "j", mods: [.cmd, .alt, .ctrl, .shift])] == [.jump])
     #expect(Config.defaults.modes["wm"]?[KeySpec(key: "g", mods: [])] == [.jump])
 }

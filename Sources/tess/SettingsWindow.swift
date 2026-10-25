@@ -35,7 +35,7 @@ final class SettingsModel {
     var inner: Double
     var outer: Double
     var overlayAllScreens: Bool
-    var windowLabels: Bool
+    var windowLabels: Config.LabelMode
     var float: [String]
     var tile: [String]
     var ignore: [String]
@@ -53,7 +53,7 @@ final class SettingsModel {
         inner = raw.gaps?.inner ?? 10
         outer = raw.gaps?.outer ?? 10
         overlayAllScreens = raw.overlay?.allScreens ?? true
-        windowLabels = raw.overlay?.windowLabels ?? true
+        windowLabels = raw.overlay?.windowLabels ?? .jump
         float = raw.float ?? []
         tile = raw.tile ?? []
         ignore = raw.ignore ?? []
@@ -149,7 +149,11 @@ struct GeneralTab: View {
             }
             Section("Overlays") {
                 Toggle("Show a mode's keys on every screen", isOn: $model.overlayAllScreens)
-                Toggle("Label every window and screen (borders, letters, numbers)", isOn: $model.windowLabels)
+                SwiftUI.Picker("Window letters and screen numbers", selection: $model.windowLabels) {
+                    Text("When jumping").tag(Config.LabelMode.jump)
+                    Text("Always").tag(Config.LabelMode.always)
+                    Text("Off").tag(Config.LabelMode.off)
+                }
             }
             Section {
                 ForEach($model.verbs) { $row in

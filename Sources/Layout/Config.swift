@@ -16,8 +16,16 @@ public struct Config: Equatable, Sendable {
     public var verbs: [String: String] = [:]
     /// The keys of a mode on every screen, rather than only the one being worked on.
     public var overlayAllScreens = true
-    /// A border and a letter on every window, and a number on every screen.
-    public var overlayWindowLabels = true
+    /// When windows show their border and letter, and screens their number.
+    public var windowLabels = LabelMode.jump
+
+    public enum LabelMode: String, Codable, Sendable {
+        /// Always on screen.
+        case always
+        /// Only in jump mode, while they are keys.
+        case jump
+        case off
+    }
     /// Mode -> key -> commands. `main` is where tess starts.
     public var modes: [String: [KeySpec: [Command]]] = [:]
     /// The merged config as written, for the settings window.
@@ -34,14 +42,27 @@ public struct Config: Equatable, Sendable {
         }
         public struct Overlay: Codable, Equatable, Sendable {
             public var allScreens: Bool?
-            public var windowLabels: Bool?
+            public var windowLabels: LabelMode?
             enum CodingKeys: String, CodingKey {
                 case allScreens = "all_screens"
                 case windowLabels = "window_labels"
             }
-            public init(allScreens: Bool? = nil, windowLabels: Bool? = nil) {
+            public init(allScreens: Bool? = nil, windowLabels: LabelMode? = nil) {
                 self.allScreens = allScreens
                 self.windowLabels = windowLabels
+            }
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                allScreens = try c.decodeIfPresent(Bool.self, forKey: .allScreens)
+                // "always", "jump" or "off"; the earlier true/false still reads.
+                if let on = try? c.decodeIfPresent(Bool.self, forKey: .windowLabels) {
+                    windowLabels = on ? .always : .off
+                } else if let s = try c.decodeIfPresent(String.self, forKey: .windowLabels) {
+                    guard let mode = LabelMode(rawValue: s) else {
+                        throw ParseError("config: overlay.window_labels is \"always\", \"jump\" or \"off\", not \"\(s)\"")
+                    }
+                    windowLabels = mode
+                }
             }
         }
         public var gaps: Gaps?
@@ -66,6 +87,8 @@ public struct Config: Equatable, Sendable {
             throw ParseError("config is not valid JSON: \(ctx.underlyingError.map { "\($0)" } ?? ctx.debugDescription)")
         } catch let DecodingError.typeMismatch(_, ctx) {
             throw ParseError("config: wrong type at \(ctx.codingPath.map(\.stringValue).joined(separator: "."))")
+        } catch let e as ParseError {
+            throw e
         } catch let DecodingError.valueNotFound(_, ctx) {
             throw ParseError("config: missing value at \(ctx.codingPath.map(\.stringValue).joined(separator: "."))")
         }
@@ -141,7 +164,7 @@ public struct Config: Equatable, Sendable {
         c.inner = min(max(raw.gaps?.inner ?? 10, 0), 100).rounded()
         c.outer = min(max(raw.gaps?.outer ?? 10, 0), 100).rounded()
         c.overlayAllScreens = raw.overlay?.allScreens ?? true
-        c.overlayWindowLabels = raw.overlay?.windowLabels ?? true
+        c.windowLabels = raw.overlay?.windowLabels ?? .jump
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
         c.ignore = raw.ignore ?? []
@@ -171,7 +194,7 @@ public struct Config: Equatable, Sendable {
     public static let defaultJSON = #"""
     {
       "gaps": {"inner": 10, "outer": 10},
-      "overlay": {"all_screens": true, "window_labels": true},
+      "overlay": {"all_screens": true, "window_labels": "jump"},
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": ["io.github.ender-wang.EdgeMark"],

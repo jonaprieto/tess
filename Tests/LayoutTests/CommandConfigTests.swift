@@ -138,7 +138,7 @@ import Testing
     let off = try Config.load(Data(#"{"overlay": {"all_screens": false}}"#.utf8))
     #expect(!off.overlayAllScreens)
     var edited = Config.defaultRaw
-    edited.overlay = .init(allScreens: false, windowLabels: true)
+    edited.overlay = .init(allScreens: false, windowLabels: .jump)
     #expect(Config.overrides(edited, over: Config.defaultRaw).overlay?.allScreens == false)
     #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).overlay == nil)
 }

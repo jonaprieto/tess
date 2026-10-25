@@ -13,12 +13,14 @@ public enum Command: Equatable, Sendable {
     case exec(String), reload, mode(String), retile, rescue, pause, tree, nop
     /// The picker; close the focused window and pick what fills its place.
     case pick, closeReplace
+    /// Send every window on the active monitor to the next one.
+    case clearMonitor
 
     static let simple: [String: Command] = [
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
-        "pick": .pick, "close-replace": .closeReplace,
+        "pick": .pick, "close-replace": .closeReplace, "clear-monitor": .clearMonitor,
     ]
 
     /// Commands separated by `;`. `exec` takes the rest of the line, `;` included.

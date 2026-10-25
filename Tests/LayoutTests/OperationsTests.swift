@@ -204,3 +204,14 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     w.remove(1)
     #expect(w.monitors[0].fullscreen == nil)
 }
+
+@Test func clearMonitorSendsEverythingToTheNextOne() {
+    var w = world([[1, 2], [3]], [[4]], focused: 1)
+    w.clearMonitor()
+    #expect(lanes(w).isEmpty)
+    #expect(lanes(w, 1) == [[4], [1, 2], [3]])
+    #expect(w.focused == 1)
+    var one = world([[1]], focused: 1)
+    one.clearMonitor()
+    #expect(lanes(one) == [[1]])
+}

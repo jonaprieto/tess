@@ -376,6 +376,9 @@ final class Tiler {
             } else {
                 openPicker(fixed: nil)
             }
+        case .clearMonitor:
+            world.clearMonitor()
+            flash = true
         case .closeReplace:
             guard let id = world.focused, let s = world.slot(of: id), let info = infos[id] else {
                 return "error: no tiled window focused"

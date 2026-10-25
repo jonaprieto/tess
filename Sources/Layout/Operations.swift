@@ -269,3 +269,16 @@ func grown(_ sizes: [Double], at i: Int, by px: Double, extent: Double) -> [Doub
         return rest > 0 ? sizes[j] / rest * (1 - share) : (1 - share) / Double(sizes.count - 1)
     }
 }
+
+extension World {
+    /// Every lane on the active monitor goes, in order, to the right end of the next monitor.
+    public mutating func clearMonitor() {
+        let m = activeMonitor
+        guard monitors.count > 1, monitors.indices.contains(m) else { return }
+        let next = (m + 1) % monitors.count
+        monitors[next].lanes += monitors[m].lanes
+        monitors[m].lanes = []
+        monitors[m].fullscreen = nil
+        if let f = focused { focused = f }
+    }
+}

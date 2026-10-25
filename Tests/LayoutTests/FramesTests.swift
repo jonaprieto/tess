@@ -51,7 +51,7 @@ func near(_ a: CGRect?, _ b: CGRect?, _ tolerance: Double = 1) -> Bool {
 @Test func fullscreenTakesTheMonitor() {
     var w = world([[1, 2], [3]], focused: 3)
     w.toggleFullscreen()
-    #expect(w.frames(inner: 10, outer: 10)[3] == CGRect(x: 10, y: 10, width: 980, height: 780))
+    #expect(w.frames(inner: 10, outer: 10)[3] == CGRect(x: 0, y: 0, width: 1000, height: 800))
 }
 
 @Test func rowsStackLanesVertically() {

@@ -21,7 +21,8 @@ extension World {
                     for (id, c) in zip(lane.windows, split(across, lane.sizes, gap: inner)) { out[id] = rect(a, c) }
                 }
             }
-            if let fs = mon.fullscreen, out[fs] != nil { out[fs] = area }
+            // Edge to edge, so it differs from a lone window, which already fills the gaps.
+            if let fs = mon.fullscreen, out[fs] != nil { out[fs] = mon.frame }
         }
         return out
     }

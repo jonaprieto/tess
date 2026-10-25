@@ -47,6 +47,7 @@ final class Tiler {
         let p = Picker()
         p.onDone = { [weak self] item, choice in self?.picked(item, choice) }
         p.onCancel = { [weak self] in self?.pickerClosed(cancelled: true) }
+        p.search = { [weak self] verb, query, done in self?.search(verb, query, done) }
         return p
     }()
     /// The picker is open (or about to open): no hotkeys, no focus changes.
@@ -344,7 +345,11 @@ final class Tiler {
         case .accordion: world.toggleAccordion()
         case .fullscreen:
             world.toggleFullscreen()
-            if let f = world.focused { focus(f) }
+            if let f = world.focused {
+                focus(f)
+                let on = world.locate(f).map { world.monitors[$0.m].fullscreen == f } ?? false
+                toast(on ? "fullscreen" : "fullscreen off")
+            }
         case .nativeFullscreen:
             if let id = world.focused ?? osFocused, let info = infos[id] { workers[info.pid]?.toggleNativeFullscreen(id) }
         case .float:
@@ -543,6 +548,7 @@ final class Tiler {
             self?.pickerMap() ?? Picker.Map(monitors: [], windows: [], labels: [:])
         }
         Browsers.tabs { [weak self] tabs in self?.picker.add(tabs) }
+        Browsers.history { [weak self] pages in self?.picker.add(pages) }
     }
 
     private func pickerClosed(cancelled: Bool) {
@@ -567,6 +573,34 @@ final class Tiler {
                     }
                 }
             }
+        case .url(let url, let browser):
+            guard let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: browser) else { return }
+            if case .place(let spot) = choice { pending = (browser, spot, Date().addingTimeInterval(10)) }
+            NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+            // A running browser opens a tab in its front window: place that window.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                guard let self, let pid = NSRunningApplication.runningApplications(withBundleIdentifier: browser).first?.processIdentifier
+                else { return }
+                self.workers[pid]?.focusedWindow { id in
+                    guard let id, self.world.contains(id) || self.infos[id] != nil else { return }
+                    self.pending = nil
+                    self.use(id, choice)
+                }
+            }
+        case .file(let path):
+            let url = URL(fileURLWithPath: path)
+            if case .place(let spot) = choice, let app = NSWorkspace.shared.urlForApplication(toOpen: url),
+               let b = Bundle(url: app)?.bundleIdentifier {
+                pending = (b, spot, Date().addingTimeInterval(10))
+            }
+            NSWorkspace.shared.open(url)
+        case .match(let path, let line):
+            if case .place(let spot) = choice { pending = ("com.microsoft.VSCode", spot, Date().addingTimeInterval(10)) }
+            let code = ["/usr/local/bin/code", "/opt/homebrew/bin/code"].first { FileManager.default.isExecutableFile(atPath: $0) }
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: code ?? "/usr/bin/open")
+            p.arguments = code != nil ? ["-g", "\(path):\(line)"] : ["-a", "Visual Studio Code", path]
+            try? p.run()
         case .open(let name, let path):
             guard let app = apps().first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) else {
                 toast("no app named \(name)")
@@ -602,6 +636,62 @@ final class Tiler {
         }
         scheduleApply()
         flashFocus(after: away ? 0.8 : 0.18)
+    }
+
+    private var searchProcess: Process?
+
+    /// `f`: file names from Spotlight, ranked by fzf when it is installed. `rg`: file contents
+    /// with ripgrep. Both under the home folder, in the background, the previous one stopped.
+    private func search(_ verb: String, _ query: String, _ done: @escaping ([Picker.Item]) -> Void) {
+        searchProcess?.terminate()
+        let skip = "-g '!Library' -g '!Movies' -g '!Music' -g '!Pictures' -g '!Applications'"
+        let script: String
+        switch verb {
+        case "f":
+            script = """
+                mdfind -onlyin "$HOME" -name "$1" 2>/dev/null | grep -v '/Library/' | head -n 500 |
+                { if command -v fzf >/dev/null; then fzf --filter "$1"; else cat; fi; } | head -n 60
+                """
+        case "rg":
+            script = """
+                cd "$HOME" && rg --line-number --no-heading --smart-case --max-count 1 --max-filesize 1M \
+                  --max-columns 160 --max-columns-preview \(skip) -- "$1" . 2>/dev/null | head -n 80
+                """
+        default: return
+        }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", script, "sh", query]
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        p.environment = ["PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin", "HOME": home]
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        searchProcess = p
+        DispatchQueue.global().async {
+            do { try p.run() } catch { return }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 8) { if p.isRunning { p.terminate() } }
+            let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            p.waitUntilExit()
+            DispatchQueue.main.async {
+                func short(_ path: String) -> String { path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path }
+                let items = text.split(separator: "\n").compactMap { line -> Picker.Item? in
+                    if verb == "f" {
+                        let path = String(line)
+                        return Picker.Item(kind: .file(path), title: (path as NSString).lastPathComponent,
+                                           detail: short((path as NSString).deletingLastPathComponent),
+                                           icon: NSWorkspace.shared.icon(forFile: path), search: "")
+                    }
+                    let f = line.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
+                    guard f.count == 3, let n = Int(f[1]) else { return nil }
+                    let path = home + "/" + (f[0].hasPrefix("./") ? String(f[0].dropFirst(2)) : f[0])
+                    return Picker.Item(kind: .match(path, line: n), title: "\(short(path)):\(n)",
+                                       detail: f[2].trimmingCharacters(in: .whitespaces),
+                                       icon: NSWorkspace.shared.icon(forFile: path), search: "")
+                }
+                done(items)
+            }
+        }
     }
 
     /// Windows (most recently focused first), then apps.

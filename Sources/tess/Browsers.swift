@@ -42,6 +42,100 @@ enum Browsers {
         }
     }
 
+    /// Pages for the picker, only listed once something is typed: Brave bookmarks (AppleScript),
+    /// then Brave and Safari history by visit count (sqlite, read-only). Brave's history needs
+    /// macOS's "data from other apps" consent and Safari's Full Disk Access; without them that
+    /// source is skipped. Read again after five minutes.
+    nonisolated(unsafe) private static var cache: (items: [Picker.Item], at: Date)?
+
+    static func history(_ done: @escaping ([Picker.Item]) -> Void) {
+        if let c = cache, Date().timeIntervalSince(c.at) < 300 { return done(c.items) }
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let brave = "com.brave.Browser", safari = "com.apple.Safari"
+        let bookmarks = """
+            set sep to character id 9
+            on walk(f, sep)
+                set out to ""
+                tell application id "com.brave.Browser"
+                    repeat with b in bookmark items of f
+                        set out to out & (title of b) & sep & (URL of b) & linefeed
+                    end repeat
+                    repeat with sub in bookmark folders of f
+                        set out to out & my walk(sub, sep)
+                    end repeat
+                end tell
+                return out
+            end walk
+            tell application id "com.brave.Browser" to set roots to {bookmarks bar, other bookmarks}
+            set out to ""
+            repeat with r in roots
+                set out to out & walk(r, sep)
+            end repeat
+            return out
+            """
+        let braveRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: brave).isEmpty
+        func uri(_ path: String) -> String {
+            "file:" + (path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path) + "?immutable=1"
+        }
+        let sources: [(browser: String, kind: String, run: (@escaping (String?) -> Void) -> Void)] = [
+            (brave, "bookmark", { braveRunning ? osascript(bookmarks, $0) : $0(nil) }),
+            (brave, "history", { sqlite(uri(home + "/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"), """
+                select title, url from urls where hidden = 0 order by visit_count + 5 * typed_count desc limit 3000
+                """, $0) }),
+            (safari, "history", { sqlite(uri(home + "/Library/Safari/History.db"), """
+                select coalesce((select title from history_visits v where v.history_item = i.id order by v.visit_time desc limit 1), ''),
+                       i.url from history_items i order by i.visit_count desc limit 3000
+                """, $0) }),
+        ]
+        var results = Array(repeating: [Picker.Item](), count: sources.count)
+        let group = DispatchGroup()
+        for (n, source) in sources.enumerated() {
+            group.enter()
+            source.run { text in
+                let name = source.browser == brave ? "Brave" : "Safari"
+                let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.browser)
+                    .map { NSWorkspace.shared.icon(forFile: $0.path) }
+                results[n] = (text ?? "").split(separator: "\n").compactMap { line in
+                    let f = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+                    guard f.count == 2, let url = URL(string: f[1]), url.scheme?.hasPrefix("http") == true else { return nil }
+                    let host = url.host ?? f[1]
+                    return Picker.Item(kind: .url(url, browser: source.browser), title: f[0].isEmpty ? f[1] : f[0],
+                                       detail: "\(name) \(source.kind) · \(host)", icon: icon,
+                                       search: "\(f[0]) \(host) \(url.path)", quiet: true)
+                }
+                group.leave()
+            }
+        }
+        group.notify(queue: .main) {
+            var seen = Set<String>()
+            let items = results.flatMap { $0 }.filter { seen.insert(($0.detail.hasPrefix("Brave") ? "b" : "s") + $0.search).inserted }
+            cache = (items, Date())
+            done(items)
+        }
+    }
+
+    /// Read-only query on a copy-free immutable snapshot; tab separated, nil on failure.
+    static func sqlite(_ uri: String, _ query: String, _ done: @escaping (String?) -> Void) {
+        DispatchQueue.global().async {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
+            p.arguments = ["-readonly", "-separator", "\t", uri, query]
+            let out = Pipe(), err = Pipe()
+            p.standardOutput = out
+            p.standardError = err
+            do { try p.run() } catch {
+                DispatchQueue.main.async { done(nil) }
+                return
+            }
+            let data = out.fileHandleForReading.readDataToEndOfFile()
+            let problem = err.fileHandleForReading.readDataToEndOfFile()
+            p.waitUntilExit()
+            if p.terminationStatus != 0 { Log.write("sqlite: \(String(decoding: problem, as: UTF8.self).prefix(200))") }
+            let text = p.terminationStatus == 0 ? String(decoding: data, as: UTF8.self) : nil
+            DispatchQueue.main.async { done(text) }
+        }
+    }
+
     /// Brings the tab to the front of its window and the window to the front of the browser.
     static func select(_ t: Picker.Tab, _ done: @escaping () -> Void) {
         let pick = t.bundleID == "com.apple.Safari"

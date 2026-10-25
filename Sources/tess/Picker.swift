@@ -10,6 +10,12 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case app(URL)
         /// A folder to open with an app, from a verb like `cd ~/anoma`.
         case open(app: String, path: String)
+        /// A page from browser history or bookmarks, opened with that browser.
+        case url(URL, browser: String)
+        /// A file found by name (`f`), opened with its app.
+        case file(String)
+        /// A line found by content (`rg`), opened in the editor at that line.
+        case match(String, line: Int)
     }
 
     struct Tab {
@@ -25,6 +31,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         var icon: NSImage?
         /// What typing matches against.
         var search: String
+        /// Only listed once something is typed (browser history: too much for an empty query).
+        var quiet = false
     }
 
     enum Choice {
@@ -40,9 +48,13 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     }
 
     static let alphabet = "asdhjklqwertyuiopzxcvbnm"
+    /// `f name` searches file names, `rg text` file contents; results come from `search`.
+    static let searchVerbs: Set<String> = ["f", "rg"]
 
     var onDone: (Item, Choice) -> Void = { _, _ in }
     var onCancel: () -> Void = {}
+    var search: (_ verb: String, _ query: String, _ done: @escaping ([Item]) -> Void) -> Void = { _, _, _ in }
+    private var searchGeneration = 0
 
     private let panel: KeyPanel
     private let content = NSView()
@@ -155,6 +167,32 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     private func filter() {
         let q = field.stringValue.trimmingCharacters(in: .whitespaces)
+        let words = field.stringValue.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+        if words.count == 2, Self.searchVerbs.contains(words[0]) {
+            searchGeneration += 1
+            let generation = searchGeneration
+            let query = words[1].trimmingCharacters(in: .whitespaces)
+            shown = []
+            list.items = []
+            list.empty = query.isEmpty ? (words[0] == "f" ? "Type part of a file name" : "Type text to find in files")
+                : "Searching…"
+            list.needsDisplay = true
+            guard !query.isEmpty else { return }
+            // Wait for a pause in typing, and drop answers to older queries.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { [weak self] in
+                guard let self, generation == self.searchGeneration else { return }
+                self.search(words[0], query) { [weak self] found in
+                    guard let self, generation == self.searchGeneration, self.isOpen else { return }
+                    self.shown = found
+                    self.list.items = found
+                    self.list.empty = "Nothing found"
+                    self.list.selected = 0
+                    self.list.needsDisplay = true
+                }
+            }
+            return
+        }
+        list.empty = "Nothing matches"
         if let folders = folders(field.stringValue) {
             shown = folders
             list.items = shown
@@ -164,6 +202,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             return
         }
         shown = items.enumerated()
+            .filter { !$0.element.quiet || !q.isEmpty }
             .compactMap { i, item in fuzzyScore(q, item.search).map { (score: $0, i: i, item: item) } }
             .sorted { ($0.score, -$0.i) > ($1.score, -$1.i) }
             .map(\.item)
@@ -215,7 +254,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         list.frame = NSRect(x: 10, y: 34, width: size.width - 20, height: rows * ListView.row)
         footer.frame = NSRect(x: 0, y: 9, width: size.width, height: 16)
         footer.stringValue = fixed == nil
-            ? "↵ pick, then choose where      ⌃N ⌃P move      cd or code + folder, ⇥ completes      esc close"
+            ? "↵ pick, then where     ⌃N ⌃P move     cd / code + folder (⇥ completes)     f name     rg text     esc close"
             : "↵ fill the empty place      ⌃N ⌃P move      esc leave it empty"
         for v in [magnifier, field, divider, list] as [NSView] { v.isHidden = false }
         map.isHidden = true
@@ -335,6 +374,7 @@ final class ListView: NSView {
     static let row: CGFloat = 38
     var items: [Picker.Item] = []
     var query = ""
+    var empty = "Nothing matches"
     var selected = 0
     private var top = 0
 
@@ -351,7 +391,7 @@ final class ListView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         if selected < top || selected >= top + Self.visible { top = max(0, selected - Self.visible + 1) }
         if items.isEmpty {
-            ("Nothing matches" as NSString).draw(at: NSPoint(x: 16, y: 12), withAttributes: [
+            (empty as NSString).draw(at: NSPoint(x: 16, y: 12), withAttributes: [
                 .font: NSFont.systemFont(ofSize: 14), .foregroundColor: NSColor.secondaryLabelColor,
             ])
             return

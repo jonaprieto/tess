@@ -650,7 +650,11 @@ final class Tiler {
         showPicker(fixed: fixed, text: text)
     }
 
+    /// The window that had focus when the picker opened; it gets it back when nothing is picked.
+    private var focusBeforePicker: WindowID?
+
     private func beginPicking() {
+        focusBeforePicker = osFocused ?? world.focused
         picking = true
         hotkeys.unregisterAll()
         overlay.hideMode()
@@ -673,7 +677,14 @@ final class Tiler {
     private func pickerClosed(cancelled: Bool) {
         picking = false
         setMode(mode)
-        if cancelled && closeReplacing { afterFocusChange() }
+        if cancelled { Events.record("picker.close", ["why": "cancelled"]) }
+        // tess was the active app for the picker: hand the keyboard back. A pick then moves
+        // focus on to what was picked.
+        if cancelled && closeReplacing {
+            afterFocusChange()
+        } else if let back = focusBeforePicker, infos[back] != nil {
+            focus(back)
+        }
         closeReplacing = false
     }
 

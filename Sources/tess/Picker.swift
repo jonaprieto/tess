@@ -128,6 +128,9 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         let final = panel.frame
         panel.setFrame(final.insetBy(dx: final.width * 0.015, dy: final.height * 0.015), display: false)
         panel.alphaValue = 0
+        // tess becomes the active app while the picker is open: a background app (a terminal,
+        // a notification) can then not take the keyboard from it and cancel it.
+        NSApp.activate()
         panel.makeKeyAndOrderFront(nil)
         panel.makeFirstResponder(field)
         field.currentEditor()?.moveToEndOfDocument(nil)
@@ -167,7 +170,9 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     func windowDidResignKey(_ notification: Notification) {
         guard isOpen else { return }
-        Log.write("picker: lost focus to \(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?"), closing")
+        let to = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?"
+        Log.write("picker: lost focus to \(to), closing")
+        Events.record("picker.close", ["why": "lost focus", "to": to])
         close()
         onCancel()
     }

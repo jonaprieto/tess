@@ -22,6 +22,7 @@ func serve() -> Never {
     let tiler = Tiler()
     let status = StatusItem(tiler)
     tiler.onChange = { status.refresh() }
+    tiler.onLayout = { status.refreshIcon() }
     do {
         try Socket.serve { line in
             do { return tiler.run(try Command.parse(line)) } catch { return "error: \(error)" }

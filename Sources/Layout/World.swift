@@ -53,7 +53,7 @@ public struct Monitor: Equatable, Sendable {
 
     func isMajor(_ a: Axis) -> Bool { (a == .width) != rows }
 
-    var windows: [WindowID] { lanes.flatMap(\.windows) }
+    public var windows: [WindowID] { lanes.flatMap(\.windows) }
 }
 
 public struct Position: Equatable, Sendable {

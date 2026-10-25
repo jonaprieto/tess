@@ -1,7 +1,8 @@
 import AppKit
 import Layout
 
-/// Menu bar item: a grid in main mode, the mode's initial otherwise, a pause sign when paused.
+/// Menu bar item: a live miniature of the monitors as they are arranged, with their columns
+/// and windows. The focused window and the active monitor take the mode's color.
 final class StatusItem: NSObject {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let tiler: Tiler
@@ -14,17 +15,69 @@ final class StatusItem: NSObject {
     }
 
     func refresh() {
+        refreshIcon()
+        refreshMenu()
+    }
+
+    /// Cheap enough to run on every layout or focus change.
+    func refreshIcon() {
         guard let button = item.button else { return }
-        if tiler.paused || waitingForAccess {
-            button.image = NSImage(systemSymbolName: "pause.circle", accessibilityDescription: "tess paused")
-            button.title = ""
-        } else if tiler.mode == "main" {
-            button.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "tess")
-            button.title = ""
-        } else {
-            button.image = nil
-            button.title = String(tiler.mode.prefix(1)).uppercased()
+        button.image = minimap()
+        button.title = ""
+        button.toolTip = "tess: \(tiler.paused ? "paused" : tiler.mode)"
+    }
+
+    private var color: NSColor {
+        if waitingForAccess { return .systemRed }
+        if tiler.paused { return .systemGray }
+        switch tiler.mode {
+        case "main": return .controlAccentColor
+        case "resize": return .systemOrange
+        case "service": return .systemPurple
+        default: return .systemTeal
         }
+    }
+
+    private func minimap() -> NSImage {
+        let world = tiler.world
+        let color = color
+        let monitors = world.monitors
+        let paused = tiler.paused
+        guard let bounds = monitors.map(\.frame).reduce(nil, { $0?.union($1) ?? $1 }), bounds.width > 0 else {
+            return NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "tess")!
+        }
+        let scale = min(16 / bounds.height, 64 / bounds.width)
+        let frames = world.frames(inner: 0, outer: 0)
+        func mini(_ r: CGRect) -> CGRect {
+            CGRect(x: 1 + (r.minX - bounds.minX) * scale, y: 1 + (r.minY - bounds.minY) * scale,
+                   width: r.width * scale, height: r.height * scale)
+        }
+        let size = NSSize(width: bounds.width * scale + 2, height: bounds.height * scale + 2)
+        let image = NSImage(size: size, flipped: true) { _ in
+            let dim = NSColor.labelColor.withAlphaComponent(paused ? 0.25 : 0.4)
+            for (m, mon) in monitors.enumerated() {
+                let box = mini(mon.frame).insetBy(dx: 1, dy: 0.5)
+                let outline = NSBezierPath(roundedRect: box, xRadius: 2.5, yRadius: 2.5)
+                outline.lineWidth = 1
+                (m == world.activeMonitor ? color : dim).setStroke()
+                outline.stroke()
+                // Unfocused first, so in an accordion the focused window is drawn on top.
+                for id in mon.windows.filter({ $0 != world.focused }) + mon.windows.filter({ $0 == world.focused }) {
+                    guard let f = frames[id] else { continue }
+                    let r = mini(f).intersection(box).insetBy(dx: 1.25, dy: 1.25)
+                    guard r.width > 0.5, r.height > 0.5 else { continue }
+                    (id == world.focused ? color : dim).setFill()
+                    NSBezierPath(roundedRect: r, xRadius: 1, yRadius: 1).fill()
+                }
+            }
+            return true
+        }
+        image.isTemplate = false
+        image.accessibilityDescription = "tess"
+        return image
+    }
+
+    private func refreshMenu() {
         let menu = NSMenu()
         if waitingForAccess {
             menu.addItem(action("Grant Accessibility access…", #selector(openAccessibility)))

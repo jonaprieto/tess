@@ -11,6 +11,8 @@ final class Tiler {
     private(set) var paused = false
     /// Called whenever the mode, pause state or config error changes (for the menu bar).
     var onChange: () -> Void = {}
+    /// Called after every layout pass (for the menu bar minimap).
+    var onLayout: () -> Void = {}
 
     private var workers: [pid_t: AppWorker] = [:]
     private var infos: [WindowID: WinInfo] = [:]
@@ -237,6 +239,7 @@ final class Tiler {
     }
 
     private func apply() {
+        defer { onLayout() }
         guard !starting, !paused else { return }
         if NSEvent.pressedMouseButtons & 1 != 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.scheduleApply() }

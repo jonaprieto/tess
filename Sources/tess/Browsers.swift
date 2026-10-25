@@ -17,27 +17,29 @@ enum Browsers {
                     repeat with w in windows
                         try
                             set wid to id of w
-                            set i to 0
-                            repeat with t in tabs of w
-                                set i to i + 1
-                                set out to out & wid & sep & i & sep & (\(titleKey) of t) & sep & (URL of t) & linefeed
+                            -- Two Apple events per window, not two per tab.
+                            set ts to \(titleKey) of tabs of w
+                            set us to URL of tabs of w
+                            repeat with i from 1 to count of ts
+                                set out to out & wid & sep & i & sep & (item i of ts) & sep & (item i of us) & linefeed
                             end repeat
                         end try
                     end repeat
                 end tell
                 return out
                 """
-            osascript(script) { output in
+            osascript(script, onMain: false) { output in
                 let name = app.localizedName ?? bundleID
+                let icon = Icons.small(app.icon)
                 let items = (output ?? "").split(separator: "\n").compactMap { line -> Picker.Item? in
                     let f = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
                     guard f.count >= 4, let w = Int(f[0]), let i = Int(f[1]) else { return nil }
                     let host = URL(string: f[3])?.host ?? f[3]
                     return Picker.Item(kind: .tab(.init(bundleID: bundleID, window: w, index: i)),
                                        title: f[2].isEmpty ? f[3] : f[2], detail: "\(name) tab · \(host)",
-                                       icon: app.icon, search: "\(f[2]) \(f[3])")
+                                       icon: icon, search: "\(f[2]) \(f[3])")
                 }
-                done(items)
+                DispatchQueue.main.async { done(items) }
             }
         }
     }
@@ -81,23 +83,24 @@ enum Browsers {
             "file:" + (path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path) + "?immutable=1"
         }
         let sources: [(browser: String, kind: String, run: (@escaping (String?) -> Void) -> Void)] = [
-            (brave, "bookmark", { braveRunning ? osascript(bookmarks, $0) : $0(nil) }),
+            (brave, "bookmark", { braveRunning ? osascript(bookmarks, onMain: false, $0) : $0(nil) }),
             (brave, "history", { sqlite(uri(home + "/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"), """
                 select title, url from urls where hidden = 0 order by visit_count + 5 * typed_count desc limit 3000
-                """, $0) }),
+                """, onMain: false, $0) }),
             (safari, "history", { sqlite(uri(home + "/Library/Safari/History.db"), """
                 select coalesce((select title from history_visits v where v.history_item = i.id order by v.visit_time desc limit 1), ''),
                        i.url from history_items i order by i.visit_count desc limit 3000
-                """, $0) }),
+                """, onMain: false, $0) }),
         ]
         var all: [Picker.Item] = []
         var seen = Set<String>()
         var left = sources.count
         for source in sources {
+            // Parsed where it arrives, off the main thread; merged on it.
             source.run { text in
                 let name = source.browser == brave ? "Brave" : "Safari"
-                let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.browser)
-                    .map { NSWorkspace.shared.icon(forFile: $0.path) }
+                let icon = Icons.small(NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.browser)
+                    .map { NSWorkspace.shared.icon(forFile: $0.path) })
                 let items = (text ?? "").split(separator: "\n").compactMap { line -> Picker.Item? in
                     let f = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
                     guard f.count == 2, let url = URL(string: f[1]), url.scheme?.hasPrefix("http") == true else { return nil }
@@ -107,17 +110,19 @@ enum Browsers {
                                        search: "\(f[0]) \(host) \(url.path)", quiet: true)
                 }
                 // Each source as soon as it answers, without repeats.
-                let fresh = items.filter { seen.insert(($0.detail.hasPrefix("Brave") ? "b" : "s") + $0.search).inserted }
-                all += fresh
-                left -= 1
-                if left == 0 { cache = (all, Date()) }
-                if !fresh.isEmpty { done(fresh) }
+                DispatchQueue.main.async {
+                    let fresh = items.filter { seen.insert(($0.detail.hasPrefix("Brave") ? "b" : "s") + $0.search).inserted }
+                    all += fresh
+                    left -= 1
+                    if left == 0 { cache = (all, Date()) }
+                    if !fresh.isEmpty { done(fresh) }
+                }
             }
         }
     }
 
     /// Read-only query on a copy-free immutable snapshot; tab separated, nil on failure.
-    static func sqlite(_ uri: String, _ query: String, _ done: @escaping (String?) -> Void) {
+    static func sqlite(_ uri: String, _ query: String, onMain: Bool = true, _ done: @escaping (String?) -> Void) {
         DispatchQueue.global().async {
             let p = Process()
             p.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
@@ -126,7 +131,7 @@ enum Browsers {
             p.standardOutput = out
             p.standardError = err
             do { try p.run() } catch {
-                DispatchQueue.main.async { done(nil) }
+                deliver(onMain) { done(nil) }
                 return
             }
             let data = out.fileHandleForReading.readDataToEndOfFile()
@@ -134,7 +139,7 @@ enum Browsers {
             p.waitUntilExit()
             if p.terminationStatus != 0 { Log.write("sqlite: \(String(decoding: problem, as: UTF8.self).prefix(200))") }
             let text = p.terminationStatus == 0 ? String(decoding: data, as: UTF8.self) : nil
-            DispatchQueue.main.async { done(text) }
+            deliver(onMain) { done(text) }
         }
     }
 
@@ -152,7 +157,11 @@ enum Browsers {
             """) { _ in done() }
     }
 
-    static func osascript(_ script: String, _ done: @escaping (String?) -> Void) {
+    static func deliver(_ onMain: Bool, _ block: @escaping () -> Void) {
+        if onMain { DispatchQueue.main.async(execute: block) } else { block() }
+    }
+
+    static func osascript(_ script: String, onMain: Bool = true, _ done: @escaping (String?) -> Void) {
         DispatchQueue.global().async {
             let p = Process()
             p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
@@ -161,7 +170,7 @@ enum Browsers {
             p.standardOutput = out
             p.standardError = err
             do { try p.run() } catch {
-                DispatchQueue.main.async { done(nil) }
+                deliver(onMain) { done(nil) }
                 return
             }
             let data = out.fileHandleForReading.readDataToEndOfFile()
@@ -169,7 +178,7 @@ enum Browsers {
             p.waitUntilExit()
             if p.terminationStatus != 0 { Log.write("osascript: \(String(decoding: problem, as: UTF8.self))") }
             let text = p.terminationStatus == 0 ? String(decoding: data, as: UTF8.self) : nil
-            DispatchQueue.main.async { done(text) }
+            deliver(onMain) { done(text) }
         }
     }
 }

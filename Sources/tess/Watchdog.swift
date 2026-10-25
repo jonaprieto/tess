@@ -17,11 +17,13 @@ enum Watchdog {
             last = DispatchTime.now().uptimeNanoseconds
             lock.unlock()
         }
+        // Tolerance lets macOS batch the wakeup with others.
+        beat.tolerance = 0.5
         // Common modes: the heartbeat keeps going while the status menu is open.
         RunLoop.main.add(beat, forMode: .common)
         let thread = Thread {
             while true {
-                Thread.sleep(forTimeInterval: 1)
+                Thread.sleep(forTimeInterval: 2)
                 lock.lock()
                 let now = DispatchTime.now().uptimeNanoseconds
                 let stalled = now > last && now - last > 5_000_000_000

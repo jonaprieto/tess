@@ -8,6 +8,8 @@ import Layout
 final class AppWorker {
     let app: NSRunningApplication
     var pid: pid_t { app.processIdentifier }
+    /// Main thread: the app icon as a small bitmap, set shortly after the worker starts.
+    var icon: NSImage?
     /// Main thread: (pid, windows, focused window).
     private let onSnapshot: (pid_t, [WinInfo], WindowID?) -> Void
 
@@ -17,6 +19,13 @@ final class AppWorker {
     private var observer: AXObserver?
     private var windows: [WindowID: AXUIElement] = [:]
     private var refreshScheduled = false
+    /// Subrole and fullscreen button change rarely; read once per window (while it is not
+    /// minimized and its app not hidden, when the subrole reads as a dialog).
+    private var traits: [WindowID: (standard: Bool, button: Bool)] = [:]
+    /// The last snapshot sent; an identical one is not sent again.
+    private var sent: (infos: [WinInfo], focused: WindowID?)?
+    /// tess's own frame writes fire moved and resized; until then they wait for one refresh.
+    private var quietUntil: CFAbsoluteTime = 0
 
     // Frame writes waiting for the worker thread; a newer one for the same window replaces it.
     private let lock = NSLock()
@@ -55,8 +64,8 @@ final class AppWorker {
     private func ensureObserver() {
         guard observer == nil else { return }
         var obs: AXObserver?
-        let callback: AXObserverCallback = { _, _, _, refcon in
-            Unmanaged<AppWorker>.fromOpaque(refcon!).takeUnretainedValue().scheduleRefresh()
+        let callback: AXObserverCallback = { _, _, name, refcon in
+            Unmanaged<AppWorker>.fromOpaque(refcon!).takeUnretainedValue().notified(name as String)
         }
         guard AXObserverCreate(pid, callback, &obs) == .success, let obs else { return }
         var ok = false
@@ -75,6 +84,17 @@ final class AppWorker {
     }
 
     // MARK: Reading
+
+    /// Worker thread. Moves and resizes right after tess's own write are its echo: one
+    /// refresh once the write has settled covers them.
+    private func notified(_ name: String) {
+        let now = CFAbsoluteTimeGetCurrent()
+        if (name == kAXMovedNotification || name == kAXResizedNotification) && now < quietUntil {
+            scheduleRefresh(after: quietUntil - now + 0.05)
+        } else {
+            scheduleRefresh()
+        }
+    }
 
     /// Re-read the windows soon; notifications come in bursts, one read covers them all.
     func scheduleRefresh(after delay: Double = 0.05) {
@@ -101,7 +121,7 @@ final class AppWorker {
         var seen: [WindowID: AXUIElement] = [:]
         var infos: [WinInfo] = []
         for el in axApp.elements(kAXWindowsAttribute) {
-            guard let id = el.windowID, let frame = el.frame else { continue }
+            guard let id = el.windowID else { continue }
             if windows[id] == nil {
                 AXUIElementSetMessagingTimeout(el, 0.25)
                 if let observer {
@@ -109,14 +129,26 @@ final class AppWorker {
                 }
             }
             seen[id] = el
-            let fullscreen = el.bool("AXFullScreen") == true
-            let button = el.element(kAXFullScreenButtonAttribute)
+            // One round trip for what changes; the traits only the first time.
+            let v = el.attributes([kAXPositionAttribute, kAXSizeAttribute, kAXTitleAttribute, kAXMinimizedAttribute, "AXFullScreen"])
+            var origin = CGPoint.zero, size = CGSize.zero
+            guard let p = v[0], CFGetTypeID(p) == AXValueGetTypeID(), AXValueGetValue(p as! AXValue, .cgPoint, &origin),
+                  let z = v[1], CFGetTypeID(z) == AXValueGetTypeID(), AXValueGetValue(z as! AXValue, .cgSize, &size) else { continue }
+            let frame = CGRect(origin: origin, size: size)
+            let title = v[2] as? String ?? ""
+            let minimized = v[3] as? Bool == true
+            let fullscreen = v[4] as? Bool == true
+            var t = traits[id]
+            if t == nil {
+                let read = (standard: el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
+                            button: el.element(kAXFullScreenButtonAttribute)?.bool(kAXEnabledAttribute) == true)
+                if !minimized && !hidden { traits[id] = read }
+                t = read
+            }
             infos.append(WinInfo(
-                id: id, pid: pid, frame: frame, title: el.string(kAXTitleAttribute) ?? "",
-                standard: !hidden && !fullscreen && el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole
-                    && el.bool(kAXMinimizedAttribute) != true,
-                fullscreenButton: button?.bool(kAXEnabledAttribute) == true,
-                nativeFullscreen: fullscreen))
+                id: id, pid: pid, frame: frame, title: title,
+                standard: !hidden && !fullscreen && !minimized && t!.standard,
+                fullscreenButton: t!.button, nativeFullscreen: fullscreen))
         }
         if let observer {
             for (id, el) in windows where seen[id] == nil {
@@ -124,7 +156,10 @@ final class AppWorker {
             }
         }
         windows = seen
+        traits = traits.filter { seen[$0.key] != nil }
         let focused = axApp.element(kAXFocusedWindowAttribute)?.windowID
+        if let sent, sent.infos == infos, sent.focused == focused { return }
+        sent = (infos, focused)
         let pid = pid
         DispatchQueue.main.async { [onSnapshot] in onSnapshot(pid, infos, focused) }
     }
@@ -140,6 +175,10 @@ final class AppWorker {
             let r = pendingFrames.removeValue(forKey: id)
             lock.unlock()
             guard let r, let el = windows[id] else { return }
+            // The next snapshot goes out even if it looks unchanged: the main thread assumed
+            // this write landed, and has to hear if the app refused it.
+            sent = nil
+            quietUntil = CFAbsoluteTimeGetCurrent() + 0.15
             // Undocumented: with AXEnhancedUserInterface on (set by VoiceOver-aware apps),
             // frame changes animate and get lost (yabai 3fe4c77, Rectangle 285).
             let enhanced = axApp.bool("AXEnhancedUserInterface") == true

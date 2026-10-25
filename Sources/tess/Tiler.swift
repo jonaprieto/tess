@@ -59,7 +59,7 @@ final class Tiler {
     private var pending: (bundle: String, spot: Spot, until: Date)?
     /// Windows the picker listed from the window server only, with their app.
     private var unseen: [WindowID: pid_t] = [:]
-    private var appCache: (apps: [(url: URL, name: String, bundleID: String?, icon: NSImage)], at: Date)?
+    private var appCache: (apps: [(url: URL, name: String, bundleID: String?, icon: NSImage)], at: Date, folders: [Date])?
     let overlay = Overlay()
 
     static let configURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/tess/config.json")
@@ -85,23 +85,25 @@ final class Tiler {
         }
         ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.spaceChangedAt = Date()
-            self?.sweep()
+            self?.sweep(all: true)
         }
         ws.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.screensChanged()
-            self?.sweep()
+            self?.sweep(all: true)
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil,
                                                queue: .main) { [weak self] _ in self?.screensChanged() }
         NSWorkspace.shared.runningApplications.forEach(track)
         // A safety net: AX notifications report nearly everything as it happens.
-        Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
+        let sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
+        sweepTimer.tolerance = 1
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.starting = false
             self?.rebuild()
             if restartedAfterHang { self?.toast("restarted after a hang") }
             Browsers.history { _ in }  // warm the caches for the picker
             self?.refreshApps()
+            _ = self?.picker
         }
         registerMode()
         Log.write("started")
@@ -114,7 +116,12 @@ final class Tiler {
         guard workers[pid] == nil, !app.isTerminated, app.activationPolicy == .regular, pid != getpid(),
               app.bundleIdentifier != "com.apple.loginwindow",
               !config.ignore.contains(app.bundleIdentifier ?? "") else { return }
-        workers[pid] = AppWorker(app) { [weak self] pid, list, focused in self?.snapshot(pid, list, focused) }
+        let worker = AppWorker(app) { [weak self] pid, list, focused in self?.snapshot(pid, list, focused) }
+        workers[pid] = worker
+        DispatchQueue.global(qos: .utility).async {
+            let icon = Icons.small(app.icon)
+            DispatchQueue.main.async { worker.icon = icon }
+        }
     }
 
     private func untrack(_ pid: pid_t) {
@@ -156,7 +163,8 @@ final class Tiler {
         guard workers[pid] != nil else { return }
         let listed = Set(list.map(\.id))
         let hadFocus = world.focused
-        let missing = infos.values.filter { $0.pid == pid && !listed.contains($0.id) }.map(\.id)
+        // Only windows that just went missing: known off-Space ones need no new lookup.
+        let missing = infos.values.filter { $0.pid == pid && !listed.contains($0.id) && !offSpace.contains($0.id) }.map(\.id)
         if !missing.isEmpty {
             let live = Self.liveWindowIDs()
             let spaceChange = Date().timeIntervalSince(spaceChangedAt) < 1.5
@@ -235,16 +243,23 @@ final class Tiler {
         workers[info.pid]?.focus(id)
     }
 
-    private func sweep() {
+    private var sweeps = 0
+
+    /// The frontmost app every 5 s, every app every 30 s (or `all`, after a Space change or
+    /// a wake): each refresh costs the app a few AX round trips on its main thread.
+    private func sweep(all: Bool = false) {
+        sweeps += 1
+        let everything = all || sweeps % 6 == 0
         NSWorkspace.shared.runningApplications.forEach(track)
         if let c = appCache, Date().timeIntervalSince(c.at) > 600 { refreshApps() }
-        if !offSpace.isEmpty {
+        if everything, !offSpace.isEmpty {
             let live = Self.liveWindowIDs()
             for id in offSpace where !live.contains(id) { forget(id) }
             scheduleApply()
         }
+        let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
         for (pid, w) in workers {
-            if w.app.isTerminated { untrack(pid) } else { w.scheduleRefresh() }
+            if w.app.isTerminated { untrack(pid) } else if everything || pid == front { w.scheduleRefresh() }
         }
     }
 
@@ -380,7 +395,7 @@ final class Tiler {
         case .reload: loadConfig(announce: true)
         case .mode(let m): setMode(m)
         case .retile:
-            sweep()
+            sweep(all: true)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
                 self?.rebuild()
                 self?.toast("re-tiled")
@@ -524,7 +539,7 @@ final class Tiler {
         mode = "main"
         overlay.hideMode()
         registerMode()
-        if announce { sweep() }
+        if announce { sweep(all: true) }
         onChange()
     }
 
@@ -806,7 +821,8 @@ final class Tiler {
             let place = offSpace.contains(id) ? "other Space"
                 : "screen \((world.locate(id)?.m ?? world.monitorIndex(for: info.frame) ?? 0) + 1)"
             items.append(Picker.Item(kind: .window(id), title: info.title.isEmpty ? name : info.title,
-                                     detail: "\(name) · \(place)", icon: app.icon, search: "\(name) \(info.title)"))
+                                     detail: "\(name) · \(place)", icon: workers[info.pid]?.icon ?? app.icon,
+                                     search: "\(name) \(info.title)"))
         }
         // Windows on a Space tess has not seen since it started: AX cannot list them, the
         // window server can (titles only with Screen Recording access).
@@ -826,7 +842,8 @@ final class Tiler {
             unseen[id] = pid
             let name = app.localizedName ?? "?"
             items.append(Picker.Item(kind: .window(id), title: title.isEmpty ? name : title,
-                                     detail: "\(name) · other Space", icon: app.icon, search: "\(name) \(title)"))
+                                     detail: "\(name) · other Space", icon: workers[pid]?.icon ?? app.icon,
+                                     search: "\(name) \(title)"))
         }
         let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         for a in apps() {
@@ -842,22 +859,32 @@ final class Tiler {
     private func apps() -> [(url: URL, name: String, bundleID: String?, icon: NSImage)] {
         if let c = appCache { return c.apps }
         let scanned = Self.scanApps(ignoring: config.ignore)
-        appCache = (scanned, Date())
+        appCache = (scanned, Date(), Self.appFolderDates())
         return scanned
     }
 
+    /// Rescans only when an app folder changed (an app installed or removed).
     private func refreshApps() {
         let ignore = config.ignore
+        let previous = appCache
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let scanned = Self.scanApps(ignoring: ignore)
-            DispatchQueue.main.async { self?.appCache = (scanned, Date()) }
+            let folders = Self.appFolderDates()
+            let apps = previous.flatMap { $0.folders == folders ? $0.apps : nil } ?? Self.scanApps(ignoring: ignore)
+            DispatchQueue.main.async { self?.appCache = (apps, Date(), folders) }
         }
+    }
+
+    private static let appFolders = ["/Applications", "/Applications/Utilities", "/System/Applications",
+                                     "/System/Applications/Utilities",
+                                     FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications").path]
+
+    private static func appFolderDates() -> [Date] {
+        appFolders.map { (try? FileManager.default.attributesOfItem(atPath: $0)[.modificationDate] as? Date) ?? .distantPast }
     }
 
     private static func scanApps(ignoring ignore: [String]) -> [(url: URL, name: String, bundleID: String?, icon: NSImage)] {
         let fm = FileManager.default
-        let dirs = ["/Applications", "/Applications/Utilities", "/System/Applications", "/System/Applications/Utilities",
-                    fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications").path]
+        let dirs = appFolders
         var out: [(url: URL, name: String, bundleID: String?, icon: NSImage)] = []
         for dir in dirs {
             for entry in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] where entry.hasSuffix(".app") {
@@ -865,7 +892,8 @@ final class Tiler {
                 let id = Bundle(url: url)?.bundleIdentifier
                 if let id, ignore.contains(id) { continue }
                 let name = (fm.displayName(atPath: url.path) as NSString).deletingPathExtension
-                out.append((url, name, id, NSWorkspace.shared.icon(forFile: url.path)))
+                let icon = NSWorkspace.shared.icon(forFile: url.path)
+                out.append((url, name, id, Icons.small(icon) ?? icon))
             }
         }
         out.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -885,8 +913,8 @@ final class Tiler {
                     let r = lane.accordion
                         ? CGRect(x: all.minX, y: all.minY + all.height * CGFloat(i) / n, width: all.width, height: all.height / n)
                         : (frames[id] ?? .zero)
-                    let app = infos[id].flatMap { workers[$0.pid]?.app }
-                    windows.append((id, r, app?.localizedName ?? "", infos[id]?.title ?? "", app?.icon))
+                    let worker = infos[id].flatMap { workers[$0.pid] }
+                    windows.append((id, r, worker?.app.localizedName ?? "", infos[id]?.title ?? "", worker?.icon ?? worker?.app.icon))
                 }
             }
         }

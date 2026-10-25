@@ -23,8 +23,14 @@ final class StatusItem: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) { fill(menu) }
 
     /// Cheap enough to run on every layout or focus change.
+    private var drawn: (world: World, mode: String, paused: Bool, waiting: Bool)?
+
+    /// Skipped when nothing the icon shows changed (most snapshots change nothing visible).
     func refreshIcon() {
         guard let button = item.button else { return }
+        let now = (tiler.world, tiler.mode, tiler.paused, waitingForAccess)
+        if let d = drawn, d.world == now.0, d.mode == now.1, d.paused == now.2, d.waiting == now.3 { return }
+        drawn = now
         button.image = minimap()
         button.title = ""
         button.toolTip = "tess: \(tiler.paused ? "paused" : tiler.mode)"

@@ -37,6 +37,18 @@ extension AXUIElement {
         return CGRect(origin: p, size: s)
     }
 
+    /// Several attributes in one round trip; nil where the app had no value.
+    func attributes(_ names: [String]) -> [CFTypeRef?] {
+        var out: CFArray?
+        guard AXUIElementCopyMultipleAttributeValues(self, names as CFArray, AXCopyMultipleAttributeOptions(rawValue: 0), &out)
+                == .success, let values = out as? [CFTypeRef], values.count == names.count else {
+            return names.map(attribute)
+        }
+        return values.map { v in
+            CFGetTypeID(v) == AXValueGetTypeID() && AXValueGetType(v as! AXValue) == .axError ? nil : v
+        }
+    }
+
     var windowID: WindowID? {
         var id: CGWindowID = 0
         return _AXUIElementGetWindow(self, &id) == .success && id != 0 ? id : nil

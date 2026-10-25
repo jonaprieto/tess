@@ -399,6 +399,7 @@ final class Tiler {
             let png = Picker.render(pickerMap(), size: NSSize(width: 1000, height: 550))
             do { try png?.write(to: URL(fileURLWithPath: path)) } catch { return "error: \(error)" }
             return path
+        case .settings: openSettings()
         case .clearMonitor:
             world.clearMonitor()
             flash = true
@@ -800,6 +801,29 @@ final class Tiler {
     // MARK: Rescue from the menu
 
     func menuRescue() { toast("rescued \(rescue()) windows") }
+
+    /// For the menu header: mode, windows, screens.
+    var summary: String {
+        let n = world.tiled.count + world.floating.count
+        return "\(paused ? "paused" : "\(mode) mode") · \(n) window\(n == 1 ? "" : "s") · \(world.monitors.count) screen\(world.monitors.count == 1 ? "" : "s")"
+    }
+
+    func openSettings() {
+        SettingsWindow.shared.show(raw: config.raw) { [weak self] raw in self?.saveSettings(raw) }
+    }
+
+    /// Validates and writes what the settings window changed, then reloads; the error if not.
+    func saveSettings(_ raw: Config.Raw) -> String? {
+        do {
+            _ = try Config.validate(raw)
+            try FileManager.default.createDirectory(at: Self.configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Config.file(for: raw).write(to: Self.configURL, options: .atomic)
+            loadConfig(announce: true)
+            return configError
+        } catch {
+            return "\(error)"
+        }
+    }
     func menuRetile() { _ = run([.retile]) }
     func menuPause() { _ = run([.pause]) }
     func menuReload() { _ = run([.reload]) }

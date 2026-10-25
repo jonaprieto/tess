@@ -3,7 +3,7 @@ import Layout
 
 /// Menu bar item: a live miniature of the monitors as they are arranged, with their columns
 /// and windows. The focused window and the active monitor take the mode's color.
-final class StatusItem: NSObject {
+final class StatusItem: NSObject, NSMenuDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let tiler: Tiler
     var waitingForAccess = false
@@ -18,6 +18,9 @@ final class StatusItem: NSObject {
         refreshIcon()
         refreshMenu()
     }
+
+    /// Rebuilt each time it opens, so the header's counts are current.
+    func menuNeedsUpdate(_ menu: NSMenu) { fill(menu) }
 
     /// Cheap enough to run on every layout or focus change.
     func refreshIcon() {
@@ -39,7 +42,7 @@ final class StatusItem: NSObject {
         }
     }
 
-    private func minimap() -> NSImage {
+    func minimap() -> NSImage {
         let world = tiler.world
         let color = color
         let monitors = world.monitors
@@ -80,32 +83,74 @@ final class StatusItem: NSObject {
 
     private func refreshMenu() {
         let menu = NSMenu()
-        if waitingForAccess {
-            menu.addItem(action("Grant Accessibility access…", #selector(openAccessibility)))
-            menu.addItem(.separator())
-        }
-        if let error = tiler.configError {
-            let e = NSMenuItem(title: "Config: \(error)", action: nil, keyEquivalent: "")
-            e.isEnabled = false
-            menu.addItem(e)
-            menu.addItem(.separator())
-        }
-        menu.addItem(action("Rescue windows", #selector(rescue)))
-        menu.addItem(action("Re-tile", #selector(retile)))
-        menu.addItem(action(tiler.paused ? "Resume tiling" : "Pause tiling", #selector(pause)))
-        menu.addItem(action("Reload config", #selector(reload)))
-        menu.addItem(action("Open config", #selector(openConfig)))
-        menu.addItem(.separator())
-        menu.addItem(action("Quit tess", #selector(quit)))
+        menu.delegate = self
+        fill(menu)
         item.menu = menu
     }
 
-    private func action(_ title: String, _ selector: Selector) -> NSMenuItem {
-        let i = NSMenuItem(title: title, action: selector, keyEquivalent: "")
+    private func fill(_ menu: NSMenu) {
+        menu.removeAllItems()
+        // Header: the minimap and what tess is doing.
+        let header = NSMenuItem(title: "tess", action: nil, keyEquivalent: "")
+        header.image = minimap()
+        header.subtitle = tiler.summary
+        header.isEnabled = false
+        menu.addItem(header)
+        if waitingForAccess {
+            menu.addItem(item("Grant Accessibility Access…", "hand.raised", #selector(openAccessibility)))
+        }
+        if let error = tiler.configError {
+            let e = NSMenuItem(title: "Config error", action: #selector(openSettings), keyEquivalent: "")
+            e.target = self
+            e.subtitle = error
+            e.image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: nil)
+            menu.addItem(e)
+        }
+        menu.addItem(.separator())
+        menu.addItem(item("Open Picker…", "magnifyingglass", #selector(pick), for: .pick("")))
+        menu.addItem(item("Settings…", "gearshape", #selector(openSettings), key: ",", mods: [.command]))
+        menu.addItem(.separator())
+        menu.addItem(item("Rescue Windows", "lifepreserver", #selector(rescue), for: .rescue))
+        menu.addItem(item("Re-tile", "rectangle.3.group", #selector(retile), for: .retile))
+        menu.addItem(item("Clear This Screen", "rectangle.portrait.and.arrow.right", #selector(clear), for: .clearMonitor))
+        menu.addItem(tiler.paused ? item("Resume Tiling", "play.circle", #selector(pause))
+                                  : item("Pause Tiling", "pause.circle", #selector(pause), for: .pause))
+        menu.addItem(.separator())
+        menu.addItem(item("Reload Config", "arrow.clockwise", #selector(reload), for: .reload))
+        menu.addItem(item("Open Log", "doc.text", #selector(openLog)))
+        menu.addItem(.separator())
+        menu.addItem(item("Quit tess", "power", #selector(quit), key: "q", mods: [.command]))
+    }
+
+    /// A menu row with a symbol, showing the main-mode shortcut bound to `command` if any.
+    private func item(_ title: String, _ symbol: String, _ selector: Selector, for command: Command? = nil,
+                      key: String = "", mods: NSEvent.ModifierFlags = []) -> NSMenuItem {
+        let i = NSMenuItem(title: title, action: selector, keyEquivalent: key)
         i.target = self
+        i.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        i.keyEquivalentModifierMask = mods
+        if let command, let spec = tiler.config.modes["main"]?.first(where: { $0.value == [command] })?.key,
+           let k = Self.equivalents[spec.key] ?? (spec.key.count == 1 ? spec.key : nil) {
+            i.keyEquivalent = k
+            var m: NSEvent.ModifierFlags = []
+            if spec.mods.contains(.cmd) { m.insert(.command) }
+            if spec.mods.contains(.alt) { m.insert(.option) }
+            if spec.mods.contains(.ctrl) { m.insert(.control) }
+            if spec.mods.contains(.shift) { m.insert(.shift) }
+            i.keyEquivalentModifierMask = m
+        }
         return i
     }
 
+    private static let equivalents: [String: String] = [
+        "space": " ", "backspace": "\u{8}", "tab": "\t", "enter": "\r", "esc": "\u{1b}", "semicolon": ";",
+        "slash": "/", "minus": "-", "equal": "=", "comma": ",", "period": ".", "quote": "'", "backtick": "`",
+    ]
+
+    @objc private func pick() { _ = tiler.run([.pick("")]) }
+    @objc private func clear() { _ = tiler.run([.clearMonitor]) }
+    @objc private func openLog() { NSWorkspace.shared.open(Log.url) }
+    @objc private func openSettings() { tiler.openSettings() }
     @objc private func rescue() { tiler.menuRescue() }
     @objc private func retile() { tiler.menuRetile() }
     @objc private func pause() { tiler.menuPause() }
@@ -116,13 +161,4 @@ final class StatusItem: NSObject {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }
 
-    /// Opens the config in the default editor, writing the defaults first if there is none.
-    @objc private func openConfig() {
-        let url = Tiler.configURL
-        if !FileManager.default.fileExists(atPath: url.path) {
-            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? Config.defaultJSON.write(to: url, atomically: true, encoding: .utf8)
-        }
-        NSWorkspace.shared.open(url)
-    }
 }

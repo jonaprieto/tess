@@ -103,6 +103,9 @@ public struct Config: Equatable, Sendable {
         return try e.encode(overrides(edited, over: defaultRaw))
     }
 
+    /// The config `raw` describes, or the first problem in it.
+    public static func validate(_ raw: Raw) throws -> Config { try build(raw) }
+
     static func build(_ raw: Raw) throws -> Config {
         var c = Config()
         c.raw = raw

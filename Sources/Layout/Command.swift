@@ -15,6 +15,8 @@ public enum Command: Equatable, Sendable {
     case pick(String), closeReplace
     /// Send every window on the active monitor to the next one.
     case clearMonitor
+    /// The settings window.
+    case settings
     /// Renders the picker's map to a PNG at this path (for debugging without a screen).
     case debugMap(String)
 
@@ -22,7 +24,7 @@ public enum Command: Equatable, Sendable {
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
-        "pick": .pick(""), "close-replace": .closeReplace, "clear-monitor": .clearMonitor,
+        "pick": .pick(""), "close-replace": .closeReplace, "clear-monitor": .clearMonitor, "settings": .settings,
     ]
 
     /// Commands separated by `;`. `exec` takes the rest of the line, `;` included.

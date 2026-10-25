@@ -2,6 +2,8 @@ import AppKit
 import ApplicationServices
 import Layout
 
+let version = "0.1.0"
+
 let usage = """
     tess: a tiling window manager for macOS
 
@@ -9,6 +11,7 @@ let usage = """
       tess <command>        send a command to the running tess, e.g. `tess focus left`
       tess tree             print monitors, lanes and windows
       tess default-config   print the built-in config (start ~/.config/tess/config.json from it)
+      tess --version        print the version
 
     """
 
@@ -57,6 +60,8 @@ let args = Array(CommandLine.arguments.dropFirst())
 switch args.first {
 case nil, "-h", "--help", "help":
     print(usage, terminator: "")
+case "--version", "version":
+    print("tess \(version)")
 case "default-config":
     print(Config.defaultJSON)
 case "serve":

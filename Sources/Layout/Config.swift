@@ -16,6 +16,8 @@ public struct Config: Equatable, Sendable {
     public var verbs: [String: String] = [:]
     /// The keys of a mode on every screen, rather than only the one being worked on.
     public var overlayAllScreens = true
+    /// A border and a letter on every window, and a number on every screen.
+    public var overlayWindowLabels = true
     /// Mode -> key -> commands. `main` is where tess starts.
     public var modes: [String: [KeySpec: [Command]]] = [:]
     /// The merged config as written, for the settings window.
@@ -32,8 +34,15 @@ public struct Config: Equatable, Sendable {
         }
         public struct Overlay: Codable, Equatable, Sendable {
             public var allScreens: Bool?
-            enum CodingKeys: String, CodingKey { case allScreens = "all_screens" }
-            public init(allScreens: Bool? = nil) { self.allScreens = allScreens }
+            public var windowLabels: Bool?
+            enum CodingKeys: String, CodingKey {
+                case allScreens = "all_screens"
+                case windowLabels = "window_labels"
+            }
+            public init(allScreens: Bool? = nil, windowLabels: Bool? = nil) {
+                self.allScreens = allScreens
+                self.windowLabels = windowLabels
+            }
         }
         public var gaps: Gaps?
         public var overlay: Overlay?
@@ -79,7 +88,8 @@ public struct Config: Equatable, Sendable {
         }
         var r = base
         if let g = top.gaps { r.gaps = Raw.Gaps(inner: g.inner ?? base.gaps?.inner, outer: g.outer ?? base.gaps?.outer) }
-        r.overlay = top.overlay ?? base.overlay
+        r.overlay = Raw.Overlay(allScreens: top.overlay?.allScreens ?? base.overlay?.allScreens,
+                                windowLabels: top.overlay?.windowLabels ?? base.overlay?.windowLabels)
         r.float = top.float ?? base.float
         r.tile = top.tile ?? base.tile
         r.ignore = top.ignore ?? base.ignore
@@ -131,6 +141,7 @@ public struct Config: Equatable, Sendable {
         c.inner = min(max(raw.gaps?.inner ?? 10, 0), 100).rounded()
         c.outer = min(max(raw.gaps?.outer ?? 10, 0), 100).rounded()
         c.overlayAllScreens = raw.overlay?.allScreens ?? true
+        c.overlayWindowLabels = raw.overlay?.windowLabels ?? true
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
         c.ignore = raw.ignore ?? []
@@ -160,7 +171,7 @@ public struct Config: Equatable, Sendable {
     public static let defaultJSON = #"""
     {
       "gaps": {"inner": 10, "outer": 10},
-      "overlay": {"all_screens": true},
+      "overlay": {"all_screens": true, "window_labels": true},
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": ["io.github.ender-wang.EdgeMark"],
@@ -201,7 +212,8 @@ public struct Config: Equatable, Sendable {
           "cmd-alt-ctrl-shift-t": "mode wm",
           "cmd-alt-ctrl-shift-g": "pick",
           "alt-space": "pick",
-          "alt-shift-backspace": "clear-monitor"
+          "alt-shift-backspace": "clear-monitor",
+          "cmd-alt-ctrl-shift-j": "jump"
         },
         "wm": {
           "h": "focus left",
@@ -231,6 +243,7 @@ public struct Config: Equatable, Sendable {
           "shift-c": "close",
           "t": "exec open -a kitty",
           "x": "close-replace",
+          "g": "jump",
           "backspace": "clear-monitor",
           "cmd-alt-ctrl-shift-g": "pick",
           "w": "rescue",

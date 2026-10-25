@@ -35,6 +35,7 @@ final class SettingsModel {
     var inner: Double
     var outer: Double
     var overlayAllScreens: Bool
+    var windowLabels: Bool
     var float: [String]
     var tile: [String]
     var ignore: [String]
@@ -52,6 +53,7 @@ final class SettingsModel {
         inner = raw.gaps?.inner ?? 10
         outer = raw.gaps?.outer ?? 10
         overlayAllScreens = raw.overlay?.allScreens ?? true
+        windowLabels = raw.overlay?.windowLabels ?? true
         float = raw.float ?? []
         tile = raw.tile ?? []
         ignore = raw.ignore ?? []
@@ -65,7 +67,7 @@ final class SettingsModel {
     var raw: Config.Raw {
         var r = Config.Raw()
         r.gaps = .init(inner: inner, outer: outer)
-        r.overlay = .init(allScreens: overlayAllScreens)
+        r.overlay = .init(allScreens: overlayAllScreens, windowLabels: windowLabels)
         r.float = float
         r.tile = tile
         r.ignore = ignore
@@ -94,8 +96,9 @@ final class SettingsModel {
 
     func revert() {
         let fresh = SettingsModel(raw: original, save: saveRaw)
-        (inner, outer, overlayAllScreens, float, tile, ignore, verbs, modes) =
-            (fresh.inner, fresh.outer, fresh.overlayAllScreens, fresh.float, fresh.tile, fresh.ignore, fresh.verbs, fresh.modes)
+        (inner, outer, overlayAllScreens, windowLabels, float, tile, ignore, verbs, modes) =
+            (fresh.inner, fresh.outer, fresh.overlayAllScreens, fresh.windowLabels, fresh.float, fresh.tile, fresh.ignore,
+             fresh.verbs, fresh.modes)
         message = nil
     }
 }
@@ -146,6 +149,7 @@ struct GeneralTab: View {
             }
             Section("Overlays") {
                 Toggle("Show a mode's keys on every screen", isOn: $model.overlayAllScreens)
+                Toggle("Label every window and screen (borders, letters, numbers)", isOn: $model.windowLabels)
             }
             Section {
                 ForEach($model.verbs) { $row in

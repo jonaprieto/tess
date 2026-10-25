@@ -352,7 +352,10 @@ final class Tiler {
     }
 
     private func apply() {
-        defer { onLayout() }
+        defer {
+            onLayout()
+            refreshDecorations()
+        }
         guard !starting, !paused else { return }
         if NSEvent.pressedMouseButtons & 1 != 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.scheduleApply() }
@@ -508,6 +511,17 @@ final class Tiler {
             do { try png?.write(to: URL(fileURLWithPath: path)) } catch { return "error: \(error)" }
             return path
         case .settings: openSettings()
+        case .jump: startJump()
+        case .focusWindow(let id):
+            guard infos[id] != nil else { return "error: no window \(id)" }
+            use(id, .jump)
+        case .swapWith(let id):
+            guard let f = world.focused, f != id, world.locate(f) != nil, world.locate(id) != nil else {
+                return "error: swap needs a focused tiled window and another tiled window"
+            }
+            world.swap(f, id)
+            world.focused = f
+            flash = true
         case .state:
             let data = (try? JSONSerialization.data(withJSONObject: stateJSON(), options: [.prettyPrinted, .sortedKeys])) ?? Data()
             return String(decoding: data, as: UTF8.self)
@@ -605,6 +619,7 @@ final class Tiler {
 
     private func setMode(_ m: String) {
         guard config.modes[m] != nil else { return }
+        jumping = false
         if m != mode { Events.record("mode", ["mode": m]) }
         mode = m
         registerMode()
@@ -658,6 +673,13 @@ final class Tiler {
 
     /// The window that had focus when the picker opened; it gets it back when nothing is picked.
     private var focusBeforePicker: WindowID?
+    private let decorations = Decorations()
+    /// Each window's letter, kept while the window lives (decorations, jump mode, picker map).
+    private(set) var labels: [WindowID: Character] = [:]
+    /// Jump mode is on: labels are keys until one is used; then back to `jumpReturn`.
+    private(set) var jumping = false
+    private var jumpReturn = "main"
+    private var drawn: [String] = []
 
     private func beginPicking() {
         focusBeforePicker = osFocused ?? world.focused
@@ -1068,7 +1090,9 @@ final class Tiler {
                 }
             }
         }
-        return Picker.Map(monitors: world.monitors.map(\.frame), windows: windows, labels: world.labels(Picker.alphabet))
+        // The same letters as on the windows themselves.
+        let mapLabels = labels.isEmpty ? world.labels(Picker.alphabet) : labels.filter { world.locate($0.key) != nil }
+        return Picker.Map(monitors: world.monitors.map(\.frame), windows: windows, labels: mapLabels)
     }
 
     // MARK: Rescue from the menu
@@ -1104,6 +1128,65 @@ final class Tiler {
     func menuReload() { _ = run([.reload], source: "menu") }
 
     // MARK: tess tree
+
+    // MARK: Labels and jump mode
+
+    /// Visible windows in screen, lane and stack order, then floating ones.
+    private var labeledWindows: [WindowID] {
+        (world.tiled + world.floating.sorted()).filter { infos[$0] != nil && !offSpace.contains($0) }
+    }
+
+    /// Borders and letters on every window, numbers on every screen (overlay.window_labels).
+    private func refreshDecorations() {
+        labels = stableLabels(labels, windows: labeledWindows, alphabet: Picker.alphabet)
+        guard config.overlayWindowLabels, !paused, !starting else {
+            if !drawn.isEmpty { decorations.hide() }
+            drawn = []
+            return
+        }
+        let windows = labeledWindows.compactMap { id -> Decorations.Window? in
+            guard let f = infos[id]?.frame else { return nil }
+            // Under tess fullscreen only the fullscreen window is shown.
+            if let p = world.locate(id), let fs = world.monitors[p.m].fullscreen, fs != id { return nil }
+            return Decorations.Window(frame: f, label: labels[id], focused: id == world.focused)
+        }
+        let screens = world.monitors.map(\.frame)
+        let signature = screens.map { "\($0)" } + windows.map { "\($0.frame)\($0.label.map(String.init) ?? "")\($0.focused)" }
+            + ["\(jumping)"]
+        guard signature != drawn else { return }
+        drawn = signature
+        decorations.update(screens: screens, windows: windows, jumping: jumping)
+    }
+
+    /// Every window's letter becomes a key (shift swaps with it), every screen's number too
+    /// (shift moves there); one use, or esc, goes back to the mode jump started from.
+    private func startJump() {
+        guard !jumping else { return }
+        jumpReturn = mode
+        jumping = true
+        overlay.hideMode()
+        let back: [Command] = [.mode(jumpReturn)]
+        var keys: [KeySpec: [Command]] = [:]
+        for id in labeledWindows {
+            guard let c = labels[id] else { continue }
+            keys[KeySpec(key: String(c), mods: [])] = [.focusWindow(id)] + back
+            keys[KeySpec(key: String(c), mods: [.shift])] = [.swapWith(id)] + back
+        }
+        for n in 1...min(9, max(world.monitors.count, 1)) {
+            keys[KeySpec(key: "\(n)", mods: [])] = [.focusMonitor(n)] + back
+            keys[KeySpec(key: "\(n)", mods: [.shift])] = [.moveToMonitor(n)] + back
+        }
+        for k in [KeySpec(key: "esc", mods: []), KeySpec(key: "enter", mods: []),
+                  KeySpec(key: "j", mods: [.cmd, .alt, .ctrl, .shift])] {
+            keys[k] = back
+        }
+        let failed = hotkeys.register(keys)
+        if !failed.isEmpty { Log.write("jump: could not register \(failed)") }
+        drawn = []
+        refreshDecorations()
+        toast("jump: a letter goes there, ⇧ swaps with it, a digit picks a screen")
+        onChange()
+    }
 
     // MARK: Event log
 

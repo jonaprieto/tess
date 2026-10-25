@@ -29,6 +29,11 @@ Everything is in `tess default-config`. The ones to know:
 - Hyper+T (Nav+T on the Air96): tess mode, where the same actions need no modifier.
 - Hyper+G (Nav+G) or `alt-space`: the picker.
 - `alt-shift-backspace`: send everything on this screen to the next one.
+- Every window wears a thin border and a letter on its top edge (it keeps the letter while
+  it lives), every screen its number in the bottom-left corner. Hyper+J (or `g` in tess mode)
+  turns them into keys: a letter goes to that window, shift+letter swaps the focused window
+  with it, a digit goes to that screen, shift+digit moves the focused window there.
+  `"overlay": {"window_labels": false}` (or Settings) turns the labels off.
 
 ## Picker
 

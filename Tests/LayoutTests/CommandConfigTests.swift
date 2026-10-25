@@ -127,7 +127,7 @@ import Testing
     #expect(wm[KeySpec(key: "2", mods: [.shift])] == [.moveToMonitor(2)])
     #expect(wm[KeySpec(key: "c", mods: [.shift])] == [.close])
     #expect(wm[KeySpec(key: "c", mods: [])] == nil)
-    #expect(wm.count == 35)
+    #expect(wm.count == 36)
     #expect(wm[KeySpec(key: "backspace", mods: [])] == [.clearMonitor])
     #expect(wm[KeySpec(key: "x", mods: [])] == [.closeReplace])
     #expect(c.modes["main"]?[KeySpec(key: "g", mods: [.cmd, .alt, .ctrl, .shift])] == [.pick("")])
@@ -138,7 +138,7 @@ import Testing
     let off = try Config.load(Data(#"{"overlay": {"all_screens": false}}"#.utf8))
     #expect(!off.overlayAllScreens)
     var edited = Config.defaultRaw
-    edited.overlay = .init(allScreens: false)
+    edited.overlay = .init(allScreens: false, windowLabels: true)
     #expect(Config.overrides(edited, over: Config.defaultRaw).overlay?.allScreens == false)
     #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).overlay == nil)
 }

@@ -19,6 +19,10 @@ public enum Command: Equatable, Sendable {
     case settings
     /// tess's model and the machine, as JSON (also written to the event log).
     case state
+    /// Jump mode: every window's label and screen number as a key.
+    case jump
+    /// A window by its id (what jump mode binds to labels).
+    case focusWindow(UInt32), swapWith(UInt32)
     /// Renders the picker's map to a PNG at this path (for debugging without a screen).
     case debugMap(String)
 
@@ -26,7 +30,7 @@ public enum Command: Equatable, Sendable {
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
-        "pick": .pick(""), "close-replace": .closeReplace, "clear-monitor": .clearMonitor, "settings": .settings, "state": .state,
+        "pick": .pick(""), "close-replace": .closeReplace, "clear-monitor": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
     ]
 
     /// Commands separated by `;`. `exec` takes the rest of the line, `;` included.
@@ -84,6 +88,9 @@ public enum Command: Equatable, Sendable {
             }
         case ("move-to-monitor", 2): return .moveToMonitor(try monitor(w[1]))
         case ("mode", 2): return .mode(w[1])
+        case ("focus-window", 2), ("swap-with", 2):
+            guard let id = UInt32(w[1]) else { throw bad }
+            return head == "focus-window" ? .focusWindow(id) : .swapWith(id)
         default: throw bad
         }
     }
@@ -139,6 +146,8 @@ extension Command: CustomStringConvertible {
         case .mode(let m): "mode \(m)"
         case .pick(let text): text.isEmpty ? "pick" : "pick \(text)"
         case .debugMap(let path): "debug-map \(path)"
+        case .focusWindow(let id): "focus-window \(id)"
+        case .swapWith(let id): "swap-with \(id)"
         default: Command.simple.first { $0.value == self }?.key ?? "nop"
         }
     }

@@ -58,13 +58,14 @@ extension Command {
         case .closeReplace: "Close, pick a replacement"
         case .clearMonitor: "Clear this screen"
         case .settings: "Settings"
-        case .tree, .nop, .debugMap, .state: nil
+        case .jump: "Jump to a window"
+        case .tree, .nop, .debugMap, .state, .focusWindow, .swapWith: nil
         }
     }
 
     public var group: Group {
         switch self {
-        case .focus, .focusMonitor, .cycleMonitor: .focus
+        case .focus, .focusMonitor, .cycleMonitor, .jump: .focus
         case .move, .moveToMonitor, .clearMonitor: .move
         case .resize, .balance, .flip, .accordion, .fullscreen, .nativeFullscreen, .float: .layout
         default: .more
@@ -75,4 +76,17 @@ extension Command {
     public static func label(of commands: [Command]) -> String? {
         commands.first { if case .mode = $0 { return commands.count == 1 }; return $0.label != nil }?.label
     }
+}
+
+/// Labels that stay with their windows: windows keep their letter while they live, and new
+/// windows take the first free letters, in `windows` order. Past the alphabet, none.
+public func stableLabels(_ current: [WindowID: Character], windows: [WindowID], alphabet: String) -> [WindowID: Character] {
+    let alive = Set(windows)
+    var out = current.filter { alive.contains($0.key) }
+    var free = alphabet.filter { c in !out.values.contains(c) }
+    for id in windows where out[id] == nil {
+        guard !free.isEmpty else { break }
+        out[id] = free.removeFirst()
+    }
+    return out
 }

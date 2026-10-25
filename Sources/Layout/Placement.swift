@@ -87,7 +87,29 @@ extension World {
 /// Subsequence match of `query` in `text`, ignoring case; higher is better, nil if no match.
 /// Consecutive letters and letters starting a word (or a camel-case hump) count extra.
 public func fuzzyScore(_ query: String, _ text: String) -> Int? {
-    fuzzy(query, text)?.score
+    // Plain ASCII (nearly every title and URL): bytes, no allocation per character.
+    if query.utf8.allSatisfy({ $0 < 128 }), text.utf8.allSatisfy({ $0 < 128 }) {
+        return fuzzyASCII(Array(query.utf8), Array(text.utf8))
+    }
+    return fuzzy(query, text)?.score
+}
+
+/// The same scoring as `fuzzy`, on ASCII bytes.
+func fuzzyASCII(_ query: [UInt8], _ text: [UInt8]) -> Int? {
+    func lower(_ c: UInt8) -> UInt8 { c >= 65 && c <= 90 ? c + 32 : c }
+    func letter(_ c: UInt8) -> Bool { (c >= 65 && c <= 90) || (c >= 97 && c <= 122) }
+    guard !query.isEmpty else { return 0 }
+    var score = 0, qi = 0, last = -2
+    for i in text.indices where qi < query.count {
+        let c = text[i]
+        guard lower(c) == lower(query[qi]) else { continue }
+        score += 1
+        if i == last + 1 { score += 3 }
+        if i == 0 || !letter(text[i - 1]) || (c >= 65 && c <= 90 && text[i - 1] >= 97 && text[i - 1] <= 122) { score += 2 }
+        last = i
+        qi += 1
+    }
+    return qi == query.count ? score : nil
 }
 
 /// Which characters of `text` the query matched (indices into `Array(text)`), for highlighting.
@@ -95,7 +117,7 @@ public func fuzzyPositions(_ query: String, _ text: String) -> [Int]? {
     fuzzy(query, text)?.positions
 }
 
-private func fuzzy(_ query: String, _ text: String) -> (score: Int, positions: [Int])? {
+func fuzzy(_ query: String, _ text: String) -> (score: Int, positions: [Int])? {
     let q = query.lowercased().map(String.init)
     guard !q.isEmpty else { return (0, []) }
     let t = Array(text)

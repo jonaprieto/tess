@@ -96,3 +96,12 @@ import Testing
     #expect(fuzzyPositions("zz", "GitHub") == nil)
     #expect(fuzzyPositions("", "GitHub") == [])
 }
+
+@Test func asciiFastPathScoresLikeTheGeneralOne() {
+    let texts = ["GitHub", "gather", "Calendar", "Musical", "Brave Browser", "anoma-log", "pull/42 · github.com", "x"]
+    for q in ["gh", "cal", "brv", "an", "pg", "zz", ""] {
+        for t in texts {
+            #expect(fuzzyScore(q, t) == fuzzy(q, t)?.score, "\(q) in \(t)")
+        }
+    }
+}

@@ -93,12 +93,14 @@ final class Tiler {
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil,
                                                queue: .main) { [weak self] _ in self?.screensChanged() }
         NSWorkspace.shared.runningApplications.forEach(track)
-        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.sweep() }
+        // A safety net: AX notifications report nearly everything as it happens.
+        Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.starting = false
             self?.rebuild()
             if restartedAfterHang { self?.toast("restarted after a hang") }
-            Browsers.history { _ in }  // warm the cache for the picker
+            Browsers.history { _ in }  // warm the caches for the picker
+            self?.refreshApps()
         }
         registerMode()
         Log.write("started")
@@ -234,6 +236,7 @@ final class Tiler {
 
     private func sweep() {
         NSWorkspace.shared.runningApplications.forEach(track)
+        if let c = appCache, Date().timeIntervalSince(c.at) > 600 { refreshApps() }
         if !offSpace.isEmpty {
             let live = Self.liveWindowIDs()
             for id in offSpace where !live.contains(id) { forget(id) }
@@ -545,6 +548,8 @@ final class Tiler {
     }
 
     private func showPicker(fixed: Spot?, text: String = "") {
+        let start = DispatchTime.now().uptimeNanoseconds
+        defer { Log.write("picker: ready in \((DispatchTime.now().uptimeNanoseconds - start) / 1_000_000) ms") }
         picker.open(pickerItems(), on: lookedAtFrame, fixed: fixed, verbs: config.verbs, text: text) { [weak self] in
             self?.pickerMap() ?? Picker.Map(monitors: [], windows: [], labels: [:])
         }
@@ -727,17 +732,33 @@ final class Tiler {
             items.append(Picker.Item(kind: .window(id), title: title.isEmpty ? name : title,
                                      detail: "\(name) · other Space", icon: app.icon, search: "\(name) \(title)"))
         }
+        let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         for a in apps() {
-            let open = a.bundleID.map { !NSRunningApplication.runningApplications(withBundleIdentifier: $0).isEmpty } ?? false
+            let open = a.bundleID.map(running.contains) ?? false
             items.append(Picker.Item(kind: .app(a.url), title: a.name, detail: open ? "app (open)" : "app",
                                      icon: a.icon, search: a.name))
         }
         return items
     }
 
-    /// Every app in the usual folders, read again after a minute.
+    /// Every app in the usual folders. Scanned off the main thread when tess starts and again
+    /// every ten minutes, so opening the picker never waits for the disk.
     private func apps() -> [(url: URL, name: String, bundleID: String?, icon: NSImage)] {
-        if let c = appCache, Date().timeIntervalSince(c.at) < 60 { return c.apps }
+        if let c = appCache { return c.apps }
+        let scanned = Self.scanApps(ignoring: config.ignore)
+        appCache = (scanned, Date())
+        return scanned
+    }
+
+    private func refreshApps() {
+        let ignore = config.ignore
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let scanned = Self.scanApps(ignoring: ignore)
+            DispatchQueue.main.async { self?.appCache = (scanned, Date()) }
+        }
+    }
+
+    private static func scanApps(ignoring ignore: [String]) -> [(url: URL, name: String, bundleID: String?, icon: NSImage)] {
         let fm = FileManager.default
         let dirs = ["/Applications", "/Applications/Utilities", "/System/Applications", "/System/Applications/Utilities",
                     fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications").path]
@@ -746,13 +767,12 @@ final class Tiler {
             for entry in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] where entry.hasSuffix(".app") {
                 let url = URL(fileURLWithPath: dir).appendingPathComponent(entry)
                 let id = Bundle(url: url)?.bundleIdentifier
-                if let id, config.ignore.contains(id) { continue }
+                if let id, ignore.contains(id) { continue }
                 let name = (fm.displayName(atPath: url.path) as NSString).deletingPathExtension
                 out.append((url, name, id, NSWorkspace.shared.icon(forFile: url.path)))
             }
         }
         out.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        appCache = (out, Date())
         return out
     }
 

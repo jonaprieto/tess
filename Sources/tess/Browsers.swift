@@ -57,8 +57,11 @@ enum Browsers {
             on walk(f, sep)
                 set out to ""
                 tell application id "com.brave.Browser"
-                    repeat with b in bookmark items of f
-                        set out to out & (title of b) & sep & (URL of b) & linefeed
+                    -- Two Apple events per folder, not two per bookmark.
+                    set ts to title of bookmark items of f
+                    set us to URL of bookmark items of f
+                    repeat with i from 1 to count of ts
+                        set out to out & (item i of ts) & sep & (item i of us) & linefeed
                     end repeat
                     repeat with sub in bookmark folders of f
                         set out to out & my walk(sub, sep)
@@ -87,15 +90,15 @@ enum Browsers {
                        i.url from history_items i order by i.visit_count desc limit 3000
                 """, $0) }),
         ]
-        var results = Array(repeating: [Picker.Item](), count: sources.count)
-        let group = DispatchGroup()
-        for (n, source) in sources.enumerated() {
-            group.enter()
+        var all: [Picker.Item] = []
+        var seen = Set<String>()
+        var left = sources.count
+        for source in sources {
             source.run { text in
                 let name = source.browser == brave ? "Brave" : "Safari"
                 let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.browser)
                     .map { NSWorkspace.shared.icon(forFile: $0.path) }
-                results[n] = (text ?? "").split(separator: "\n").compactMap { line in
+                let items = (text ?? "").split(separator: "\n").compactMap { line -> Picker.Item? in
                     let f = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
                     guard f.count == 2, let url = URL(string: f[1]), url.scheme?.hasPrefix("http") == true else { return nil }
                     let host = url.host ?? f[1]
@@ -103,14 +106,13 @@ enum Browsers {
                                        detail: "\(name) \(source.kind) · \(host)", icon: icon,
                                        search: "\(f[0]) \(host) \(url.path)", quiet: true)
                 }
-                group.leave()
+                // Each source as soon as it answers, without repeats.
+                let fresh = items.filter { seen.insert(($0.detail.hasPrefix("Brave") ? "b" : "s") + $0.search).inserted }
+                all += fresh
+                left -= 1
+                if left == 0 { cache = (all, Date()) }
+                if !fresh.isEmpty { done(fresh) }
             }
-        }
-        group.notify(queue: .main) {
-            var seen = Set<String>()
-            let items = results.flatMap { $0 }.filter { seen.insert(($0.detail.hasPrefix("Brave") ? "b" : "s") + $0.search).inserted }
-            cache = (items, Date())
-            done(items)
         }
     }
 

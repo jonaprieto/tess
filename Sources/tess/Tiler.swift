@@ -98,6 +98,7 @@ final class Tiler {
             self?.starting = false
             self?.rebuild()
             if restartedAfterHang { self?.toast("restarted after a hang") }
+            Browsers.history { _ in }  // warm the cache for the picker
         }
         registerMode()
         Log.write("started")

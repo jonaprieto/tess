@@ -153,8 +153,8 @@ final class StatusItem: NSObject, NSMenuDelegate {
         "slash": "/", "minus": "-", "equal": "=", "comma": ",", "period": ".", "quote": "'", "backtick": "`",
     ]
 
-    @objc private func pick() { _ = tiler.run([.pick("")]) }
-    @objc private func clear() { _ = tiler.run([.clearMonitor]) }
+    @objc private func pick() { _ = tiler.run([.pick("")], source: "menu") }
+    @objc private func clear() { _ = tiler.run([.clearMonitor], source: "menu") }
     @objc private func openLog() { NSWorkspace.shared.open(Log.url) }
     @objc private func openSettings() { tiler.openSettings() }
     @objc private func rescue() { tiler.menuRescue() }

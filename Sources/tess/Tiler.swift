@@ -54,7 +54,7 @@ final class Tiler {
     /// From a hotkey there is no terminal: an error becomes a toast.
     private lazy var hotkeys = Hotkeys { [weak self] commands in
         guard let self else { return }
-        let out = self.run(commands)
+        let out = self.run(commands, source: "hotkey")
         if out.hasPrefix("error: ") { self.toast(String(out.dropFirst(7))) }
     }
     private lazy var picker: Picker = {
@@ -99,9 +99,11 @@ final class Tiler {
         ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.spaceChangedAt = Date()
             self?.spaceChanges += 1
+            Events.record("space", ["frontmost": NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""])
             self?.sweep(all: true)
         }
         ws.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Events.record("wake")
             self?.screensChanged()
             self?.sweep(all: true)
         }
@@ -111,9 +113,15 @@ final class Tiler {
         // A safety net: AX notifications report nearly everything as it happens.
         let sweepTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sweep() }
         sweepTimer.tolerance = 1
+        // A full picture every ten minutes, between the change events.
+        let stateTimer = Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { [weak self] _ in
+            if let self { Events.record("state", self.stateJSON()) }
+        }
+        stateTimer.tolerance = 30
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.starting = false
             self?.rebuild()
+            if let self { Events.record("start", ["version": version, "restarted_after_hang": restartedAfterHang, "state": self.stateJSON()]) }
             if restartedAfterHang { self?.toast("restarted after a hang") }
             Browsers.history { _ in }  // warm the caches for the picker
             self?.refreshApps()
@@ -130,6 +138,7 @@ final class Tiler {
         guard workers[pid] == nil, !app.isTerminated, app.activationPolicy == .regular, pid != getpid(),
               app.bundleIdentifier != "com.apple.loginwindow",
               !config.ignore.contains(app.bundleIdentifier ?? "") else { return }
+        Events.record("app.open", ["pid": Int(pid), "bundle": app.bundleIdentifier ?? "", "name": app.localizedName ?? ""])
         let worker = AppWorker(app) { [weak self] pid, list, focused in self?.snapshot(pid, list, focused) }
         workers[pid] = worker
         DispatchQueue.global(qos: .utility).async {
@@ -142,13 +151,15 @@ final class Tiler {
         // didTerminate fires for every process, helpers and ignored apps included.
         guard let worker = workers.removeValue(forKey: pid) else { return }
         worker.stop()
+        Events.record("app.quit", ["pid": Int(pid), "bundle": worker.app.bundleIdentifier ?? "", "name": worker.app.localizedName ?? ""])
         let hadFocus = world.focused
-        for (id, info) in infos where info.pid == pid { forget(id) }
+        for (id, info) in infos where info.pid == pid { forget(id, "app quit") }
         if let hadFocus, !world.contains(hadFocus) { afterFocusChange() }
         scheduleApply()
     }
 
-    private func forget(_ id: WindowID) {
+    private func forget(_ id: WindowID, _ why: String = "gone") {
+        if infos[id] != nil { Events.record("window.close", describe(id).merging(["why": why]) { $1 }) }
         infos[id] = nil
         writes[id] = nil
         offSpace.remove(id)
@@ -190,16 +201,16 @@ final class Tiler {
             let spaceChange = Date().timeIntervalSince(spaceChangedAt) < 1.5
             for id in missing {
                 if spaceChange && live.contains(id) {
-                    offSpace.insert(id)
+                    if offSpace.insert(id).inserted { Events.record("window.away", describe(id)) }
                     unlistedSince[id] = unlistedSince[id] ?? spaceChanges
                 } else if !offSpace.contains(id) {
-                    forget(id)
+                    forget(id, "closed")
                 }
             }
         }
         for info in list {
             infos[info.id] = info
-            offSpace.remove(info.id)
+            if offSpace.remove(info.id) != nil { Events.record("window.back", describe(info.id)) }
             unlistedSince[info.id] = nil
         }
         let frontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier == pid
@@ -210,21 +221,30 @@ final class Tiler {
         var found: [WinInfo] = []
         for info in list {
             switch kind(info) {
-            case .skip: if world.contains(info.id) { world.remove(info.id) }
+            case .skip:
+                if world.contains(info.id) {
+                    world.remove(info.id)
+                    Events.record("window.untiled", describe(info.id).merging(
+                        ["why": info.nativeFullscreen ? "native fullscreen" : "minimized or hidden"]) { $1 })
+                }
             case .tile where !world.contains(info.id):
                 if info.id <= preexisting || known.contains(info.id) {
                     found.append(info)
+                    Events.record("window.open", describe(info.id).merging(["how": "adopted where it was"]) { $1 })
                 } else if let p = pending, p.bundle == bundle(pid), Date() < p.until {
                     // The app picked in the picker: its first window goes where step 2 said.
                     pending = nil
                     world.place(info.id, p.spot)
+                    Events.record("window.open", describe(info.id).merging(["how": "placed from the picker"]) { $1 })
                 } else {
                     world.insert(info.id)
+                    Events.record("window.open", describe(info.id).merging(["how": "new column"]) { $1 })
                 }
             case .float:
                 if !world.contains(info.id) {
                     world.floating.insert(info.id)
                     autoFloated.insert(info.id)
+                    Events.record("window.open", describe(info.id).merging(["how": "floating"]) { $1 })
                 }
             case .tile:
                 // Floated only because it looked like a dialog at first (no fullscreen button
@@ -256,7 +276,10 @@ final class Tiler {
             return
         }
         guard world.contains(id) else { return }
-        if world.focused != id { world.focused = id }
+        if world.focused != id {
+            world.focused = id
+            Events.record("focus", describe(id).merging(["by": "macos"]) { $1 })
+        }
         if world.floating.contains(id), let f = infos[id]?.frame, let m = world.monitorIndex(for: f) { world.activeMonitor = m }
     }
 
@@ -269,6 +292,7 @@ final class Tiler {
     /// Never while the picker is open: another app taking focus would close it.
     private func focus(_ id: WindowID) {
         guard !picking else { return }
+        Events.record("focus", describe(id).merging(["by": "tess"]) { $1 })
         intent = (id, Date().addingTimeInterval(0.3), false)
         workerFocus(id)
     }
@@ -291,7 +315,7 @@ final class Tiler {
             if !offSpace.isEmpty {
                 let live = Self.liveWindowIDs()
                 for id in offSpace where !live.contains(id) || spaceChanges - (unlistedSince[id] ?? spaceChanges) >= 4 {
-                    forget(id)
+                    forget(id, "closed while on another Space")
                 }
             }
             // Nothing in the layout without a window behind it, and writes refused earlier
@@ -344,7 +368,10 @@ final class Tiler {
             var w = writes[id] ?? (target, 0)
             if w.target != target { w = (target, 0) }
             guard w.tries < 3 else {
-                if refused.insert(id).inserted { Log.write("window \(id) keeps its own size (\(info.frame), wanted \(target))") }
+                if refused.insert(id).inserted {
+                    Log.write("window \(id) keeps its own size (\(info.frame), wanted \(target))")
+                    Events.record("frame.refused", describe(id).merging(["wanted": target.json]) { $1 })
+                }
                 continue
             }
             w.tries += 1
@@ -373,6 +400,9 @@ final class Tiler {
         world.setMonitors(screens.map { (id: $0.id, frame: $0.frame) }, main: screens.first(where: \.isMain)?.id)
         writes = [:]
         Log.write("monitors: \(screens.map { "\($0.id.prefix(8)) \(Int($0.frame.width))x\(Int($0.frame.height))" })")
+        Events.record("screens", ["screens": screens.enumerated().map { n, s in
+            ["n": n + 1, "id": s.id, "frame": s.frame.json, "full": s.full.json, "main": s.isMain] as [String: Any] }])
+        if !starting { Events.record("state", stateJSON()) }
         scheduleApply()
     }
 
@@ -394,8 +424,17 @@ final class Tiler {
     // MARK: Commands
 
     /// Runs commands from a hotkey or the CLI; returns what to print.
-    func run(_ commands: [Command]) -> String {
-        commands.map(execute).filter { !$0.isEmpty }.joined(separator: "\n")
+    /// `source` says where the commands came from (hotkey, cli, menu, picker) for the event log.
+    func run(_ commands: [Command], source: String = "internal") -> String {
+        let before = world
+        let out = commands.map(execute).filter { !$0.isEmpty }.joined(separator: "\n")
+        if commands != [.state], commands != [.tree], commands != [.nop] {
+            var e: [String: Any] = ["cmd": commands.map(\.description).joined(separator: "; "), "source": source]
+            if out.hasPrefix("error: ") { e["error"] = String(out.dropFirst(7)) }
+            Events.record("command", e)
+        }
+        if world != before { Events.record("layout", layoutJSON()) }
+        return out
     }
 
     private func execute(_ c: Command) -> String {
@@ -464,6 +503,9 @@ final class Tiler {
             do { try png?.write(to: URL(fileURLWithPath: path)) } catch { return "error: \(error)" }
             return path
         case .settings: openSettings()
+        case .state:
+            let data = (try? JSONSerialization.data(withJSONObject: stateJSON(), options: [.prettyPrinted, .sortedKeys])) ?? Data()
+            return String(decoding: data, as: UTF8.self)
         case .clearMonitor:
             world.clearMonitor()
             flash = true
@@ -557,6 +599,7 @@ final class Tiler {
 
     private func setMode(_ m: String) {
         guard config.modes[m] != nil else { return }
+        if m != mode { Events.record("mode", ["mode": m]) }
         mode = m
         registerMode()
         if m == "main" {
@@ -581,10 +624,12 @@ final class Tiler {
         do {
             config = try Config.load(FileManager.default.fileExists(atPath: url.path) ? Data(contentsOf: url) : nil)
             configError = nil
+            Events.record("config", ["ok": true])
             if announce { toast("config reloaded") }
         } catch {
             configError = "\(error)"
             Log.write("config: \(error)")
+            Events.record("config", ["ok": false, "error": "\(error)"])
             toast("\(error)")
         }
         for (pid, w) in workers where config.ignore.contains(w.app.bundleIdentifier ?? "") { untrack(pid) }
@@ -613,7 +658,11 @@ final class Tiler {
 
     private func showPicker(fixed: Spot?, text: String = "") {
         let start = DispatchTime.now().uptimeNanoseconds
-        defer { Log.write("picker: ready in \((DispatchTime.now().uptimeNanoseconds - start) / 1_000_000) ms") }
+        defer {
+            let ms = (DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+            Log.write("picker: ready in \(ms) ms")
+            Events.record("picker", ["ready_ms": Int(ms)])
+        }
         picker.open(pickerItems(), on: lookedAtFrame, fixed: fixed, verbs: config.verbs, text: text) { [weak self] in
             self?.pickerMap() ?? Picker.Map(monitors: [], windows: [], labels: [:])
         }
@@ -630,6 +679,13 @@ final class Tiler {
 
     private func picked(_ item: Picker.Item, _ choice: Picker.Choice) {
         pickerClosed(cancelled: false)
+        let how: String
+        switch choice {
+        case .jump: how = "jump"
+        case .place(let spot): how = "\(spot)"
+        }
+        Events.record("pick", ["kind": "\(item.kind)".components(separatedBy: "(").first ?? "", "title": item.title,
+                               "detail": item.detail, "where": how])
         switch item.kind {
         case .window(let id):
             use(id, choice)
@@ -1026,11 +1082,55 @@ final class Tiler {
             return "\(error)"
         }
     }
-    func menuRetile() { _ = run([.retile]) }
-    func menuPause() { _ = run([.pause]) }
-    func menuReload() { _ = run([.reload]) }
+    func menuRetile() { _ = run([.retile], source: "menu") }
+    func menuPause() { _ = run([.pause], source: "menu") }
+    func menuReload() { _ = run([.reload], source: "menu") }
 
     // MARK: tess tree
+
+    // MARK: Event log
+
+    /// A window for the log: id, app, title (cut at 200 characters) and frame.
+    private func describe(_ id: WindowID) -> [String: Any] {
+        var d: [String: Any] = ["id": Int(id)]
+        if let i = infos[id] {
+            d["app"] = workers[i.pid]?.app.localizedName ?? ""
+            d["bundle"] = bundle(i.pid) ?? ""
+            d["title"] = String(i.title.prefix(200))
+            d["frame"] = i.frame.json
+        }
+        return d
+    }
+
+    /// Screens with their columns and windows, as the model has them.
+    private func layoutJSON() -> [String: Any] {
+        ["focused": world.focused.map { Int($0) as Any } ?? NSNull(), "active_screen": world.activeMonitor + 1,
+         "screens": world.monitors.enumerated().map { n, m in
+            ["n": n + 1, "rows": m.rows, "fullscreen": m.fullscreen.map { Int($0) as Any } ?? NSNull(),
+             "lanes": m.lanes.map { ["windows": $0.windows.map { Int($0) }, "accordion": $0.accordion] as [String: Any] }]
+                as [String: Any] }]
+    }
+
+    /// Everything tess knows, and the machine it runs on.
+    func stateJSON() -> [String: Any] {
+        var state = layoutJSON()
+        let frames = world.frames(inner: config.inner, outer: config.outer)
+        state["mode"] = mode
+        state["paused"] = paused
+        state["config_error"] = configError ?? NSNull()
+        state["frontmost"] = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        state["machine"] = Events.machine()
+        state["apps"] = workers.values.map { ["pid": Int($0.pid), "bundle": $0.app.bundleIdentifier ?? "", "name": $0.app.localizedName ?? ""] }
+        state["windows"] = infos.keys.sorted().map { id -> [String: Any] in
+            var d = describe(id)
+            d["place"] = offSpace.contains(id) ? "other Space" : world.floating.contains(id) ? "floating"
+                : world.locate(id) != nil ? "tiled" : "not tiled"
+            if let f = frames[id] { d["target"] = f.json }
+            if refused.contains(id) { d["keeps_own_size"] = true }
+            return d
+        }
+        return state
+    }
 
     private func tree() -> String {
         func name(_ id: WindowID) -> String {

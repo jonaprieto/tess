@@ -55,7 +55,18 @@ the picker reads tabs). Browser history needs Full Disk Access for
 `~/tess/build/tess` (System Settings, Privacy & Security); without it the picker still lists
 tabs and Brave bookmarks.
 
-Log: `~/Library/Logs/tess.log`.
+## Logs
+
+- `~/Library/Logs/tess/events.jsonl`: one JSON object per line for everything that changes:
+  apps opening and quitting, windows opening, closing, moving to another Space or keeping
+  their own size, focus (by tess or by macOS), every command and where it came from (hotkey,
+  CLI, menu, picker), the layout after it, screens, Spaces, modes, picks, config reloads,
+  watchdog exits, and how long the picker took to open. A full snapshot of the model and the
+  machine (macOS, uptime, thermal state, Low Power Mode, memory, tess's CPU and memory) is
+  written at start, on screen changes and every ten minutes. Rotated at 20 MB. It stays on
+  this Mac; picker queries are not recorded.
+- `tess state` prints the same snapshot now.
+- `~/Library/Logs/tess.log`: short human-readable notes.
 
 Limits: macOS Spaces other than native fullscreen are not modeled; an app with a minimum
 size can overlap its neighbor.

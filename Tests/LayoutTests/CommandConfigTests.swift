@@ -10,6 +10,7 @@ import Testing
     #expect(try Command.parse("focus-monitor prev") == [.cycleMonitor(-1)])
     #expect(try Command.parse("move-to-monitor 3") == [.moveToMonitor(3)])
     #expect(try Command.parse("retile; mode main") == [.retile, .mode("main")])
+    #expect(try Command.parse("state") == [.state])
 }
 
 @Test func pickTakesItsStartingText() throws {

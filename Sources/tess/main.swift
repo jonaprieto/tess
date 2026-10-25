@@ -30,7 +30,7 @@ func serve() -> Never {
     tiler.onLayout = { status.refreshIcon() }
     do {
         try Socket.serve { line in
-            do { return tiler.run(try Command.parse(line)) } catch { return "error: \(error)" }
+            do { return tiler.run(try Command.parse(line), source: "cli") } catch { return "error: \(error)" }
         }
     } catch {
         Log.write("\(error)")

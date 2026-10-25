@@ -30,6 +30,7 @@ enum Watchdog {
                 lock.unlock()
                 if stalled {
                     Log.write("watchdog: main thread stalled for 5 s, exiting")
+                    Events.record("watchdog", ["stalled_s": 5, "machine": Events.machine()])
                     FileManager.default.createFile(atPath: marker.path, contents: nil)
                     exit(1)
                 }

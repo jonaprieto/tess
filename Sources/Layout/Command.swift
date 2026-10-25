@@ -17,6 +17,8 @@ public enum Command: Equatable, Sendable {
     case clearMonitor
     /// The settings window.
     case settings
+    /// tess's model and the machine, as JSON (also written to the event log).
+    case state
     /// Renders the picker's map to a PNG at this path (for debugging without a screen).
     case debugMap(String)
 
@@ -24,7 +26,7 @@ public enum Command: Equatable, Sendable {
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
-        "pick": .pick(""), "close-replace": .closeReplace, "clear-monitor": .clearMonitor, "settings": .settings,
+        "pick": .pick(""), "close-replace": .closeReplace, "clear-monitor": .clearMonitor, "settings": .settings, "state": .state,
     ]
 
     /// Commands separated by `;`. `exec` takes the rest of the line, `;` included.

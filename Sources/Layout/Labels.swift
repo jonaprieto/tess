@@ -58,7 +58,7 @@ extension Command {
         case .closeReplace: "Close, pick a replacement"
         case .clearMonitor: "Clear this screen"
         case .settings: "Settings"
-        case .tree, .nop, .debugMap: nil
+        case .tree, .nop, .debugMap, .state: nil
         }
     }
 

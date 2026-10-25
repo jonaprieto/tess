@@ -62,7 +62,17 @@ extension World {
                 let stack = g.members.sorted {
                     (rows ? $0.frame.minX : $0.frame.minY, $0.id) < (rows ? $1.frame.minX : $1.frame.minY, $1.id)
                 }
-                return Lane(stack.map(\.id), size: g.hi - g.lo, sizes: stack.map { rows ? $0.frame.width : $0.frame.height })
+                func span(_ r: CGRect) -> (lo: Double, hi: Double) { rows ? (r.minX, r.maxX) : (r.minY, r.maxY) }
+                // Windows lying on top of each other (left maximized, or by another tiler's
+                // accordion) were not a stack: keep them full size, one in front.
+                let piled = zip(stack, stack.dropFirst()).contains { a, b in
+                    let (alo, ahi) = span(a.frame), (blo, bhi) = span(b.frame)
+                    return min(ahi, bhi) - max(alo, blo) > 0.5 * min(ahi - alo, bhi - blo)
+                }
+                var lane = Lane(stack.map(\.id), size: g.hi - g.lo,
+                                sizes: piled ? nil : stack.map { rows ? $0.frame.width : $0.frame.height })
+                lane.accordion = piled
+                return lane
             }
         }
         let m = min(activeMonitor, monitors.count - 1)

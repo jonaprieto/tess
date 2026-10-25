@@ -15,6 +15,8 @@ public enum Command: Equatable, Sendable {
     case pick(String), closeReplace
     /// Send every window on the active monitor to the next one.
     case clearMonitor
+    /// Renders the picker's map to a PNG at this path (for debugging without a screen).
+    case debugMap(String)
 
     static let simple: [String: Command] = [
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
@@ -29,6 +31,10 @@ public enum Command: Equatable, Sendable {
         var rest = Substring(line)
         while true {
             let part = rest.drop(while: \.isWhitespace)
+            if part.hasPrefix("debug-map ") {
+                out.append(.debugMap(part.dropFirst(10).trimmingCharacters(in: .whitespaces)))
+                return out
+            }
             if part.hasPrefix("pick ") {
                 // Like exec, the rest of the line: the text the picker starts with.
                 out.append(.pick(part.dropFirst(5).trimmingCharacters(in: .whitespaces)))
@@ -128,6 +134,7 @@ extension Command: CustomStringConvertible {
         case .exec(let s): "exec \(s)"
         case .mode(let m): "mode \(m)"
         case .pick(let text): text.isEmpty ? "pick" : "pick \(text)"
+        case .debugMap(let path): "debug-map \(path)"
         default: Command.simple.first { $0.value == self }?.key ?? "nop"
         }
     }

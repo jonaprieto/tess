@@ -224,6 +224,23 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     // MARK: Step 2
 
+    /// The map as a PNG, drawn offscreen in dark appearance on a dark background.
+    static func render(_ model: Map, size: NSSize) -> Data? {
+        let view = MapView(frame: NSRect(origin: .zero, size: size))
+        view.model = model
+        view.title = "Example"
+        let image = NSImage(size: size, flipped: true) { rect in
+            NSAppearance(named: .darkAqua)?.performAsCurrentDrawingAppearance {
+                NSColor(white: 0.16, alpha: 1).setFill()
+                rect.fill()
+                view.draw(rect)
+            }
+            return true
+        }
+        guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        return rep.representation(using: .png, properties: [:])
+    }
+
     private func showMap(for item: Item) {
         picked = item
         let model = mapModel()
@@ -413,43 +430,69 @@ final class MapView: NSView {
             NSColor.labelColor.withAlphaComponent(0.25).setStroke()
             path.lineWidth = 1
             path.stroke()
-            ("\(n + 1)" as NSString).draw(at: NSPoint(x: box.maxX - 24, y: box.maxY - 26), withAttributes: [
+            ("\(n + 1)" as NSString).draw(at: NSPoint(x: box.maxX - 14, y: box.minY - 20), withAttributes: [
                 .font: NSFont.monospacedDigitSystemFont(ofSize: 15, weight: .semibold), .foregroundColor: NSColor.tertiaryLabelColor,
             ])
         }
         for w in model.windows {
-            let r = mini(w.frame).insetBy(dx: 6, dy: 6)
+            let r = mini(w.frame).insetBy(dx: 4, dy: 3)
+            guard r.width > 4, r.height > 4 else { continue }
             let isPicked = w.id == picked
-            let path = NSBezierPath(roundedRect: r, xRadius: 9, yRadius: 9)
+            let path = NSBezierPath(roundedRect: r, xRadius: min(9, r.height / 3), yRadius: min(9, r.height / 3))
             (isPicked ? NSColor.controlAccentColor.withAlphaComponent(0.35) : NSColor.labelColor.withAlphaComponent(0.1)).setFill()
             path.fill()
             (isPicked ? NSColor.controlAccentColor : NSColor.labelColor.withAlphaComponent(0.18)).setStroke()
             path.lineWidth = isPicked ? 2 : 1
             path.stroke()
-            // Icon and names in the middle.
-            let side = min(40, r.height * 0.4, r.width * 0.4)
-            let iconRect = NSRect(x: r.midX - side / 2, y: r.midY - side / 2 - 12, width: side, height: side)
-            w.icon?.draw(in: iconRect)
-            let center = NSMutableParagraphStyle()
-            center.alignment = .center
-            center.lineBreakMode = .byTruncatingTail
-            (w.app as NSString).draw(in: NSRect(x: r.minX + 8, y: iconRect.maxY + 6, width: r.width - 16, height: 16), withAttributes: [
-                .font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: NSColor.labelColor, .paragraphStyle: center,
-            ])
-            (w.title as NSString).draw(in: NSRect(x: r.minX + 8, y: iconRect.maxY + 22, width: r.width - 16, height: 15), withAttributes: [
-                .font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: center,
-            ])
-            guard let label = model.labels[w.id] else { continue }
-            // A keycap in the top-left corner.
-            let cap = NSRect(x: r.minX + 9, y: r.minY + 9, width: 28, height: 28)
-            NSColor.black.withAlphaComponent(0.25).setFill()
-            NSBezierPath(roundedRect: cap.offsetBy(dx: 0, dy: 2), xRadius: 7, yRadius: 7).fill()
-            NSColor.controlAccentColor.setFill()
-            NSBezierPath(roundedRect: cap, xRadius: 7, yRadius: 7).fill()
-            let text = String(label).uppercased() as NSString
-            let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 15, weight: .bold), .foregroundColor: NSColor.white]
-            let s = text.size(withAttributes: attrs)
-            text.draw(at: NSPoint(x: cap.midX - s.width / 2, y: cap.midY - s.height / 2), withAttributes: attrs)
+            NSGraphicsContext.saveGraphicsState()
+            path.addClip()
+            let clip = NSMutableParagraphStyle()
+            clip.lineBreakMode = .byTruncatingTail
+            let label = model.labels[w.id]
+            if r.height < 72 {
+                // A compact row: keycap, icon and "App · title" on one line.
+                let side = min(24, r.height - 6)
+                var x = r.minX + 6
+                if let label {
+                    keycap(label, NSRect(x: x, y: r.midY - side / 2, width: side, height: side))
+                    x += side + 6
+                }
+                let icon = min(18, r.height - 6)
+                w.icon?.draw(in: NSRect(x: x, y: r.midY - icon / 2, width: icon, height: icon))
+                x += icon + 6
+                let line = NSMutableAttributedString(string: w.app, attributes: [
+                    .font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: NSColor.labelColor,
+                ])
+                if !w.title.isEmpty {
+                    line.append(NSAttributedString(string: "  \(w.title)", attributes: [
+                        .font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor,
+                    ]))
+                }
+                line.addAttribute(.paragraphStyle, value: clip, range: NSRange(location: 0, length: line.length))
+                line.draw(in: NSRect(x: x, y: r.midY - 8, width: r.maxX - x - 6, height: 16))
+            } else {
+                let side = min(40, r.height * 0.35, r.width * 0.4)
+                let iconRect = NSRect(x: r.midX - side / 2, y: r.midY - side / 2 - 12, width: side, height: side)
+                w.icon?.draw(in: iconRect)
+                clip.alignment = .center
+                (w.app as NSString).draw(in: NSRect(x: r.minX + 8, y: iconRect.maxY + 6, width: r.width - 16, height: 16), withAttributes: [
+                    .font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: NSColor.labelColor, .paragraphStyle: clip,
+                ])
+                (w.title as NSString).draw(in: NSRect(x: r.minX + 8, y: iconRect.maxY + 22, width: r.width - 16, height: 15), withAttributes: [
+                    .font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: clip,
+                ])
+                if let label { keycap(label, NSRect(x: r.minX + 9, y: r.minY + 9, width: 28, height: 28)) }
+            }
+            NSGraphicsContext.restoreGraphicsState()
         }
+    }
+
+    private func keycap(_ label: Character, _ cap: NSRect) {
+        NSColor.controlAccentColor.setFill()
+        NSBezierPath(roundedRect: cap, xRadius: cap.height / 4, yRadius: cap.height / 4).fill()
+        let text = String(label).uppercased() as NSString
+        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: cap.height * 0.55, weight: .bold), .foregroundColor: NSColor.white]
+        let s = text.size(withAttributes: attrs)
+        text.draw(at: NSPoint(x: cap.midX - s.width / 2, y: cap.midY - s.height / 2), withAttributes: attrs)
     }
 }

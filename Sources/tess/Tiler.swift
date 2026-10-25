@@ -386,6 +386,10 @@ final class Tiler {
             } else {
                 openPicker(fixed: nil, text: text)
             }
+        case .debugMap(let path):
+            let png = Picker.render(pickerMap(), size: NSSize(width: 1000, height: 550))
+            do { try png?.write(to: URL(fileURLWithPath: path)) } catch { return "error: \(error)" }
+            return path
         case .clearMonitor:
             world.clearMonitor()
             flash = true
@@ -663,10 +667,21 @@ final class Tiler {
 
     private func pickerMap() -> Picker.Map {
         let frames = world.frames(inner: config.inner, outer: config.outer)
-        let windows = world.tiled.compactMap { id -> (id: WindowID, frame: CGRect, app: String, title: String, icon: NSImage?)? in
-            guard let f = frames[id] else { return nil }
-            let app = infos[id].flatMap { workers[$0.pid]?.app }
-            return (id, f, app?.localizedName ?? "", infos[id]?.title ?? "", app?.icon)
+        var windows: [(id: WindowID, frame: CGRect, app: String, title: String, icon: NSImage?)] = []
+        for mon in world.monitors {
+            for lane in mon.lanes {
+                let rects = lane.windows.compactMap { frames[$0] }
+                guard let all = rects.reduce(nil, { (u: CGRect?, r) in u?.union(r) ?? r }) else { continue }
+                for (i, id) in lane.windows.enumerated() {
+                    // An accordion's windows share one rect; the map lists them as rows instead.
+                    let n = CGFloat(lane.windows.count)
+                    let r = lane.accordion
+                        ? CGRect(x: all.minX, y: all.minY + all.height * CGFloat(i) / n, width: all.width, height: all.height / n)
+                        : (frames[id] ?? .zero)
+                    let app = infos[id].flatMap { workers[$0.pid]?.app }
+                    windows.append((id, r, app?.localizedName ?? "", infos[id]?.title ?? "", app?.icon))
+                }
+            }
         }
         return Picker.Map(monitors: world.monitors.map(\.frame), windows: windows, labels: world.labels(Picker.alphabet))
     }

@@ -100,3 +100,20 @@ func near(_ a: CGRect?, _ b: CGRect?, _ tolerance: Double = 1) -> Bool {
     ])
     #expect(lanes(w) == [[1, 3], [2]])
 }
+
+@Test func windowsOnTopOfEachOtherBecomeAnAccordion() {
+    var w = world([])
+    w.rebuild([
+        (id: 1, frame: CGRect(x: 10, y: 10, width: 980, height: 780)),
+        (id: 2, frame: CGRect(x: 10, y: 10, width: 980, height: 780)),
+        (id: 3, frame: CGRect(x: 12, y: 14, width: 970, height: 770)),
+    ])
+    #expect(lanes(w) == [[1, 2, 3]])
+    #expect(w.monitors[0].lanes[0].accordion)
+    var stacked = world([])
+    stacked.rebuild([
+        (id: 1, frame: CGRect(x: 10, y: 10, width: 980, height: 385)),
+        (id: 2, frame: CGRect(x: 10, y: 405, width: 980, height: 385)),
+    ])
+    #expect(!stacked.monitors[0].lanes[0].accordion)
+}

@@ -118,18 +118,7 @@ final class Overlay {
         return p
     }
 
-    private static func panel() -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .statusBar
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.ignoresMouseEvents = true
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-        return p
-    }
+    private static func panel() -> NSPanel { Panels.overlay(level: .statusBar) }
 }
 
 /// The mode overlay's content: a title, then one column per group of bindings.

@@ -1,4 +1,5 @@
 import AppKit
+import Layout
 
 /// Brave and Safari tabs over AppleScript, run with `osascript` off the main thread (a busy
 /// browser can take seconds to answer, and the watchdog allows the main thread five).
@@ -31,13 +32,10 @@ enum Browsers {
             osascript(script, onMain: false) { output in
                 let name = app.localizedName ?? bundleID
                 let icon = Icons.small(app.icon)
-                let items = (output ?? "").split(separator: "\n").compactMap { line -> Picker.Item? in
-                    let f = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
-                    guard f.count >= 4, let w = Int(f[0]), let i = Int(f[1]) else { return nil }
-                    let host = URL(string: f[3])?.host ?? f[3]
-                    return Picker.Item(kind: .tab(.init(bundleID: bundleID, window: w, index: i)),
-                                       title: f[2].isEmpty ? f[3] : f[2], detail: "\(name) tab · \(host)",
-                                       icon: icon, search: "\(f[2]) \(f[3])")
+                let items = (output ?? "").split(separator: "\n").compactMap(Parse.tab).map { t in
+                    let host = URL(string: t.url)?.host ?? t.url
+                    return Picker.Item(kind: .tab(.init(bundleID: bundleID, window: t.window, index: t.index)),
+                                       title: t.title, detail: "\(name) tab · \(host)", icon: icon, search: "\(t.title) \(t.url)")
                 }
                 DispatchQueue.main.async { done(items) }
             }
@@ -102,13 +100,10 @@ enum Browsers {
                 let name = source.browser == brave ? "Brave" : "Safari"
                 let icon = Icons.small(NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.browser)
                     .map { NSWorkspace.shared.icon(forFile: $0.path) })
-                let items = (text ?? "").split(separator: "\n").compactMap { line -> Picker.Item? in
-                    let f = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
-                    guard f.count == 2, let url = URL(string: f[1]), url.scheme?.hasPrefix("http") == true else { return nil }
-                    let host = url.host ?? f[1]
-                    return Picker.Item(kind: .url(url, browser: source.browser), title: f[0].isEmpty ? f[1] : f[0],
-                                       detail: "\(name) \(source.kind) · \(host)", icon: icon,
-                                       search: "\(f[0]) \(host) \(url.path)", quiet: true)
+                let items = (text ?? "").split(separator: "\n").compactMap(Parse.page).map { p in
+                    Picker.Item(kind: .url(p.url, browser: source.browser), title: p.title,
+                                detail: "\(name) \(source.kind) · \(p.host)", icon: icon,
+                                search: "\(p.title) \(p.host) \(p.url.path)", quiet: true)
                 }
                 // Each source as soon as it answers, without repeats.
                 DispatchQueue.main.async {
@@ -124,28 +119,10 @@ enum Browsers {
         }
     }
 
-    /// Read-only query on a copy-free immutable snapshot; tab separated, nil on failure.
+    /// Read-only query on an immutable snapshot of the file; tab separated, nil on failure.
     static func sqlite(_ uri: String, _ query: String, onMain: Bool = true, _ done: @escaping (String?) -> Void) {
-        DispatchQueue.global().async {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
-            p.arguments = ["-readonly", "-separator", "\t", uri, query]
-            let out = Pipe(), err = Pipe()
-            p.standardOutput = out
-            p.standardError = err
-            do { try p.run() } catch {
-                deliver(onMain) { done(nil) }
-                return
-            }
-            // A browser stuck on a dialog would otherwise hold this for the 2 minute Apple event timeout.
-            DispatchQueue.global().asyncAfter(deadline: .now() + 10) { if p.isRunning { p.terminate() } }
-            let data = out.fileHandleForReading.readDataToEndOfFile()
-            let problem = err.fileHandleForReading.readDataToEndOfFile()
-            p.waitUntilExit()
-            if p.terminationStatus != 0 { Log.write("sqlite: \(String(decoding: problem, as: UTF8.self).prefix(200))") }
-            let text = p.terminationStatus == 0 ? String(decoding: data, as: UTF8.self) : nil
-            deliver(onMain) { done(text) }
-        }
+        Proc.run("/usr/bin/sqlite3", ["-readonly", "-separator", "\t", uri, query], timeout: 10, onMain: onMain,
+                 log: "sqlite", done)
     }
 
     /// Brings the tab to the front of its window and the window to the front of the browser.
@@ -162,30 +139,8 @@ enum Browsers {
             """) { _ in done() }
     }
 
-    static func deliver(_ onMain: Bool, _ block: @escaping () -> Void) {
-        if onMain { DispatchQueue.main.async(execute: block) } else { block() }
-    }
-
+    /// A browser stuck on a dialog would otherwise hold this for the 2 minute Apple event timeout.
     static func osascript(_ script: String, onMain: Bool = true, _ done: @escaping (String?) -> Void) {
-        DispatchQueue.global().async {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            p.arguments = ["-e", script]
-            let out = Pipe(), err = Pipe()
-            p.standardOutput = out
-            p.standardError = err
-            do { try p.run() } catch {
-                deliver(onMain) { done(nil) }
-                return
-            }
-            // A browser stuck on a dialog would otherwise hold this for the 2 minute Apple event timeout.
-            DispatchQueue.global().asyncAfter(deadline: .now() + 10) { if p.isRunning { p.terminate() } }
-            let data = out.fileHandleForReading.readDataToEndOfFile()
-            let problem = err.fileHandleForReading.readDataToEndOfFile()
-            p.waitUntilExit()
-            if p.terminationStatus != 0 { Log.write("osascript: \(String(decoding: problem, as: UTF8.self))") }
-            let text = p.terminationStatus == 0 ? String(decoding: data, as: UTF8.self) : nil
-            deliver(onMain) { done(text) }
-        }
+        Proc.run("/usr/bin/osascript", ["-e", script], timeout: 10, onMain: onMain, log: "osascript", done)
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import Layout
 
 /// The operation log, for improving tess from what really happened: one JSON object per line
 /// in `~/Library/Logs/tess/events.jsonl`, `{"t": time, "e": type, ...fields}`. Rotated at
@@ -67,9 +68,4 @@ enum Events {
             "tess_rss_mb": Int(usage.ru_maxrss) / 1_048_576,
         ]
     }
-}
-
-extension CGRect {
-    /// [x, y, width, height] in whole points, for the log.
-    var json: [Int] { [Int(minX.rounded()), Int(minY.rounded()), Int(width.rounded()), Int(height.rounded())] }
 }

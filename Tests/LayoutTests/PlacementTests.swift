@@ -76,7 +76,7 @@ import Testing
 
 @Test func labelsFollowMonitorsLanesAndStacks() {
     let w = world([[1, 2], [3]], [[4]])
-    let l = w.labels("asd")
+    let l = stableLabels([:], windows: w.tiled, alphabet: "asd")
     #expect(l == [1: "a", 2: "s", 3: "d"])
 }
 

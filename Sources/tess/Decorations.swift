@@ -41,19 +41,7 @@ final class Decorations {
         panels.forEach { $0.orderOut(nil) }
     }
 
-    private static func panel() -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        // Above normal windows, below menus, the picker and tess's own toasts.
-        p.level = .floating
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.ignoresMouseEvents = true
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-        return p
-    }
+    private static func panel() -> NSPanel { Panels.overlay(level: .floating) }
 }
 
 final class DecorationView: NSView {

@@ -51,7 +51,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         var labels: [WindowID: Character]
     }
 
-    static let alphabet = "asdhjklqwertyuiopzxcvbnm"
+    static let alphabet = labelAlphabet
     /// `f name` searches file names, `rg text` file contents; results come from `search`.
     static let searchVerbs: Set<String> = ["f", "rg", "book", "paper"]
 

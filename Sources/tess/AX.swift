@@ -80,32 +80,3 @@ extension AXUIElement {
         AXUIElementPerformAction(b, kAXPressAction as CFString)
     }
 }
-
-/// What tess needs to know about one window, read on its app's thread.
-struct WinInfo: Equatable {
-    var id: WindowID
-    var pid: pid_t
-    var frame: CGRect
-    var title: String
-    /// `AXStandardWindow`, not minimized, not native fullscreen, app not hidden.
-    var standard: Bool
-    var fullscreenButton: Bool
-    var nativeFullscreen: Bool
-}
-
-enum Kind {
-    case tile, float, skip
-}
-
-extension WinInfo {
-    func kind(bundleID: String?, _ config: Config) -> Kind {
-        guard standard else { return .skip }
-        if let b = bundleID {
-            if config.float.contains(b) { return .float }
-            if config.tile.contains(b) { return .tile }
-        }
-        // Windows without a working fullscreen button are not meant to be big (dialogs,
-        // settings, About windows): the same heuristic AeroSpace uses.
-        return fullscreenButton ? .tile : .float
-    }
-}

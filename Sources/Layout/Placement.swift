@@ -72,11 +72,6 @@ extension World {
         return (p, monitors[p.m].lanes[p.l].windows.count == 1)
     }
 
-    /// One letter per tiled window, by monitor, lane and stack, while letters last.
-    public func labels(_ alphabet: String) -> [WindowID: Character] {
-        Dictionary(uniqueKeysWithValues: zip(tiled, alphabet))
-    }
-
     /// Out of the layout and the floating set, focus untouched.
     mutating func unplace(_ id: WindowID) {
         detach(id)

@@ -116,7 +116,8 @@ import Testing
     #expect(zone(250, 20) == .stack(1, after: false))
     #expect(zone(250, 780) == .stack(1, after: true))
     #expect(zone(250, 400) == .swap(1))
-    #expect(zone(750, 400) == nil)  // over itself
+    #expect(zone(750, 400) == .stay)  // over its own place
+    #expect(w.dropZone(2, at: CGPoint(x: 750, y: 400), frames: f)?.rect == f[2])
     #expect(zone(1500, 400) == .screen(1))
     #expect(w.dropZone(2, at: CGPoint(x: 250, y: 780), frames: f)?.rect == CGRect(x: 0, y: 400, width: 500, height: 400))
     w.drop(2, .stack(1, after: true))
@@ -133,4 +134,18 @@ import Testing
     let g = w.frames(inner: 0, outer: 0)
     #expect(w.dropZone(3, at: CGPoint(x: 500, y: 10), frames: g)?.zone == .lane(1, after: false))
     #expect(w.dropZone(3, at: CGPoint(x: 10, y: 200), frames: g)?.zone == .stack(1, after: false))
+}
+
+@Test func theGapBesideAWindowCountsAsThatWindow() {
+    // 1 and 2 with a 10 point gap between them; the mouse in the gap is at 1's right edge.
+    let w = world([[1], [2]], [], focused: 2)
+    let f = w.frames(inner: 10, outer: 10)
+    let gap = CGPoint(x: (f[1]!.maxX + f[2]!.minX) / 2, y: 400)
+    #expect(!f[1]!.contains(gap) && !f[2]!.contains(gap))
+    var moved = w
+    moved.monitors[0].lanes = [Lane([1]), Lane([3]), Lane([2])]
+    let g = moved.frames(inner: 10, outer: 10)
+    let between = CGPoint(x: g[1]!.maxX + 2, y: 400)  // in the gap, nearer 1
+    #expect(moved.dropZone(2, at: between, frames: g)?.zone == .lane(1, after: true))
+    #expect(w.dropZone(2, at: CGPoint(x: 2500, y: 400), frames: f) == nil)
 }

@@ -25,6 +25,8 @@ public enum DropZone: Equatable, Sendable {
     case swap(WindowID)
     /// The right end of that monitor.
     case screen(Int)
+    /// Back where it was.
+    case stay
 }
 
 extension World {
@@ -78,15 +80,20 @@ extension World {
     }
 
     /// Where tiled window `id` dragged to `point` would land (`frames`: where the layout puts
-    /// each window), and the rect that shows it; nil where it would stay put. Over another
-    /// window: near an edge along the lanes, a lane of its own on that side; near an edge
-    /// across them, that window's lane on that side; the middle, they swap. Over no window
-    /// on another screen, the right end of that screen.
+    /// each window), and the rect that shows it; nil off every screen. Over another window, or
+    /// in the gap beside it: near an edge along the lanes, a lane of its own on that side; near
+    /// an edge across them, that window's lane on that side; the middle, they swap. Over its
+    /// own place, it stays. Over nothing on another screen, the right end of that screen.
     public func dropZone(_ id: WindowID, at point: CGPoint, frames: [WindowID: CGRect]) -> (zone: DropZone, rect: CGRect)? {
         guard let from = locate(id) else { return nil }
-        guard let (t, f) = frames.first(where: { $0.key != id && locate($0.key) != nil && $0.value.contains(point) }) else {
-            guard let m = monitors.firstIndex(where: { $0.frame.contains(point) }), m != from.m else { return nil }
-            return (.screen(m), monitors[m].frame)
+        let others = frames.filter { $0.key != id && locate($0.key) != nil }
+        let over = others.first { $0.value.contains(point) }
+        if over == nil, let own = frames[id], own.contains(point) { return (.stay, own) }
+        func away(_ r: CGRect) -> Double { hypot(max(r.minX - point.x, 0, point.x - r.maxX), max(r.minY - point.y, 0, point.y - r.maxY)) }
+        let near = others.filter { away($0.value) <= 12 }.min { away($0.value) < away($1.value) }
+        guard let (t, f) = over ?? near else {
+            guard let m = monitors.firstIndex(where: { $0.frame.contains(point) }) else { return nil }
+            return m == from.m ? (.stay, frames[id] ?? monitors[m].frame) : (.screen(m), monitors[m].frame)
         }
         let u = (point.x - f.minX) / f.width, v = (point.y - f.minY) / f.height
         if min(u, 1 - u, v, 1 - v) > 0.25 { return (.swap(t), f) }
@@ -102,6 +109,8 @@ extension World {
     /// `id` (tiled) moved to `zone` and focused.
     public mutating func drop(_ id: WindowID, _ zone: DropZone) {
         switch zone {
+        case .stay:
+            return
         case .swap(let t):
             swap(id, t)
         case .screen(let m):

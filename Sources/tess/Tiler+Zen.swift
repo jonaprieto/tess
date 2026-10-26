@@ -2,7 +2,8 @@ import AppKit
 import Layout
 
 /// Zen: for 25 minutes the focused window fills its screen and a veil darkens the others, then
-/// 5 minutes of break without either, until `zen` runs again.
+/// 5 minutes of break with the layout back and a lighter veil on every screen, until `zen` runs
+/// again.
 extension Tiler {
     func toggleZen() {
         if zen == nil {
@@ -52,9 +53,13 @@ extension Tiler {
         return world.activeMonitor
     }
 
+    /// Working: the other screens, dark. Break: every screen, lighter, so it cannot go unnoticed
+    /// and what was left open still reads.
     func refreshVeil() {
+        guard zen != nil, !paused else { return veil.show([]) }
         let m = zenMonitor
-        veil.show(zenWorking && !paused ? world.monitors.indices.filter { $0 != m }.map { world.monitors[$0].frame } : [])
+        veil.show(world.monitors.indices.filter { !zenWorking || $0 != m }.map { world.monitors[$0].frame },
+                  alpha: zenWorking ? 0.95 : 0.6)
     }
 }
 
@@ -64,17 +69,16 @@ extension Tiler {
 final class Veil {
     private var panels: [NSPanel] = []
 
-    func show(_ screens: [CGRect]) {
+    func show(_ screens: [CGRect], alpha: CGFloat = 0.95) {
         while panels.count < screens.count {
-            let p = Panels.overlay(level: NSWindow.Level(rawValue: NSWindow.Level.normal.rawValue + 1))
-            p.backgroundColor = NSColor.black.withAlphaComponent(0.95)
-            panels.append(p)
+            panels.append(Panels.overlay(level: NSWindow.Level(rawValue: NSWindow.Level.normal.rawValue + 1)))
         }
         for (n, p) in panels.enumerated() {
             guard let screen = screens[safe: n] else {
                 p.orderOut(nil)
                 continue
             }
+            p.backgroundColor = NSColor.black.withAlphaComponent(alpha)
             let frame = Screens.flip(screen)
             if p.frame != frame { p.setFrame(frame, display: true) }
             if !p.isVisible { p.orderFrontRegardless() }

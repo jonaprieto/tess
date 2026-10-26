@@ -74,7 +74,7 @@ final class Grayscale {
 /// of tess's own windows in front.
 extension Tiler {
     func refreshGray() {
-        guard config.grayOthers, !paused, !starting, !zenWorking, let f = world.focused, let info = infos[f],
+        guard config.grayOthers, !paused, !starting, zen == nil, let f = world.focused, let info = infos[f],
               NSWorkspace.shared.frontmostApplication?.processIdentifier == info.pid
         else { return grayscale.hide() }
         grayscale.show(world.monitors.map { m in (m.frame, m.frame.intersects(info.frame) ? info.frame : nil) })

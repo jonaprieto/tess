@@ -103,8 +103,8 @@ another app or Zen is in front.
 
 Zen (`z` in tess mode, `tess zen`, or the menu) is a pomodoro: for 25 minutes the focused
 window fills its screen and the other screens go dark, then a 5 minute break with the layout
-as it was, until Zen is turned off. The menu bar counts down. Clicking a dark screen focuses
-what is under it, and Zen follows.
+as it was and every screen dimmed, until Zen is turned off. The menu bar counts down.
+Clicking a dark screen focuses what is under it, and Zen follows.
 
 ## Picker
 

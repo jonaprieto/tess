@@ -31,7 +31,9 @@ extension World {
     /// Tiles `windows` by where they are now: each goes to the monitor holding its center, a
     /// lane is the windows whose range on the lanes' axis overlaps its first window's by half or more,
     /// and weights are the current sizes. A window off every screen gets a lane at the end of
-    /// the active monitor. Accordion and fullscreen are not recovered.
+    /// the active monitor. A window covering its monitor edge to edge, which only tess
+    /// fullscreen does, is fullscreen again, its lane at the right end (so a restart keeps
+    /// it). Accordion is not recovered.
     public mutating func rebuild(_ windows: [(id: WindowID, frame: CGRect)]) {
         guard !monitors.isEmpty else { return }
         let full = monitors.compactMap(\.fullscreen)
@@ -44,9 +46,16 @@ extension World {
         }
         var lost: [WindowID] = []
         var byMonitor = Array(repeating: [(id: WindowID, frame: CGRect)](), count: monitors.count)
+        var edgeToEdge: [(id: WindowID, m: Int)] = []
         for w in windows {
             floating.remove(w.id)
-            if let m = monitorIndex(for: w.frame) { byMonitor[m].append(w) } else { lost.append(w.id) }
+            if let m = monitors.firstIndex(where: { $0.frame.isNear(w.frame) }) {
+                edgeToEdge.append((w.id, m))
+            } else if let m = monitorIndex(for: w.frame) {
+                byMonitor[m].append(w)
+            } else {
+                lost.append(w.id)
+            }
         }
         for m in monitors.indices {
             let rows = monitors[m].rows
@@ -83,6 +92,11 @@ extension World {
         }
         let m = min(activeMonitor, monitors.count - 1)
         for id in lost { monitors[m].lanes.append(newLane(id, on: m)) }
+        for (id, m) in edgeToEdge {
+            monitors[m].lanes.append(newLane(id, on: m))
+            // Alone on its monitor with no outer gap it is just a lone window.
+            if !byMonitor[m].isEmpty, !full.contains(where: { locate($0)?.m == m }) { monitors[m].fullscreen = id }
+        }
         if let f = focused { focused = f }
     }
 

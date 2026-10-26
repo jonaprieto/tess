@@ -149,3 +149,18 @@ import Testing
     #expect(moved.dropZone(2, at: between, frames: g)?.zone == .lane(1, after: true))
     #expect(w.dropZone(2, at: CGPoint(x: 2500, y: 400), frames: f) == nil)
 }
+
+@Test func aRestartKeepsTessFullscreen() {
+    // 2 fills monitor A edge to edge, in front of 1 and 3.
+    var w = world([], [], focused: nil)
+    let a = w.monitors[0].frame
+    w.rebuild([(1, CGRect(x: a.minX + 10, y: a.minY + 10, width: 480, height: 780)),
+               (3, CGRect(x: a.minX + 510, y: a.minY + 10, width: 480, height: 780)),
+               (2, a)])
+    #expect(lanes(w) == [[1], [3], [2]])
+    #expect(w.monitors[0].fullscreen == 2)
+    // Alone on its monitor (no outer gap), a window filling it is not fullscreen.
+    var lone = world([], [], focused: nil)
+    lone.rebuild([(5, lone.monitors[1].frame)])
+    #expect(lanes(lone, 1) == [[5]] && lone.monitors[1].fullscreen == nil)
+}

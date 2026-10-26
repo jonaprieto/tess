@@ -97,7 +97,7 @@ final class Overlay {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: hide)
     }
 
-    /// Where a dragged window would land, tinted; nil hides it.
+    /// Where a dragged window would land, tinted orange; nil hides it.
     func showDrop(_ rect: CGRect?) {
         guard let rect else {
             dropPanel?.orderOut(nil)
@@ -113,8 +113,9 @@ final class Overlay {
             return p
         }()
         dropPanel = p
-        p.contentView?.layer?.backgroundColor = Panels.accent.withAlphaComponent(0.22).cgColor
-        p.contentView?.layer?.borderColor = Panels.accent.cgColor
+        // Orange, apart from the focus border, so where a drop lands is never mistaken for focus.
+        p.contentView?.layer?.backgroundColor = NSColor.systemOrange.withAlphaComponent(0.22).cgColor
+        p.contentView?.layer?.borderColor = NSColor.systemOrange.cgColor
         let frame = Screens.flip(rect.insetBy(dx: 4, dy: 4))
         if p.frame != frame { p.setFrame(frame, display: true) }
         if !p.isVisible { p.orderFrontRegardless() }

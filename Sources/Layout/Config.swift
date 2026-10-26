@@ -21,6 +21,8 @@ public struct Config: Equatable, Sendable {
     public var overlayAllScreens = true
     /// When windows show their border and letter, and screens their number.
     public var windowLabels = LabelMode.jump
+    /// Modes that go back to main after one command, unless entered again to lock them.
+    public var oneShot: [String] = []
     /// New windows go to an empty screen when there is one, and the settings window and a
     /// mode's keys show on the screen with the fewest windows (instead of `overlayAllScreens`).
     public var emptyScreens = true
@@ -80,9 +82,11 @@ public struct Config: Equatable, Sendable {
         public var verbs: [String: String?]?
         public var modes: [String: [String: String?]]?
         public var emptyScreens: Bool?
+        public var oneShot: [String]?
         enum CodingKeys: String, CodingKey {
             case gaps, overlay, float, tile, ignore, history, verbs, modes
             case emptyScreens = "empty_screens"
+            case oneShot = "one_shot"
         }
         public init() {}
     }
@@ -126,6 +130,7 @@ public struct Config: Equatable, Sendable {
         r.overlay = Raw.Overlay(allScreens: top.overlay?.allScreens ?? base.overlay?.allScreens,
                                 windowLabels: top.overlay?.windowLabels ?? base.overlay?.windowLabels)
         r.emptyScreens = top.emptyScreens ?? base.emptyScreens
+        r.oneShot = top.oneShot ?? base.oneShot
         r.float = top.float ?? base.float
         r.tile = top.tile ?? base.tile
         r.ignore = top.ignore ?? base.ignore
@@ -153,6 +158,7 @@ public struct Config: Equatable, Sendable {
         if edited.gaps != base.gaps { o.gaps = edited.gaps }
         if edited.overlay != base.overlay { o.overlay = edited.overlay }
         if edited.emptyScreens != base.emptyScreens { o.emptyScreens = edited.emptyScreens }
+        if edited.oneShot != base.oneShot { o.oneShot = edited.oneShot }
         if edited.float != base.float { o.float = edited.float }
         if edited.tile != base.tile { o.tile = edited.tile }
         if edited.ignore != base.ignore { o.ignore = edited.ignore }
@@ -196,6 +202,8 @@ public struct Config: Equatable, Sendable {
         c.verbs = (raw.verbs ?? [:]).compactMapValues { $0 }
         let modes = raw.modes ?? [:]
         guard modes["main"] != nil else { throw ParseError("config: modes.main is missing") }
+        c.oneShot = raw.oneShot ?? []
+        for m in c.oneShot where modes[m] == nil { throw ParseError("config: one_shot: no mode '\(m)'") }
         for (mode, bindings) in modes {
             var parsed: [KeySpec: [Command]] = [:]
             for (key, line) in bindings {
@@ -225,6 +233,7 @@ public struct Config: Equatable, Sendable {
       "gaps": {"inner": 10, "outer": 10},
       "overlay": {"all_screens": true, "window_labels": "jump"},
       "empty_screens": true,
+      "one_shot": ["tess"],
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": ["io.github.ender-wang.EdgeMark"],
@@ -309,7 +318,7 @@ public struct Config: Equatable, Sendable {
           "r": "mode resize",
           "esc": "mode main",
           "enter": "mode main",
-          "cmd-alt-ctrl-shift-t": "mode main"
+          "cmd-alt-ctrl-shift-t": "mode tess"
         },
         "resize": {
           "h": "resize width -50",

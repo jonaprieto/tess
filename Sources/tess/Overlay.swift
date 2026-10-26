@@ -142,7 +142,9 @@ final class ModeSheet: NSView {
                 back.append(key.symbol)
                 continue
             }
-            guard let label = Command.label(of: commands), let first = commands.first(where: { $0.label != nil }) else { continue }
+            // Entering the mode again locks it on (one_shot).
+            let label = commands == [.mode(name)] ? "Lock" : Command.label(of: commands)
+            guard let label, let first = commands.first(where: { $0.label != nil }) else { continue }
             groups[first.group, default: []].append(Row(cap: key.symbol, label: label, order: Self.order(first, label)))
         }
         back.sort { $0.count < $1.count }

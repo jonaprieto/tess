@@ -41,7 +41,8 @@ Hyper+R).
 - `alt-shift-semicolon` re-tiles from where the windows are now.
 - Hyper+T is tess mode: the same actions without a modifier (`h`, `shift-h`, `1`, `f`, `a`,
   `v`, ...), plus `x` to close the window and pick what fills its place, `w` to bring back
-  lost windows, `s` to re-tile, `r` for resize mode. Esc, enter or Hyper+T again leave it.
+  lost windows, `s` to re-tile, `r` for resize mode. It lasts one command; Hyper+T again
+  keeps it on until esc.
 - Hyper+G or `alt-space` opens the picker, Hyper+R (or `g` in tess mode) jump mode.
 
 The menu bar item names the mode that is on. Clicking it lists the last ten layout changes
@@ -102,7 +103,7 @@ change, for example:
 ```
 
 `float` lists apps that never tile, `tile` apps that always do, `ignore` apps tess leaves
-alone (EdgeMark is there by default).
+alone (EdgeMark is there by default). `"one_shot": []` keeps tess mode on until esc.
 
 `history` lists the browsers whose bookmarks and history the picker reads, first one first
 (`["com.brave.Browser", "com.apple.Safari"]` by default): it wins ties, a page both have

@@ -123,12 +123,12 @@ import Testing
     #expect(Command.resize(.height, 12.5).description == "resize height +12.5")
 }
 
-@Test func hyperTTogglesTheWMMode() throws {
+@Test func hyperTEntersAndLocksTessMode() throws {
     let c = Config.defaults
     let hyperT = KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])
     #expect(c.modes["main"]?[hyperT] == [.mode("tess")])
     let wm = try #require(c.modes["tess"])
-    #expect(wm[hyperT] == [.mode("main")])
+    #expect(wm[hyperT] == [.mode("tess")])
     #expect(wm[KeySpec(key: "esc", mods: [])] == [.mode("main")])
     #expect(wm[KeySpec(key: "h", mods: [])] == [.focus(.left)])
     #expect(wm[KeySpec(key: "l", mods: [.shift])] == [.move(.right)])
@@ -171,4 +171,14 @@ import Testing
     edited.history = ["com.apple.Safari", "com.brave.Browser"]
     #expect(Config.overrides(edited, over: Config.defaultRaw).history == ["com.apple.Safari", "com.brave.Browser"])
     #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).history == nil)
+}
+
+@Test func tessModeIsOneShotByDefault() throws {
+    #expect(Config.defaults.oneShot == ["tess"])
+    #expect(try Config.load(Data(#"{"one_shot": []}"#.utf8)).oneShot == [])
+    #expect(throws: ParseError.self) { try Config.load(Data(#"{"one_shot": ["nope"]}"#.utf8)) }
+    var edited = Config.defaultRaw
+    edited.oneShot = []
+    #expect(Config.overrides(edited, over: Config.defaultRaw).oneShot == [])
+    #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).oneShot == nil)
 }

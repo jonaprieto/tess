@@ -10,7 +10,12 @@ final class Tiler {
 
     var configError: String?
 
-    var mode = "main"
+    var mode = "main" {
+        didSet { if mode == "main" { locked = false } }
+    }
+
+    /// A one-shot mode entered again stays on until it is left.
+    var locked = false
 
     var paused = false
 
@@ -76,8 +81,11 @@ final class Tiler {
     /// From a hotkey there is no terminal: an error becomes a toast.
     lazy var hotkeys = Hotkeys { [weak self] commands in
         guard let self else { return }
+        let last = self.oneShotNow, from = self.mode
         let out = self.run(commands, source: "hotkey")
         if out.hasPrefix("error: ") { self.toast(String(out.dropFirst(7))) }
+        // That was the one-shot mode's command, unless it locked the mode or left it.
+        if last, self.mode == from, !self.locked { self.setMode("main") }
     }
 
     lazy var picker: Picker = {
@@ -570,12 +578,18 @@ final class Tiler {
 
     // MARK: Modes and config
 
-    /// `back` is the mode the current one was entered from (resize returns to tess mode).
+    /// A one-shot mode (config one_shot) that is not locked: its next command is its last.
+    var oneShotNow: Bool { mode != "main" && config.oneShot.contains(mode) && !locked }
+
+    /// Where `mode back` and the end of jump mode go from the current mode: main from a
+    /// one-shot mode, since what left it was its command.
+    var returnMode: String { oneShotNow ? "main" : mode }
+    /// `back` is the mode the current one was entered from (resize returns to a locked tess mode).
     func setMode(_ requested: String) {
         let m = requested == "back" ? modeBefore : requested
         guard config.modes[m] != nil else { return }
         if m != mode {
-            if requested != "back" { modeBefore = jumping ? jumpReturn : mode }
+            if requested != "back" { modeBefore = jumping ? jumpReturn : returnMode }
             Events.record("mode", ["mode": m])
         }
         mode = m
@@ -590,7 +604,8 @@ final class Tiler {
 
 
     func registerMode() {
-        guard !paused else { return }
+        // The picker has the keyboard; closing it registers the mode again.
+        guard !paused, !picking else { return }
         let failed = hotkeys.register(config.modes[mode] ?? [:])
         if !failed.isEmpty {
             Log.write("could not register: \(failed)")

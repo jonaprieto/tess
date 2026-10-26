@@ -69,7 +69,13 @@ extension Tiler {
             p.arguments = ["-c", line]
             do { try p.run() } catch { return "error: \(error)" }
         case .reload: loadConfig(announce: true)
-        case .mode(let m): setMode(m)
+        case .mode(let m):
+            // Entering a one-shot mode again keeps it on until esc.
+            if m == mode, oneShotNow {
+                locked = true
+                toast("\(m) mode locked")
+            }
+            setMode(m)
         case .retile:
             sweep(all: true)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in

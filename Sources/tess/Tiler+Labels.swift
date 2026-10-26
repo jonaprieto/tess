@@ -40,10 +40,11 @@ extension Tiler {
 
 
     /// Every window's letter becomes a key (shift swaps with it), every screen's number too
-    /// (shift moves there); one use, or esc, goes back to the mode jump started from.
+    /// (shift moves there); one use, or esc, goes back to the mode jump started from (main from
+    /// a one-shot mode).
     func startJump() {
         guard !jumping else { return }
-        jumpReturn = mode
+        jumpReturn = returnMode
         mode = "jump"
         Events.record("mode", ["mode": "jump"])
         let (keys, exits) = jumpKeys(labels: labels, windows: labeledWindows, screens: world.monitors.count,

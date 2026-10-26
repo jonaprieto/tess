@@ -30,7 +30,8 @@ public struct Config: Equatable, Sendable {
     public enum LabelMode: String, Codable, Sendable {
         /// Always on screen.
         case always
-        /// Only in jump mode, while they are keys.
+        /// The focused window's border and the active screen's outline; every border, letter
+        /// and number only in jump mode, while they are keys.
         case jump
         case off
     }

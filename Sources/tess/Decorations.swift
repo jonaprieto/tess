@@ -1,9 +1,10 @@
 import AppKit
 import Layout
 
-/// Always-on labels: a thin border and a letter on every window, a number on every screen.
-/// One click-through panel per screen, just above normal windows, redrawn after each layout
-/// pass. In jump mode the letters grow, since they are then the keys.
+/// Labels: a thin border and a letter on every window and a number on every screen (`all`),
+/// or only the focused window's border; and an outline on the active screen. One
+/// click-through panel per screen, just above normal windows, redrawn after each layout pass.
+/// In jump mode the letters grow, since they are then the keys.
 final class Decorations {
     struct Window {
         var frame: CGRect
@@ -13,7 +14,7 @@ final class Decorations {
 
     private var panels: [NSPanel] = []
 
-    func update(screens: [CGRect], windows: [Window], jumping: Bool) {
+    func update(screens: [CGRect], windows: [Window], jumping: Bool, all: Bool, active: Int?) {
         while panels.count < screens.count { panels.append(Self.panel()) }
         while panels.count > screens.count { panels.removeLast().orderOut(nil) }
         for (n, screen) in screens.enumerated() {
@@ -28,6 +29,8 @@ final class Decorations {
             view.screen = screen
             view.number = n + 1
             view.jumping = jumping
+            view.all = all
+            view.active = n == active
             view.windows = windows.filter { screen.intersects($0.frame) }
             let frame = Screens.flip(screen)
             if p.frame != frame { p.setFrame(frame, display: false) }
@@ -48,12 +51,20 @@ final class DecorationView: NSView {
     var screen = CGRect.zero
     var number = 1
     var jumping = false
+    var all = false
+    var active = false
     var windows: [Decorations.Window] = []
 
     override var isFlipped: Bool { true }
 
     override func draw(_ dirtyRect: NSRect) {
         func local(_ r: CGRect) -> CGRect { r.offsetBy(dx: -screen.minX, dy: -screen.minY) }
+        if active {
+            let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 10, yRadius: 10)
+            path.lineWidth = 2
+            NSColor.controlAccentColor.withAlphaComponent(0.45).setStroke()
+            path.stroke()
+        }
         // Borders first, the focused one last so it is on top.
         for w in windows.sorted(by: { !$0.focused && $1.focused }) {
             let r = local(w.frame).insetBy(dx: -1, dy: -1)
@@ -79,6 +90,7 @@ final class DecorationView: NSView {
         }
         // The screen's number in its bottom-left corner (top-left would sit on a window's
         // close button).
+        guard all else { return }
         let side: CGFloat = jumping ? 34 : 22
         badge("\(number)", NSRect(x: 2, y: bounds.height - side - 2, width: side, height: side), strong: jumping, round: true)
     }

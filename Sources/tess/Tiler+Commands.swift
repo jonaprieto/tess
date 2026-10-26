@@ -151,8 +151,8 @@ extension Tiler {
     func flashFocus(after delay: Double = 0.18) {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self else { return }
-            // With labels always on, the focused window's border already says it.
-            if self.config.windowLabels == .always, self.world.focused != nil { return }
+            // The focused window's border already says it.
+            if self.config.windowLabels != .off, self.world.focused != nil { return }
             self.overlay.flash(self.world.focused.flatMap { self.infos[$0]?.frame } ?? self.activeFrame)
         }
     }

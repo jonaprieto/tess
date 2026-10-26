@@ -165,9 +165,9 @@ struct GeneralTab: View {
             Section("Overlays") {
                 Toggle("Show a mode's keys on every screen", isOn: $model.overlayAllScreens)
                     .disabled(model.emptyScreens)
-                SwiftUI.Picker("Window letters and screen numbers", selection: $model.windowLabels) {
-                    Text("When jumping").tag(Config.LabelMode.jump)
-                    Text("Always").tag(Config.LabelMode.always)
+                SwiftUI.Picker("Borders and letters", selection: $model.windowLabels) {
+                    Text("Focused window, letters when jumping").tag(Config.LabelMode.jump)
+                    Text("Every window, always").tag(Config.LabelMode.always)
                     Text("Off").tag(Config.LabelMode.off)
                 }
             }

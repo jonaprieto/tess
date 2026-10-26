@@ -63,8 +63,9 @@ bottom-left corner. A window keeps its letter while it lives.
 - digit: focus that screen; shift+digit: send the focused window there.
 - esc: leave.
 
-With `"overlay": {"window_labels": "always"}` the labels stay on screen all the time;
-`"off"` never shows them.
+Outside jump mode the focused window keeps its border and, with more than one screen, the
+active screen an outline. With `"overlay": {"window_labels": "always"}` every label stays on
+screen all the time; `"off"` shows none.
 
 ## Zen
 

@@ -15,27 +15,30 @@ extension Tiler {
     }
 
 
-    /// Borders and letters on every window, numbers on every screen (overlay.window_labels).
+    /// Borders and letters on every window, numbers on every screen when always on or jumping;
+    /// otherwise the focused window's border and, with more than one screen, the active
+    /// screen's outline (overlay.window_labels).
     func refreshDecorations() {
         labels = stableLabels(labels, windows: labeledWindows, alphabet: labelAlphabet)
-        let show = config.windowLabels == .always || (config.windowLabels == .jump && jumping)
-        guard show, !paused, !starting else {
+        let all = config.windowLabels == .always || jumping
+        guard config.windowLabels != .off, !paused, !starting else {
             if !drawn.isEmpty { decorations.hide() }
             drawn = []
             return
         }
         let windows = labeledWindows.compactMap { id -> Decorations.Window? in
-            guard let f = infos[id]?.frame else { return nil }
+            guard all || id == world.focused, let f = infos[id]?.frame else { return nil }
             // Under tess fullscreen only the fullscreen window is shown.
             if let p = world.locate(id), let fs = world.monitors[p.m].fullscreen, fs != id { return nil }
-            return Decorations.Window(frame: f, label: labels[id], focused: id == world.focused)
+            return Decorations.Window(frame: f, label: all ? labels[id] : nil, focused: id == world.focused)
         }
         let screens = world.monitors.map(\.frame)
+        let active = screens.count > 1 ? world.activeMonitor : nil
         let signature = screens.map { "\($0)" } + windows.map { "\($0.frame)\($0.label.map(String.init) ?? "")\($0.focused)" }
-            + ["\(jumping)"]
+            + ["\(jumping)", "\(all)", "\(active ?? -1)"]
         guard signature != drawn else { return }
         drawn = signature
-        decorations.update(screens: screens, windows: windows, jumping: jumping)
+        decorations.update(screens: screens, windows: windows, jumping: jumping, all: all, active: active)
     }
 
 

@@ -12,6 +12,9 @@ public struct Config: Equatable, Sendable {
     public var tile: [String] = []
     /// Bundle ids tess never touches.
     public var ignore: [String] = []
+    /// Browsers whose bookmarks and history the picker lists, first one first: it wins ties
+    /// and pages several of them have. One left out is not read.
+    public var history: [String] = []
     /// Picker verbs: `cd ~/x` opens the folder with the app named here.
     public var verbs: [String: String] = [:]
     /// The keys of a mode on every screen, rather than only the one being worked on.
@@ -73,11 +76,12 @@ public struct Config: Equatable, Sendable {
         public var float: [String]?
         public var tile: [String]?
         public var ignore: [String]?
+        public var history: [String]?
         public var verbs: [String: String?]?
         public var modes: [String: [String: String?]]?
         public var emptyScreens: Bool?
         enum CodingKeys: String, CodingKey {
-            case gaps, overlay, float, tile, ignore, verbs, modes
+            case gaps, overlay, float, tile, ignore, history, verbs, modes
             case emptyScreens = "empty_screens"
         }
         public init() {}
@@ -125,6 +129,7 @@ public struct Config: Equatable, Sendable {
         r.float = top.float ?? base.float
         r.tile = top.tile ?? base.tile
         r.ignore = top.ignore ?? base.ignore
+        r.history = top.history ?? base.history
         r.verbs = merge(base.verbs, top.verbs)
         var modes = (base.modes ?? [:]).mapValues { canonical($0) ?? [:] }
         // tess mode was called "wm" before; a file that still says so means tess mode.
@@ -151,6 +156,7 @@ public struct Config: Equatable, Sendable {
         if edited.float != base.float { o.float = edited.float }
         if edited.tile != base.tile { o.tile = edited.tile }
         if edited.ignore != base.ignore { o.ignore = edited.ignore }
+        if edited.history != base.history { o.history = edited.history }
         o.verbs = diff(edited.verbs, base.verbs)
         var modes: [String: [String: String?]] = [:]
         for m in Set((edited.modes ?? [:]).keys).union((base.modes ?? [:]).keys) {
@@ -183,6 +189,10 @@ public struct Config: Equatable, Sendable {
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
         c.ignore = raw.ignore ?? []
+        c.history = raw.history ?? []
+        for b in c.history where !historyBrowsers.contains(b) {
+            throw ParseError("config: history lists \(historyBrowsers.joined(separator: " and ")), not \"\(b)\"")
+        }
         c.verbs = (raw.verbs ?? [:]).compactMapValues { $0 }
         let modes = raw.modes ?? [:]
         guard modes["main"] != nil else { throw ParseError("config: modes.main is missing") }
@@ -206,6 +216,9 @@ public struct Config: Equatable, Sendable {
         return c
     }
 
+    /// The browsers the picker can read history from.
+    public static let historyBrowsers = ["com.brave.Browser", "com.apple.Safari"]
+
     // swift-format-ignore
     public static let defaultJSON = #"""
     {
@@ -215,6 +228,7 @@ public struct Config: Equatable, Sendable {
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": ["io.github.ender-wang.EdgeMark"],
+      "history": ["com.brave.Browser", "com.apple.Safari"],
       "verbs": {"cd": "iTerm", "code": "Visual Studio Code"},
       "modes": {
         "main": {

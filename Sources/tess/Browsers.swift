@@ -42,14 +42,15 @@ enum Browsers {
         }
     }
 
-    /// Pages for the picker, only listed once something is typed: Brave bookmarks (AppleScript),
-    /// then Brave and Safari history by visit count (sqlite, read-only). Brave's history needs
-    /// macOS's "data from other apps" consent and Safari's Full Disk Access; without them that
-    /// source is skipped. Read again after five minutes.
-    nonisolated(unsafe) private static var cache: (items: [Picker.Item], at: Date)?
+    /// Pages for the picker, only listed once something is typed, from the browsers in `order`
+    /// (the config's `history`) in that order: Brave's bookmarks (AppleScript) and history,
+    /// Safari's history, both by visit count (sqlite, read-only). A page several browsers have
+    /// comes from the first. Brave's history needs macOS's "data from other apps" consent and
+    /// Safari's Full Disk Access; without them that source is skipped. Read again after five minutes.
+    nonisolated(unsafe) private static var cache: (items: [Picker.Item], at: Date, order: [String])?
 
-    static func history(_ done: @escaping ([Picker.Item]) -> Void) {
-        if let c = cache, Date().timeIntervalSince(c.at) < 300 { return done(c.items) }
+    static func history(_ order: [String], _ done: @escaping ([Picker.Item]) -> Void) {
+        if let c = cache, c.order == order, Date().timeIntervalSince(c.at) < 300 { return done(c.items) }
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let brave = "com.brave.Browser", safari = "com.apple.Safari"
         let bookmarks = """
@@ -80,21 +81,26 @@ enum Browsers {
         func uri(_ path: String) -> String {
             "file:" + (path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path) + "?immutable=1"
         }
-        let sources: [(browser: String, kind: String, run: (@escaping (String?) -> Void) -> Void)] = [
-            (brave, "bookmark", { braveRunning ? osascript(bookmarks, onMain: false, $0) : $0(nil) }),
-            (brave, "history", { sqlite(uri(home + "/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"), """
-                select title, url from urls where hidden = 0 order by visit_count + 5 * typed_count desc limit 3000
-                """, onMain: false, $0) }),
-            (safari, "history", { sqlite(uri(home + "/Library/Safari/History.db"), """
-                select coalesce((select title from history_visits v where v.history_item = i.id order by v.visit_time desc limit 1), ''),
-                       i.url from history_items i order by i.visit_count desc limit 3000
-                """, onMain: false, $0) }),
-        ]
+        typealias Source = (browser: String, kind: String, run: (@escaping (String?) -> Void) -> Void)
+        let sources = order.flatMap { browser -> [Source] in
+            browser == brave ? [
+                (brave, "bookmark", { braveRunning ? osascript(bookmarks, onMain: false, $0) : $0(nil) }),
+                (brave, "history", { sqlite(uri(home + "/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"), """
+                    select title, url from urls where hidden = 0 order by visit_count + 5 * typed_count desc limit 3000
+                    """, onMain: false, $0) }),
+            ] : [
+                (safari, "history", { sqlite(uri(home + "/Library/Safari/History.db"), """
+                    select coalesce((select title from history_visits v where v.history_item = i.id order by v.visit_time desc limit 1), ''),
+                           i.url from history_items i order by i.visit_count desc limit 3000
+                    """, onMain: false, $0) }),
+            ]
+        }
+        var arrived = [[Picker.Item]?](repeating: nil, count: sources.count)
+        var next = 0
         var all: [Picker.Item] = []
         var seen = Set<String>()
-        var left = sources.count
         var answered = false
-        for source in sources {
+        for (k, source) in sources.enumerated() {
             // Parsed where it arrives, off the main thread; merged on it.
             source.run { text in
                 let name = source.browser == brave ? "Brave" : "Safari"
@@ -105,15 +111,19 @@ enum Browsers {
                                 detail: "\(name) \(source.kind) · \(p.host)", icon: icon,
                                 search: "\(p.title) \(p.host) \(p.url.path)", quiet: true)
                 }
-                // Each source as soon as it answers, without repeats.
+                // Each source once the ones before it have answered, so ties and repeats go to
+                // the browser listed first.
                 DispatchQueue.main.async {
-                    let fresh = items.filter { seen.insert(($0.detail.hasPrefix("Brave") ? "b" : "s") + $0.search).inserted }
-                    all += fresh
-                    left -= 1
+                    arrived[k] = items
                     if text != nil { answered = true }
+                    while next < sources.count, let items = arrived[next] {
+                        next += 1
+                        let fresh = items.filter { seen.insert($0.search).inserted }
+                        all += fresh
+                        if !fresh.isEmpty { done(fresh) }
+                    }
                     // Not cached when every source failed (no permission yet): try again next open.
-                    if left == 0, answered { cache = (all, Date()) }
-                    if !fresh.isEmpty { done(fresh) }
+                    if next == sources.count, answered { cache = (all, Date(), order) }
                 }
             }
         }

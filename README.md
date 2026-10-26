@@ -104,6 +104,10 @@ change, for example:
 `float` lists apps that never tile, `tile` apps that always do, `ignore` apps tess leaves
 alone (EdgeMark is there by default).
 
+`history` lists the browsers whose bookmarks and history the picker reads, first one first
+(`["com.brave.Browser", "com.apple.Safari"]` by default): it wins ties, a page both have
+shows once from it, and a browser left out is not read.
+
 New windows open on an empty screen when there is one, and Settings and a mode's keys show
 on the screen with the fewest windows; `"empty_screens": false` turns that off.
 

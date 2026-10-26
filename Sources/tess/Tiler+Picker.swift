@@ -36,7 +36,7 @@ extension Tiler {
             self?.pickerMap() ?? Picker.Map(monitors: [], windows: [], labels: [:])
         }
         Browsers.tabs { [weak self] tabs in self?.picker.add(tabs) }
-        Browsers.history { [weak self] pages in self?.picker.add(pages) }
+        Browsers.history(config.history) { [weak self] pages in self?.picker.add(pages) }
     }
 
 

@@ -198,7 +198,7 @@ final class Tiler {
             self?.rebuild()
             if let self { Events.record("start", ["version": version, "restarted_after_hang": restartedAfterHang, "state": self.stateJSON()]) }
             if restartedAfterHang { self?.toast("restarted after a hang") }
-            Browsers.history { _ in }  // warm the caches for the picker
+            if let self { Browsers.history(self.config.history) { _ in } }  // warm the caches for the picker
             self?.refreshApps()
             _ = self?.picker
         }

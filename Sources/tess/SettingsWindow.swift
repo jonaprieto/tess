@@ -72,7 +72,8 @@ final class SettingsModel {
     }
 
     var raw: Config.Raw {
-        var r = Config.Raw()
+        // What the window does not edit (history) stays as it was.
+        var r = original
         r.gaps = .init(inner: inner, outer: outer)
         r.overlay = .init(allScreens: overlayAllScreens, windowLabels: windowLabels)
         r.emptyScreens = emptyScreens

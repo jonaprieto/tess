@@ -162,3 +162,13 @@ import Testing
     #expect(Config.overrides(edited, over: Config.defaultRaw).emptyScreens == false)
     #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).emptyScreens == nil)
 }
+
+@Test func historyIsBraveThenSafariByDefault() throws {
+    #expect(Config.defaults.history == ["com.brave.Browser", "com.apple.Safari"])
+    #expect(try Config.load(Data(#"{"history": ["com.brave.Browser"]}"#.utf8)).history == ["com.brave.Browser"])
+    #expect(throws: ParseError.self) { try Config.load(Data(#"{"history": ["com.google.Chrome"]}"#.utf8)) }
+    var edited = Config.defaultRaw
+    edited.history = ["com.apple.Safari", "com.brave.Browser"]
+    #expect(Config.overrides(edited, over: Config.defaultRaw).history == ["com.apple.Safari", "com.brave.Browser"])
+    #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).history == nil)
+}

@@ -288,16 +288,14 @@ public struct Config: Equatable, Sendable {
           "alt-shift-3": "move-to-screen 3",
           "alt-tab": "focus-screen next",
           "alt-shift-tab": "focus-screen prev",
-          "alt-t": "terminal",
+          "alt-t": "mode tess",
           "alt-shift-r": "reload",
           "cmd-h": "nop",
           "cmd-alt-h": "nop",
           "alt-r": "mode resize",
           "alt-shift-semicolon": "retile",
-          "cmd-alt-ctrl-shift-t": "mode tess",
-          "cmd-alt-ctrl-shift-g": "pick",
-          "alt-shift-backspace": "clear-screen",
-          "cmd-alt-ctrl-shift-r": "jump"
+          "alt-space": "pick",
+          "alt-shift-backspace": "clear-screen"
         },
         "tess": {
           "h": "focus left",
@@ -329,14 +327,13 @@ public struct Config: Equatable, Sendable {
           "u": "undo",
           "shift-u": "redo",
           "z": "zen; mode main",
-          "cmd-alt-ctrl-shift-r": "jump",
           "backspace": "clear-screen",
-          "cmd-alt-ctrl-shift-g": "pick",
+          "alt-space": "pick",
           "w": "rescue",
           "s": "retile",
           "r": "mode resize",
           "esc": "mode main",
-          "cmd-alt-ctrl-shift-t": "mode tess"
+          "alt-t": "mode tess"
         },
         "resize": {
           "h": "resize width -50",

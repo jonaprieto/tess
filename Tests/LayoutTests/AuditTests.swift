@@ -66,12 +66,13 @@ import Testing
     }
     #expect(Config.defaults.modes["service"] == nil)
     let wm = Config.defaults.modes["tess"]!
-    let hyper: Set<Mod> = [.cmd, .alt, .ctrl, .shift]
-    // One key per command: Hyper+G picks and Hyper+R jumps, nothing else does.
+    let altSpace = KeySpec(key: "space", mods: [.alt])
+    // One key per command: alt-space picks, nothing else does; tess mode's letters jump, so
+    // no key is jump mode's by default.
     for (name, m) in Config.defaults.modes {
-        #expect(m.filter { $0.value == [.pick("")] }.map(\.key).allSatisfy { $0 == KeySpec(key: "g", mods: hyper) }, "\(name) pick")
-        #expect(m.filter { $0.value == [.jump] }.map(\.key).allSatisfy { $0 == KeySpec(key: "r", mods: hyper) }, "\(name) jump")
+        #expect(m.filter { $0.value == [.pick("")] }.map(\.key).allSatisfy { $0 == altSpace }, "\(name) pick")
+        #expect(!m.values.contains([.jump]), "\(name) jump")
     }
-    #expect(wm[KeySpec(key: "g", mods: hyper)] == [.pick("")])
+    #expect(wm[altSpace] == [.pick("")])
     #expect(wm[KeySpec(key: "tab", mods: [.shift])] == [.cycleMonitor(-1)])
 }

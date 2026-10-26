@@ -17,9 +17,7 @@ import Testing
     #expect(try Config.load(Data(#"{"overlay": {"window_labels": "off"}}"#.utf8)).windowLabels == .off)
     #expect(throws: ParseError.self) { try Config.load(Data(#"{"overlay": {"window_labels": true}}"#.utf8)) }
     #expect(throws: ParseError.self) { try Config.load(Data(#"{"overlay": {"window_labels": "sometimes"}}"#.utf8)) }
-    #expect(Config.defaults.modes["main"]?[KeySpec(key: "r", mods: [.cmd, .alt, .ctrl, .shift])] == [.jump])
     #expect(Config.defaults.modes["tess"]?[KeySpec(key: "g", mods: [])] == nil)
-    #expect(Config.defaults.modes["tess"]?[KeySpec(key: "r", mods: [.cmd, .alt, .ctrl, .shift])] == [.jump])
 }
 
 @Test func labelsStayWithTheirWindows() {

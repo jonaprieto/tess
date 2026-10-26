@@ -347,8 +347,9 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     private func key(_ e: NSEvent) -> NSEvent? {
         let ctrl = e.modifierFlags.contains(.control)
         let ch = e.charactersIgnoringModifiers?.lowercased() ?? ""
-        // esc, or the key that opened the picker (any Hyper key), closes it.
+        // esc, or the key that opened the picker (alt-space, or any Hyper key), closes it.
         let hyper = e.modifierFlags.isSuperset(of: [.command, .option, .control, .shift])
+            || (e.keyCode == 49 && e.modifierFlags.contains(.option))
         if e.keyCode == 53 || hyper {
             if picked != nil, fixed == nil, !hyper {
                 picked = nil

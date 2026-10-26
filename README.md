@@ -29,8 +29,7 @@ or `make uninstall`.
 
 ## Keys
 
-Hyper is ⌃⌥⇧⌘ (Nav+T, Nav+G and Nav+R on the NuPhy Air96 layout send Hyper+T, Hyper+G and
-Hyper+R).
+Every default key is on any Mac keyboard; `alt` is ⌥ Option.
 
 - `alt-h/j/k/l` focus, `alt-shift-h/j/k/l` move, `alt-1/2/3` go to a screen,
   `alt-shift-1/2/3` send the window there, `alt-tab` next screen.
@@ -39,13 +38,20 @@ Hyper+R).
   `alt-shift-space` float, `alt-r` resize mode.
 - `alt-shift-backspace` sends every window on this screen to the next one.
 - `alt-shift-semicolon` re-tiles from where the windows are now.
-- `alt-t` opens a terminal window (iTerm, or the app `terminal` names).
-- Hyper+T is tess mode: the same actions without a modifier (`h`, `shift-h`, `1`, `f`, `a`,
-  `v`, ...), plus `x` to close the window and pick what fills its place, `w` to bring back
-  lost windows, `s` to re-tile, `r` for resize mode. Every window and tab shows a letter, as
-  in jump mode, and the letter goes there. It lasts one command; Hyper+T again keeps it on
-  until esc.
-- Hyper+G opens the picker, Hyper+R jump mode, in tess mode too.
+- `alt-t` is tess mode: the same actions without a modifier (`h`, `shift-h`, `1`, `f`, `a`,
+  `v`, ...), plus `t` for a terminal window, `x` to close the window and pick what fills its
+  place, `w` to bring back lost windows, `s` to re-tile, `r` for resize mode. Every window
+  and tab shows a letter, and the letter goes there. It lasts one command; `alt-t` again
+  keeps it on until esc.
+- `alt-space` opens the picker, in tess mode too.
+
+A keyboard with a spare key can send any binding. On a NuPhy Air96 set Nav+T, Nav+G and
+Nav+R to send Hyper (⌃⌥⇧⌘) +T, +G and +R, and bind those in the config:
+
+```json
+{"modes": {"main": {"cmd-alt-ctrl-shift-t": "mode tess", "cmd-alt-ctrl-shift-g": "pick", "cmd-alt-ctrl-shift-r": "jump"},
+           "tess": {"cmd-alt-ctrl-shift-t": "mode tess", "cmd-alt-ctrl-shift-g": "pick"}}}
+```
 
 Windows can also be moved with the mouse: drag a tiled one and where it will land shows in
 orange as you drag. Over another window, or the gap beside it, its left or right edge splits
@@ -62,6 +68,9 @@ shown and stay with apps. `tess default-config` prints every binding.
 ## Jump mode
 
 <img src="assets/jump.svg" alt="Jump mode: a letter on every window, a number on every screen" width="100%">
+
+tess mode (`alt-t`) shows these letters and takes them as keys; jump mode (`tess jump`, or a
+key bound to `jump`) is the same without tess mode's other keys.
 
 Every window in sight shows a border and a letter in its middle, every tab in sight (Brave,
 iTerm, any app with a tab bar) a letter, every screen its number in the bottom-left corner.
@@ -120,7 +129,7 @@ change, for example:
 ```
 
 `float` lists apps that never tile, `tile` apps that always do, `ignore` apps tess leaves
-alone (EdgeMark is there by default). `terminal` is the app `alt-t` opens. `"one_shot": []`
+alone (EdgeMark is there by default). `terminal` is the app `t` in tess mode opens. `"one_shot": []`
 keeps tess mode on until esc.
 
 `history` lists the browsers whose bookmarks and history the picker reads, first one first

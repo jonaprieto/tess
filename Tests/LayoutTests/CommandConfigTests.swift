@@ -85,7 +85,7 @@ import Testing
     // An old full copy of the defaults still gets bindings added since.
     let old = #"{"modes": {"main": {"alt-h": "focus left"}}}"#
     let c = try Config.load(Data(old.utf8))
-    #expect(c.modes["main"]?[KeySpec(key: "g", mods: [.cmd, .alt, .ctrl, .shift])] == [.pick("")])
+    #expect(c.modes["main"]?[KeySpec(key: "space", mods: [.alt])] == [.pick("")])
     // null removes a default binding; lists replace.
     let edits = #"{"float": [], "gaps": {"inner": 4}, "modes": {"main": {"alt-t": null, "alt-y": "balance"}}}"#
     let e = try Config.load(Data(edits.utf8))
@@ -122,25 +122,27 @@ import Testing
     #expect(Command.resize(.height, 12.5).description == "resize height +12.5")
 }
 
-@Test func hyperTEntersAndLocksTessMode() throws {
+@Test func altTEntersAndLocksTessMode() throws {
     let c = Config.defaults
-    let hyperT = KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])
-    #expect(c.modes["main"]?[hyperT] == [.mode("tess")])
+    let altT = KeySpec(key: "t", mods: [.alt])
+    #expect(c.modes["main"]?[altT] == [.mode("tess")])
     let wm = try #require(c.modes["tess"])
-    #expect(wm[hyperT] == [.mode("tess")])
+    #expect(wm[altT] == [.mode("tess")])
     #expect(wm[KeySpec(key: "esc", mods: [])] == [.mode("main")])
     #expect(wm[KeySpec(key: "h", mods: [])] == [.focus(.left)])
     #expect(wm[KeySpec(key: "l", mods: [.shift])] == [.move(.right)])
     #expect(wm[KeySpec(key: "2", mods: [.shift])] == [.moveToMonitor(2)])
     #expect(wm[KeySpec(key: "c", mods: [.shift])] == [.close])
     #expect(wm[KeySpec(key: "c", mods: [])] == nil)
-    #expect(wm.count == 37)
+    #expect(wm.count == 36)
     #expect(wm[KeySpec(key: "z", mods: [])] == [.zen, .mode("main")])
     #expect(wm[KeySpec(key: "u", mods: [])] == [.undo])
     #expect(wm[KeySpec(key: "u", mods: [.shift])] == [.redo])
     #expect(wm[KeySpec(key: "backspace", mods: [])] == [.clearMonitor])
     #expect(wm[KeySpec(key: "x", mods: [])] == [.closeReplace])
-    #expect(c.modes["main"]?[KeySpec(key: "g", mods: [.cmd, .alt, .ctrl, .shift])] == [.pick("")])
+    #expect(c.modes["main"]?[KeySpec(key: "space", mods: [.alt])] == [.pick("")])
+    // Nothing needs a Hyper key: every default binding works on any Mac keyboard.
+    #expect(c.modes.values.allSatisfy { $0.keys.allSatisfy { $0.mods.count < 4 } })
 }
 
 @Test func cheatSheetOnEveryScreenIsTheDefault() throws {
@@ -186,7 +188,6 @@ import Testing
     #expect(try Command.parse("terminal") == [.terminal])
     #expect(Config.defaults.terminal == "iTerm")
     #expect(try Config.load(Data(#"{"terminal": "Ghostty"}"#.utf8)).terminal == "Ghostty")
-    #expect(Config.defaults.modes["main"]?[KeySpec(key: "t", mods: [.alt])] == [.terminal])
     #expect(Config.defaults.modes["tess"]?[KeySpec(key: "t", mods: [])] == [.terminal])
 }
 

@@ -58,6 +58,12 @@ orange as you drag. Over another window, or the gap beside it, its left or right
 beside it, its top or bottom edge stacks with it, and its middle swaps the two. Over its own
 place it stays; over an empty part of another screen it goes to that screen.
 
+Fullscreen within tess (`alt-enter`) fills the screen edge to edge in front of its other
+windows until `alt-enter` again, or another window there takes focus or opens; it survives
+a restart. A floating window joins the tiling to go fullscreen, and moving or resizing one
+says it floats. macOS fullscreen (`alt-shift-enter`) gives the window a Space of its own,
+which tess leaves alone.
+
 The menu bar item names the mode that is on. Clicking it lists the last ten layout changes
 (keys, CLI, menu and picker): clicking one undoes it and everything after it, clicking an
 undone one redoes up to it. In tess mode `u` undoes and `shift-u` redoes.

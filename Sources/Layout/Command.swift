@@ -146,6 +146,16 @@ public struct KeySpec: Hashable, Sendable, CustomStringConvertible {
     }
 }
 
+extension Command {
+    /// Moves or resizes a tiled window.
+    public var isMoveOrResize: Bool {
+        switch self {
+        case .move, .resize: true
+        default: false
+        }
+    }
+}
+
 extension Command: CustomStringConvertible {
     /// The command as written in the config; `parse` reads it back.
     public var description: String {

@@ -32,6 +32,11 @@ extension Tiler {
         let before = world.focused
         let beforeMonitor = world.activeMonitor
         var flash = false
+        // Commands on a tiled window say so when the focused one floats, instead of doing nothing.
+        if let f = world.focused, world.floating.contains(f), c == .accordion || c.isMoveOrResize {
+            let key = config.modes["main"]?.first { $0.value == [.float] }?.key.symbol
+            return "error: \(appName(f)) floats\(key.map { "; \($0) tiles it" } ?? "")"
+        }
         switch c {
         case .focus(let d): world.focus(d); flash = true
         case .move(let d): world.move(d); flash = true
@@ -43,6 +48,8 @@ extension Tiler {
             toast(world.monitors[safe: world.activeMonitor]?.rows == true ? "rows" : "columns")
         case .accordion: world.toggleAccordion()
         case .fullscreen:
+            // A floating window joins the tiling to go fullscreen.
+            if let f = world.focused, world.floating.contains(f) { world.toggleFloating(f) }
             world.toggleFullscreen()
             if let f = world.focused, world.locate(f) != nil {
                 focus(f)

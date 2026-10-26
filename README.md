@@ -80,9 +80,10 @@ what is under it, and Zen follows.
 ## Picker
 
 Type to filter windows (on every Space), Brave and Safari tabs, and apps; once you type, also
-Brave bookmarks and browser history. Arithmetic like `2 * (3 + 4)` shows its result on top,
-and Enter copies it. Enter on a window, tab or app shows a map of every screen to choose
-where it goes:
+Brave bookmarks, browser history, and Sleep, Lock Screen, Log Out, Restart and Shut Down (the
+last three ask first). Arithmetic like `2 * (3 + 4)` shows its result on top, and Enter
+copies it. Enter on a window, tab or app shows a map of every screen to choose where it
+goes:
 
 - letter or shift+letter: swap with that window; alt+letter: go beside it.
 - enter: next to the focused window; digit: that screen; `g`: just go there; `f`: float.
@@ -138,6 +139,7 @@ Accessibility, asked at first start. Automation for Brave and Safari, asked the 
 the picker reads tabs. Browser history also needs Full Disk Access (System Settings, Privacy
 & Security) for the tess binary: `$(brew --prefix)/opt/tess/bin/tess` from Homebrew, or
 `~/tess/build/tess` from source. Without it the picker still lists tabs and Brave bookmarks.
+Log Out, Restart and Shut Down may ask once for Automation of loginwindow.
 
 ## Logs
 

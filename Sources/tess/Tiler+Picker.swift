@@ -93,6 +93,21 @@ extension Tiler {
             }
         case .file(let path):
             openFile(path, choice)
+        case .system("sleep"):
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+            p.arguments = ["sleepnow"]
+            try? p.run()
+        case .system("lock"):
+            // ponytail: login.framework's private SACLockScreenImmediate; if Apple drops it,
+            // send ctrl-cmd-Q through System Events instead.
+            if let h = dlopen("/System/Library/PrivateFrameworks/login.framework/Versions/Current/login", RTLD_LAZY),
+               let f = dlsym(h, "SACLockScreenImmediate") {
+                _ = unsafeBitCast(f, to: (@convention(c) () -> Int32).self)()
+            }
+        case .system(let event):
+            // loginwindow shows its own dialog before logging out, restarting or shutting down.
+            Browsers.osascript("tell application \"loginwindow\" to «event aevt\(event)»") { _ in }
         case .copy(let text):
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
@@ -308,6 +323,12 @@ extension Tiler {
             let open = a.bundleID.map(running.contains) ?? false
             items.append(Picker.Item(kind: .app(a.url), title: a.name, detail: open ? "app (open)" : "app",
                                      icon: a.icon, search: a.name))
+        }
+        let settings = NSWorkspace.shared.icon(forFile: "/System/Applications/System Settings.app")
+        for (title, action) in [("Sleep", "sleep"), ("Lock Screen", "lock"), ("Log Out…", "logo"),
+                                ("Restart…", "rrst"), ("Shut Down…", "rsdn")] {
+            items.append(Picker.Item(kind: .system(action), title: title, detail: "system", icon: settings,
+                                     search: title, quiet: true))
         }
         return items
     }

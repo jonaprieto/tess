@@ -22,6 +22,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case pdf(URL, name: String)
         /// The calculator's result, copied.
         case copy(String)
+        /// Sleep, lock, or a loginwindow event (log out, restart, shut down) by its code.
+        case system(String)
     }
 
     struct Tab {
@@ -389,13 +391,14 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case (36, _, _), (76, _, _):
             guard shown.indices.contains(list.selected) else { return nil }
             let item = shown[list.selected]
-            if case .copy = item.kind {
+            switch (item.kind, fixed) {
+            case (.copy, _), (.system, _):
                 close()
                 onDone(item, .place(.here))
-            } else if let fixed {
+            case (_, let fixed?):
                 close()
                 onDone(item, .place(fixed))
-            } else {
+            default:
                 showMap(for: item)
             }
         default: return e

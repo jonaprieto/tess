@@ -129,6 +129,11 @@ final class Tiler {
 
     var drawn: [String] = []
 
+    /// Layout changes, oldest first; the last `undone` of them were undone.
+    var history: [Step] = []
+
+    var undone = 0
+
 
     var searchProcess: Process?
 

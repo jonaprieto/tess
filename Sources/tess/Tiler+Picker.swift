@@ -155,7 +155,13 @@ extension Tiler {
             }
             return
         }
-        if case .place(let spot) = choice { world.place(id, spot) } else if world.contains(id) { world.focused = id }
+        if case .place(let spot) = choice {
+            let before = world
+            world.place(id, spot)
+            remember("Put \(appName(id)) \(describe(spot))", windowName(id), from: before)
+        } else if world.contains(id) {
+            world.focused = id
+        }
         if away {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.focus(id) }
         } else {
@@ -163,6 +169,19 @@ extension Tiler {
         }
         scheduleApply()
         flashFocus(after: away ? 0.8 : 0.18)
+    }
+
+
+    /// Where a pick went, in words.
+    func describe(_ spot: Spot) -> String {
+        switch spot {
+        case .replace(let t): "in place of \(appName(t))"
+        case .beside(let t): "beside \(appName(t))"
+        case .here: "here"
+        case .monitor(let m): "on screen \(m + 1)"
+        case .slot: "in the empty place"
+        case .float: "floating"
+        }
     }
 
 

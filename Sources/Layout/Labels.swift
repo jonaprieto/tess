@@ -59,7 +59,11 @@ extension Command {
         case .clearMonitor: "Clear this screen"
         case .settings: "Settings"
         case .jump: "Jump to a window"
-        case .tree, .nop, .debugMap, .state, .focusWindow, .swapWith: nil
+        case .undo: "Undo"
+        case .redo: "Redo"
+        case .focusWindow: "Go to a window"
+        case .swapWith: "Swap windows"
+        case .tree, .nop, .debugMap, .state: nil
         }
     }
 

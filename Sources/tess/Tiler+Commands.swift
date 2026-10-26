@@ -18,6 +18,10 @@ extension Tiler {
             Events.record("command", e)
         }
         if world != before { Events.record("layout", layoutJSON()) }
+        if !commands.contains(.undo), !commands.contains(.redo) {
+            remember(Command.label(of: commands) ?? commands.map(\.description).joined(separator: "; "),
+                     windowName(before.focused), from: before)
+        }
         return out
     }
 
@@ -69,8 +73,11 @@ extension Tiler {
         case .retile:
             sweep(all: true)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                self?.rebuild()
-                self?.toast("re-tiled")
+                guard let self else { return }
+                let before = self.world
+                self.rebuild()
+                self.remember("Re-tile", "", from: before)
+                self.toast("re-tiled")
             }
         case .rescue: toast("rescued \(rescue()) windows")
         case .pause: setPaused(!paused)
@@ -89,6 +96,8 @@ extension Tiler {
             return path
         case .settings: openSettings()
         case .jump: startJump()
+        case .undo: return undo()
+        case .redo: return redo()
         case .focusWindow(let id):
             guard infos[id] != nil else { return "error: no window \(id)" }
             use(id, .jump)

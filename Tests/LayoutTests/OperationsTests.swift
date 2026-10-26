@@ -215,3 +215,18 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     one.clearMonitor()
     #expect(lanes(one) == [[1]])
 }
+
+@Test func undoBringsBackTheEarlierLayoutForTheWindowsThereAreNow() {
+    let before = world([[1], [2]], [[3]], focused: 2)
+    var now = before
+    now.focused = 1
+    #expect(now.sameLayout(as: before))
+    now.moveToMonitor(1)
+    #expect(!now.sameLayout(as: before))
+    now.remove(3)  // closed since
+    now.insert(4)  // opened since
+    let back = now.restoring(before)
+    #expect(lanes(back) == [[1], [2]])
+    #expect(lanes(back, 1) == [[4]])
+    #expect(back.focused == 2)
+}

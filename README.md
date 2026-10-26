@@ -42,6 +42,10 @@ Hyper+R).
   lost windows, `s` to re-tile, `r` for resize mode. Esc, enter or Hyper+T again leave it.
 - Hyper+G or `alt-space` opens the picker, Hyper+R (or `g` in tess mode) jump mode.
 
+The menu bar item names the mode that is on. Clicking it lists the last ten layout changes
+(keys, CLI, menu and picker): clicking one undoes it and everything after it, clicking an
+undone one redoes up to it. In tess mode `u` undoes and `shift-u` redoes.
+
 While a mode is on, every screen shows its keys. `tess default-config` prints every binding.
 
 ## Jump mode
@@ -96,6 +100,7 @@ alone (EdgeMark is there by default).
 - `tess state`: the model and the machine as JSON.
 - `tess rescue`: bring back windows that are mostly off-screen.
 - `tess pause`: stop tiling until run again (also in the menu).
+- `tess undo`, `tess redo`: the last layout change.
 - `tess reload`, `tess default-config`, `tess --version`.
 
 ## Permissions

@@ -271,6 +271,8 @@ public struct Config: Equatable, Sendable {
           "shift-c": "close",
           "t": "exec open -a kitty",
           "x": "close-replace",
+          "u": "undo",
+          "shift-u": "redo",
           "g": "jump",
           "cmd-alt-ctrl-shift-r": "jump",
           "backspace": "clear-screen",

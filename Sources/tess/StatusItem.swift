@@ -117,6 +117,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
             e.image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: nil)
             menu.addItem(e)
         }
+        recent(menu)
         menu.addItem(.separator())
         menu.addItem(item("Open Picker…", "magnifyingglass", #selector(pick), for: .pick("")))
         menu.addItem(item("Settings…", "gearshape", #selector(openSettings), key: ",", mods: [.command]))
@@ -131,6 +132,32 @@ final class StatusItem: NSObject, NSMenuDelegate {
         menu.addItem(item("Open Log", "doc.text", #selector(openLog)))
         menu.addItem(.separator())
         menu.addItem(item("Quit tess", "power", #selector(quit), key: "q", mods: [.command]))
+    }
+
+    /// The last changes, newest first. Clicking one in effect undoes it and what came after;
+    /// clicking an undone one (dimmed) redoes up to it.
+    private func recent(_ menu: NSMenu) {
+        guard !tiler.history.isEmpty else { return }
+        menu.addItem(.separator())
+        menu.addItem(.sectionHeader(title: "Recent: click to undo or redo"))
+        let applied = tiler.history.count - tiler.undone
+        let ago = RelativeDateTimeFormatter()
+        ago.unitsStyle = .short
+        ago.dateTimeStyle = .named
+        for (i, step) in tiler.history.enumerated().reversed() {
+            let done = i < applied
+            let row = NSMenuItem(title: step.title, action: #selector(revisit(_:)), keyEquivalent: "")
+            row.target = self
+            row.tag = i
+            row.subtitle = [ago.localizedString(for: step.at, relativeTo: Date()), step.detail].filter { !$0.isEmpty }
+                .joined(separator: " · ")
+            row.image = NSImage(systemSymbolName: done ? "arrow.uturn.backward" : "arrow.uturn.forward", accessibilityDescription: nil)
+            row.toolTip = done ? "Undo this and everything after it" : "Redo up to here"
+            if !done {
+                row.attributedTitle = NSAttributedString(string: step.title, attributes: [.foregroundColor: NSColor.secondaryLabelColor])
+            }
+            menu.addItem(row)
+        }
     }
 
     /// A menu row with a symbol, showing the main-mode shortcut bound to `command` if any.
@@ -158,6 +185,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
         "slash": "/", "minus": "-", "equal": "=", "comma": ",", "period": ".", "quote": "'", "backtick": "`",
     ]
 
+    @objc private func revisit(_ sender: NSMenuItem) { tiler.revisit(sender.tag) }
     @objc private func pick() { _ = tiler.run([.pick("")], source: "menu") }
     @objc private func clear() { _ = tiler.run([.clearMonitor], source: "menu") }
     @objc private func openLog() { NSWorkspace.shared.open(Log.url) }

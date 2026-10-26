@@ -286,3 +286,28 @@ extension World {
         if let f = focused { focused = f }
     }
 }
+
+extension World {
+    // MARK: Undo
+
+    /// Whether `other` arranges the windows the same way (focus aside).
+    public func sameLayout(as other: World) -> Bool {
+        monitors == other.monitors && floating == other.floating
+    }
+
+    /// The arrangement of `old`, an earlier copy, for the windows and screens there are now:
+    /// windows closed since are left out, windows opened since go to the end of the screen they
+    /// are on, and focus goes back to what `old` had focused.
+    public func restoring(_ old: World) -> World {
+        var w = old
+        for id in w.tiled + Array(w.floating) where !contains(id) { w.remove(id) }
+        w.parked = parked
+        w.setMonitors(monitors.map { (id: $0.id, frame: $0.frame) })
+        for (m, mon) in monitors.enumerated() {
+            for id in mon.windows where !w.contains(id) { w.place(id, .monitor(m)) }
+        }
+        for id in floating where !w.contains(id) { w.floating.insert(id) }
+        if let f = old.focused, w.contains(f) { w.focused = f }
+        return w
+    }
+}

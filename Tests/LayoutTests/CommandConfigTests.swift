@@ -152,3 +152,12 @@ import Testing
     #expect(Config.overrides(edited, over: Config.defaultRaw).overlay?.allScreens == false)
     #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).overlay == nil)
 }
+
+@Test func emptyScreensIsOnByDefault() throws {
+    #expect(Config.defaults.emptyScreens)
+    #expect(try !Config.load(Data(#"{"empty_screens": false}"#.utf8)).emptyScreens)
+    var edited = Config.defaultRaw
+    edited.emptyScreens = false
+    #expect(Config.overrides(edited, over: Config.defaultRaw).emptyScreens == false)
+    #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).emptyScreens == nil)
+}

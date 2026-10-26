@@ -18,6 +18,9 @@ public struct Config: Equatable, Sendable {
     public var overlayAllScreens = true
     /// When windows show their border and letter, and screens their number.
     public var windowLabels = LabelMode.jump
+    /// New windows go to an empty screen when there is one, and the settings window and a
+    /// mode's keys show on the screen with the fewest windows (instead of `overlayAllScreens`).
+    public var emptyScreens = true
 
     public enum LabelMode: String, Codable, Sendable {
         /// Always on screen.
@@ -72,6 +75,11 @@ public struct Config: Equatable, Sendable {
         public var ignore: [String]?
         public var verbs: [String: String?]?
         public var modes: [String: [String: String?]]?
+        public var emptyScreens: Bool?
+        enum CodingKeys: String, CodingKey {
+            case gaps, overlay, float, tile, ignore, verbs, modes
+            case emptyScreens = "empty_screens"
+        }
         public init() {}
     }
 
@@ -113,6 +121,7 @@ public struct Config: Equatable, Sendable {
         if let g = top.gaps { r.gaps = Raw.Gaps(inner: g.inner ?? base.gaps?.inner, outer: g.outer ?? base.gaps?.outer) }
         r.overlay = Raw.Overlay(allScreens: top.overlay?.allScreens ?? base.overlay?.allScreens,
                                 windowLabels: top.overlay?.windowLabels ?? base.overlay?.windowLabels)
+        r.emptyScreens = top.emptyScreens ?? base.emptyScreens
         r.float = top.float ?? base.float
         r.tile = top.tile ?? base.tile
         r.ignore = top.ignore ?? base.ignore
@@ -138,6 +147,7 @@ public struct Config: Equatable, Sendable {
         var o = Raw()
         if edited.gaps != base.gaps { o.gaps = edited.gaps }
         if edited.overlay != base.overlay { o.overlay = edited.overlay }
+        if edited.emptyScreens != base.emptyScreens { o.emptyScreens = edited.emptyScreens }
         if edited.float != base.float { o.float = edited.float }
         if edited.tile != base.tile { o.tile = edited.tile }
         if edited.ignore != base.ignore { o.ignore = edited.ignore }
@@ -169,6 +179,7 @@ public struct Config: Equatable, Sendable {
         c.outer = min(max(raw.gaps?.outer ?? 10, 0), 100).rounded()
         c.overlayAllScreens = raw.overlay?.allScreens ?? true
         c.windowLabels = raw.overlay?.windowLabels ?? .jump
+        c.emptyScreens = raw.emptyScreens ?? true
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
         c.ignore = raw.ignore ?? []
@@ -200,6 +211,7 @@ public struct Config: Equatable, Sendable {
     {
       "gaps": {"inner": 10, "outer": 10},
       "overlay": {"all_screens": true, "window_labels": "jump"},
+      "empty_screens": true,
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": ["io.github.ender-wang.EdgeMark"],

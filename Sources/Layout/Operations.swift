@@ -275,6 +275,19 @@ func grown(_ sizes: [Double], at i: Int, by px: Double, extent: Double) -> [Doub
 }
 
 extension World {
+    /// A monitor with no windows, for a new window, unless the active one is empty itself.
+    public var emptyMonitor: Int? {
+        guard monitors.indices.contains(activeMonitor), !monitors[activeMonitor].windows.isEmpty else { return nil }
+        return monitors.indices.first { monitors[$0].windows.isEmpty }
+    }
+
+    /// The monitor with the fewest windows; `prefer` wins a tie.
+    public func leastBusy(prefer: Int) -> Int {
+        monitors.indices.min { a, b in
+            (monitors[a].windows.count, a == prefer ? 0 : 1) < (monitors[b].windows.count, b == prefer ? 0 : 1)
+        } ?? prefer
+    }
+
     /// Every lane on the active monitor goes, in order, to the right end of the next monitor.
     public mutating func clearMonitor() {
         let m = activeMonitor

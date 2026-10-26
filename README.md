@@ -91,6 +91,9 @@ change, for example:
 `float` lists apps that never tile, `tile` apps that always do, `ignore` apps tess leaves
 alone (EdgeMark is there by default).
 
+New windows open on an empty screen when there is one, and Settings and a mode's keys show
+on the screen with the fewest windows; `"empty_screens": false` turns that off.
+
 ## Command line
 
 `tess <command>` runs any command a key can, for example `tess focus left` or

@@ -130,7 +130,7 @@ extension Tiler {
         if world.focused != before, let f = world.focused { focus(f) }
         if flash { flashFocus() }
         // A single cheat sheet follows to the screen being worked on.
-        if mode != "main", !config.overlayAllScreens, world.activeMonitor != beforeMonitor,
+        if mode != "main", !config.emptyScreens, !config.overlayAllScreens, world.activeMonitor != beforeMonitor,
            let m = world.monitors[safe: world.activeMonitor] {
             overlay.showMode(mode, config.modes[mode] ?? [:], on: [m.frame])
         }
@@ -214,7 +214,9 @@ extension Tiler {
 
 
     func openSettings() {
-        SettingsWindow.shared.show(raw: config.raw) { [weak self] raw in self?.saveSettings(raw) }
+        SettingsWindow.shared.show(raw: config.raw, on: config.emptyScreens ? leastBusyFrame : nil) { [weak self] raw in
+            self?.saveSettings(raw)
+        }
     }
 
 

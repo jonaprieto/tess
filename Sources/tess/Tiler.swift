@@ -317,6 +317,10 @@ final class Tiler {
                     pending = nil
                     world.place(info.id, p.spot)
                     Events.record("window.open", describe(info.id).merging(["how": "placed from the picker"]) { $1 })
+                } else if config.emptyScreens, let m = world.emptyMonitor {
+                    world.place(info.id, .monitor(m))
+                    Events.record("window.open", describe(info.id).merging(["how": "empty screen \(m + 1)"]) { $1 })
+                    announce(info.id, on: m)
                 } else {
                     world.insert(info.id)
                     Events.record("window.open", describe(info.id).merging(["how": "new column"]) { $1 })
@@ -506,9 +510,28 @@ final class Tiler {
     }
 
 
-    /// Where a mode's keys show: every screen, or (overlay.all_screens false) the one in use.
+    /// Where a mode's keys show: the screen with the fewest windows (empty_screens), every
+    /// screen, or (overlay.all_screens false) the one in use.
     var modeScreens: [CGRect] {
-        config.overlayAllScreens && !world.monitors.isEmpty ? world.monitors.map(\.frame) : [lookedAtFrame]
+        guard !world.monitors.isEmpty else { return [lookedAtFrame] }
+        if config.emptyScreens { return [leastBusyFrame] }
+        return config.overlayAllScreens ? world.monitors.map(\.frame) : [lookedAtFrame]
+    }
+
+    /// The screen with the fewest windows, the one being looked at on a tie.
+    var leastBusyFrame: CGRect {
+        let looked = lookedAtFrame
+        let m = world.leastBusy(prefer: world.monitors.firstIndex { $0.frame == looked } ?? world.activeMonitor)
+        return world.monitors[safe: m]?.frame ?? looked
+    }
+
+    /// A new window sent to another screen says where it went.
+    func announce(_ id: WindowID, on m: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self, let screen = self.world.monitors[safe: m]?.frame else { return }
+            self.overlay.toast("\(self.appName(id)) opened on screen \(m + 1)", on: screen)
+            if let f = self.world.frames(inner: self.config.inner, outer: self.config.outer)[id] { self.overlay.flash(f) }
+        }
     }
 
 

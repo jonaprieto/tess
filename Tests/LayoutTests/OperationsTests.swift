@@ -230,3 +230,15 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     #expect(lanes(back, 1) == [[4]])
     #expect(back.focused == 2)
 }
+
+@Test func newWindowsFindAnEmptyScreenAndPanelsTheLeastBusyOne() {
+    var w = world([[1], [2]], [], focused: 1)
+    #expect(w.emptyMonitor == 1)
+    #expect(w.leastBusy(prefer: 0) == 1)
+    w.monitors[1].lanes = [Lane([3])]
+    #expect(w.emptyMonitor == nil)
+    #expect(w.leastBusy(prefer: 0) == 1)
+    w.monitors[1].lanes = [Lane([3]), Lane([4])]
+    #expect(w.leastBusy(prefer: 1) == 1)  // a tie goes to the preferred screen
+    #expect(world([], [[3]]).emptyMonitor == nil)  // the active screen is empty already
+}

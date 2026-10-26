@@ -8,7 +8,8 @@ final class SettingsWindow {
     static let shared = SettingsWindow()
     private var window: NSWindow?
 
-    func show(raw: Config.Raw, save: @escaping (Config.Raw) -> String?) {
+    /// Opens on `screen` (AX coordinates) when given and not already open.
+    func show(raw: Config.Raw, on screen: CGRect?, save: @escaping (Config.Raw) -> String?) {
         let w = window ?? {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 560),
                              styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
@@ -19,6 +20,10 @@ final class SettingsWindow {
             return w
         }()
         w.contentView = NSHostingView(rootView: SettingsView(model: SettingsModel(raw: raw, save: save)))
+        if let screen, !w.isVisible {
+            let f = Screens.flip(screen)
+            w.setFrameOrigin(NSPoint(x: f.midX - w.frame.width / 2, y: f.midY - w.frame.height / 2))
+        }
         NSApp.activate()
         w.makeKeyAndOrderFront(nil)
     }
@@ -35,6 +40,7 @@ final class SettingsModel {
     var inner: Double
     var outer: Double
     var overlayAllScreens: Bool
+    var emptyScreens: Bool
     var windowLabels: Config.LabelMode
     var float: [String]
     var tile: [String]
@@ -53,6 +59,7 @@ final class SettingsModel {
         inner = raw.gaps?.inner ?? 10
         outer = raw.gaps?.outer ?? 10
         overlayAllScreens = raw.overlay?.allScreens ?? true
+        emptyScreens = raw.emptyScreens ?? true
         windowLabels = raw.overlay?.windowLabels ?? .jump
         float = raw.float ?? []
         tile = raw.tile ?? []
@@ -68,6 +75,7 @@ final class SettingsModel {
         var r = Config.Raw()
         r.gaps = .init(inner: inner, outer: outer)
         r.overlay = .init(allScreens: overlayAllScreens, windowLabels: windowLabels)
+        r.emptyScreens = emptyScreens
         r.float = float
         r.tile = tile
         r.ignore = ignore
@@ -96,9 +104,9 @@ final class SettingsModel {
 
     func revert() {
         let fresh = SettingsModel(raw: original, save: saveRaw)
-        (inner, outer, overlayAllScreens, windowLabels, float, tile, ignore, verbs, modes) =
-            (fresh.inner, fresh.outer, fresh.overlayAllScreens, fresh.windowLabels, fresh.float, fresh.tile, fresh.ignore,
-             fresh.verbs, fresh.modes)
+        (inner, outer, overlayAllScreens, emptyScreens, windowLabels, float, tile, ignore, verbs, modes) =
+            (fresh.inner, fresh.outer, fresh.overlayAllScreens, fresh.emptyScreens, fresh.windowLabels, fresh.float, fresh.tile,
+             fresh.ignore, fresh.verbs, fresh.modes)
         message = nil
     }
 }
@@ -147,8 +155,15 @@ struct GeneralTab: View {
                     LabeledContent("Around the screen", value: "\(Int(model.outer)) pt")
                 }
             }
+            Section {
+                Toggle("Use empty screens", isOn: $model.emptyScreens)
+            } footer: {
+                Text("New windows open on an empty screen when there is one; Settings and a mode's keys show on the screen with the fewest windows.")
+                    .foregroundStyle(.secondary)
+            }
             Section("Overlays") {
                 Toggle("Show a mode's keys on every screen", isOn: $model.overlayAllScreens)
+                    .disabled(model.emptyScreens)
                 SwiftUI.Picker("Window letters and screen numbers", selection: $model.windowLabels) {
                     Text("When jumping").tag(Config.LabelMode.jump)
                     Text("Always").tag(Config.LabelMode.always)

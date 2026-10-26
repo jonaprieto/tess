@@ -241,7 +241,7 @@ public struct Config: Equatable, Sendable {
           "cmd-alt-ctrl-shift-g": "pick",
           "alt-space": "pick",
           "alt-shift-backspace": "clear-screen",
-          "cmd-alt-ctrl-shift-j": "jump"
+          "cmd-alt-ctrl-shift-r": "jump"
         },
         "tess": {
           "h": "focus left",
@@ -272,6 +272,7 @@ public struct Config: Equatable, Sendable {
           "t": "exec open -a kitty",
           "x": "close-replace",
           "g": "jump",
+          "cmd-alt-ctrl-shift-r": "jump",
           "backspace": "clear-screen",
           "cmd-alt-ctrl-shift-g": "pick",
           "w": "rescue",

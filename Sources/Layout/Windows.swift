@@ -79,7 +79,7 @@ public func jumpKeys(labels: [WindowID: Character], windows: [WindowID], screens
         keys[KeySpec(key: "\(n)", mods: [.shift])] = [.moveToMonitor(n)] + back
     }
     let exits = [KeySpec(key: "esc", mods: []), KeySpec(key: "enter", mods: []),
-                 KeySpec(key: "j", mods: [.cmd, .alt, .ctrl, .shift]), KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])]
+                 KeySpec(key: "r", mods: [.cmd, .alt, .ctrl, .shift]), KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])]
     for k in exits { keys[k] = back }
     return (keys, exits)
 }

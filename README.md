@@ -27,7 +27,8 @@ or `make uninstall`.
 
 ## Keys
 
-Hyper is ⌃⌥⇧⌘ (Nav+T and Nav+G on the NuPhy Air96 layout send Hyper+T and Hyper+G).
+Hyper is ⌃⌥⇧⌘ (Nav+T, Nav+G and Nav+R on the NuPhy Air96 layout send Hyper+T, Hyper+G and
+Hyper+R).
 
 - `alt-h/j/k/l` focus, `alt-shift-h/j/k/l` move, `alt-1/2/3` go to a screen,
   `alt-shift-1/2/3` send the window there, `alt-tab` next screen.
@@ -39,7 +40,7 @@ Hyper is ⌃⌥⇧⌘ (Nav+T and Nav+G on the NuPhy Air96 layout send Hyper+T an
 - Hyper+T is tess mode: the same actions without a modifier (`h`, `shift-h`, `1`, `f`, `a`,
   `v`, ...), plus `x` to close the window and pick what fills its place, `w` to bring back
   lost windows, `s` to re-tile, `r` for resize mode. Esc, enter or Hyper+T again leave it.
-- Hyper+G or `alt-space` opens the picker, Hyper+J (or `g` in tess mode) jump mode.
+- Hyper+G or `alt-space` opens the picker, Hyper+R (or `g` in tess mode) jump mode.
 
 While a mode is on, every screen shows its keys. `tess default-config` prints every binding.
 

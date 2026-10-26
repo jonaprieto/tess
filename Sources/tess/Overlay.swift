@@ -8,6 +8,7 @@ final class Overlay {
     private var modePanels: [NSPanel] = []
     private var toastPanel: NSPanel?
     private var flashPanel: NSPanel?
+    private var dropPanel: NSPanel?
     private var toastHide: DispatchWorkItem?
     private var flashHide: DispatchWorkItem?
 
@@ -93,6 +94,29 @@ final class Overlay {
         }
         flashHide = hide
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: hide)
+    }
+
+    /// Where a dragged window would land, tinted; nil hides it.
+    func showDrop(_ rect: CGRect?) {
+        guard let rect else {
+            dropPanel?.orderOut(nil)
+            return
+        }
+        let p = dropPanel ?? {
+            let p = Self.panel()
+            let v = NSView()
+            v.wantsLayer = true
+            v.layer?.borderWidth = 3
+            v.layer?.cornerRadius = 12
+            p.contentView = v
+            return p
+        }()
+        dropPanel = p
+        p.contentView?.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.22).cgColor
+        p.contentView?.layer?.borderColor = NSColor.controlAccentColor.cgColor
+        let frame = Screens.flip(rect.insetBy(dx: 4, dy: 4))
+        if p.frame != frame { p.setFrame(frame, display: true) }
+        if !p.isVisible { p.orderFrontRegardless() }
     }
 
     private enum Place { case center, bottom }

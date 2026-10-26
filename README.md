@@ -46,6 +46,11 @@ Hyper+R).
   keeps it on until esc.
 - Hyper+G opens the picker, Hyper+R jump mode, in tess mode too.
 
+Windows can also be moved with the mouse: drag a tiled one and where it will land shows as
+you drag. Over another window, its left or right edge splits beside it, its top or bottom
+edge stacks with it, and its middle swaps the two; over an empty part of another screen, it
+goes to that screen.
+
 The menu bar item names the mode that is on. Clicking it lists the last ten layout changes
 (keys, CLI, menu and picker): clicking one undoes it and everything after it, clicking an
 undone one redoes up to it. In tess mode `u` undoes and `shift-u` redoes.

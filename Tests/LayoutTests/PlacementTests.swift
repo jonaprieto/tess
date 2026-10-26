@@ -105,3 +105,32 @@ import Testing
         }
     }
 }
+
+@Test func dropZonesSplitAlongOrAcrossTheLanes() {
+    // Lanes [1][2] on A (columns, 500 wide), nothing on B.
+    var w = world([[1], [2]], [], focused: 2)
+    let f = w.frames(inner: 0, outer: 0)
+    func zone(_ x: Double, _ y: Double) -> DropZone? { w.dropZone(2, at: CGPoint(x: x, y: y), frames: f)?.zone }
+    #expect(zone(20, 400) == .lane(1, after: false))
+    #expect(zone(480, 400) == .lane(1, after: true))
+    #expect(zone(250, 20) == .stack(1, after: false))
+    #expect(zone(250, 780) == .stack(1, after: true))
+    #expect(zone(250, 400) == .swap(1))
+    #expect(zone(750, 400) == nil)  // over itself
+    #expect(zone(1500, 400) == .screen(1))
+    #expect(w.dropZone(2, at: CGPoint(x: 250, y: 780), frames: f)?.rect == CGRect(x: 0, y: 400, width: 500, height: 400))
+    w.drop(2, .stack(1, after: true))
+    #expect(lanes(w) == [[1, 2]] && w.focused == 2)
+    w.drop(2, .lane(1, after: false))
+    #expect(lanes(w) == [[2], [1]])
+    w.drop(2, .swap(1))
+    #expect(lanes(w) == [[1], [2]])
+    w.drop(2, .screen(1))
+    #expect(lanes(w) == [[1]] && lanes(w, 1) == [[2]])
+    // Rows: top and bottom edges split along the lanes.
+    w.monitors[0].rows = true
+    w.monitors[0].lanes = [Lane([1]), Lane([3])]
+    let g = w.frames(inner: 0, outer: 0)
+    #expect(w.dropZone(3, at: CGPoint(x: 500, y: 10), frames: g)?.zone == .lane(1, after: false))
+    #expect(w.dropZone(3, at: CGPoint(x: 10, y: 200), frames: g)?.zone == .stack(1, after: false))
+}

@@ -16,6 +16,17 @@ public enum Spot: Equatable, Sendable {
     case float
 }
 
+/// Where a dragged window lands, relative to the window under the mouse.
+public enum DropZone: Equatable, Sendable {
+    /// A lane of its own before or after that window's lane (a split along the lanes).
+    case lane(WindowID, after: Bool)
+    /// In that window's lane, before or after it (a split across the lanes).
+    case stack(WindowID, after: Bool)
+    case swap(WindowID)
+    /// The right end of that monitor.
+    case screen(Int)
+}
+
 extension World {
     /// Puts `id` (tiled, floating or new) at `spot` and focuses it.
     public mutating func place(_ id: WindowID, _ spot: Spot) {
@@ -64,6 +75,52 @@ extension World {
         guard let pa = locate(a), let pb = locate(b) else { return }
         monitors[pa.m].lanes[pa.l].windows[pa.w] = b
         monitors[pb.m].lanes[pb.l].windows[pb.w] = a
+    }
+
+    /// Where tiled window `id` dragged to `point` would land (`frames`: where the layout puts
+    /// each window), and the rect that shows it; nil where it would stay put. Over another
+    /// window: near an edge along the lanes, a lane of its own on that side; near an edge
+    /// across them, that window's lane on that side; the middle, they swap. Over no window
+    /// on another screen, the right end of that screen.
+    public func dropZone(_ id: WindowID, at point: CGPoint, frames: [WindowID: CGRect]) -> (zone: DropZone, rect: CGRect)? {
+        guard let from = locate(id) else { return nil }
+        guard let (t, f) = frames.first(where: { $0.key != id && locate($0.key) != nil && $0.value.contains(point) }) else {
+            guard let m = monitors.firstIndex(where: { $0.frame.contains(point) }), m != from.m else { return nil }
+            return (.screen(m), monitors[m].frame)
+        }
+        let u = (point.x - f.minX) / f.width, v = (point.y - f.minY) / f.height
+        if min(u, 1 - u, v, 1 - v) > 0.25 { return (.swap(t), f) }
+        let horizontal = min(u, 1 - u) <= min(v, 1 - v)
+        let first = horizontal ? u < 0.5 : v < 0.5
+        let rect = horizontal
+            ? CGRect(x: first ? f.minX : f.midX, y: f.minY, width: f.width / 2, height: f.height)
+            : CGRect(x: f.minX, y: first ? f.minY : f.midY, width: f.width, height: f.height / 2)
+        let rows = monitors[locate(t)!.m].rows
+        return (horizontal != rows ? .lane(t, after: !first) : .stack(t, after: !first), rect)
+    }
+
+    /// `id` (tiled) moved to `zone` and focused.
+    public mutating func drop(_ id: WindowID, _ zone: DropZone) {
+        switch zone {
+        case .swap(let t):
+            swap(id, t)
+        case .screen(let m):
+            guard monitors.indices.contains(m) else { return }
+            unplace(id)
+            monitors[m].lanes.append(newLane(id, on: m))
+        case .lane(let t, let after), .stack(let t, let after):
+            guard t != id, locate(t) != nil else { return }
+            unplace(id)
+            let p = locate(t)!
+            if case .lane = zone {
+                monitors[p.m].lanes.insert(newLane(id, on: p.m), at: after ? p.l + 1 : p.l)
+            } else {
+                let w = after ? p.w + 1 : p.w
+                monitors[p.m].lanes[p.l].sizes.insert(mean(monitors[p.m].lanes[p.l].sizes) ?? 1, at: w)
+                monitors[p.m].lanes[p.l].windows.insert(id, at: w)
+            }
+        }
+        focused = id
     }
 
     /// Where a window sits, to put another one there after it closes.

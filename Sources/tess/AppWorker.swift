@@ -12,6 +12,8 @@ final class AppWorker {
     var icon: NSImage?
     /// Main thread: (pid, windows, focused window).
     private let onSnapshot: (pid_t, [WinInfo], WindowID?) -> Void
+    /// A window the mouse is moving (not resizing), as it moves.
+    private let onDrag: (WindowID) -> Void
 
     // Worker thread only.
     private var runLoop: CFRunLoop!
@@ -36,9 +38,11 @@ final class AppWorker {
         kAXMovedNotification, kAXResizedNotification,
     ]
 
-    init(_ app: NSRunningApplication, onSnapshot: @escaping (pid_t, [WinInfo], WindowID?) -> Void) {
+    init(_ app: NSRunningApplication, onSnapshot: @escaping (pid_t, [WinInfo], WindowID?) -> Void,
+         onDrag: @escaping (WindowID) -> Void) {
         self.app = app
         self.onSnapshot = onSnapshot
+        self.onDrag = onDrag
         let ready = DispatchSemaphore(value: 0)
         let thread = Thread { [unowned self] in self.run(ready) }
         thread.name = "tess.ax.\(app.processIdentifier)"
@@ -64,8 +68,8 @@ final class AppWorker {
     private func ensureObserver() {
         guard observer == nil else { return }
         var obs: AXObserver?
-        let callback: AXObserverCallback = { _, _, name, refcon in
-            Unmanaged<AppWorker>.fromOpaque(refcon!).takeUnretainedValue().notified(name as String)
+        let callback: AXObserverCallback = { _, element, name, refcon in
+            Unmanaged<AppWorker>.fromOpaque(refcon!).takeUnretainedValue().notified(name as String, element)
         }
         guard AXObserverCreate(pid, callback, &obs) == .success, let obs else { return }
         // Both or neither: missing window-created would leave new windows to the sweep.
@@ -87,8 +91,14 @@ final class AppWorker {
 
     /// Worker thread. Moves and resizes right after tess's own write are its echo: one
     /// refresh once the write has settled covers them.
-    private func notified(_ name: String) {
+    private func notified(_ name: String, _ element: AXUIElement) {
         let now = CFAbsoluteTimeGetCurrent()
+        // Moved under the mouse at the same size: dragged, not resized from an edge.
+        if name == kAXMovedNotification, NSEvent.pressedMouseButtons & 1 != 0, let id = element.windowID,
+           let was = sent?.infos.first(where: { $0.id == id })?.frame, let frame = element.frame,
+           abs(frame.width - was.width) < 2, abs(frame.height - was.height) < 2 {
+            DispatchQueue.main.async { [onDrag] in onDrag(id) }
+        }
         if (name == kAXMovedNotification || name == kAXResizedNotification) && now < quietUntil {
             scheduleRefresh(after: quietUntil - now + 0.05)
         } else {

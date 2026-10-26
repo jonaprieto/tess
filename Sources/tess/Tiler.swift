@@ -99,6 +99,9 @@ final class Tiler {
     /// The picker is open (or about to open): no hotkeys, no focus changes.
     var picking = false
 
+    /// The window the mouse is moving and where it would land, until the button comes up.
+    var drag: (id: WindowID, zone: DropZone?)?
+
     /// The picker was opened by close-replace; cancelling it focuses what tess picked.
     var closeReplacing = false
 
@@ -225,7 +228,8 @@ final class Tiler {
               app.bundleIdentifier != "com.apple.loginwindow",
               !config.ignore.contains(app.bundleIdentifier ?? "") else { return }
         Events.record("app.open", ["pid": Int(pid), "bundle": app.bundleIdentifier ?? "", "name": app.localizedName ?? ""])
-        let worker = AppWorker(app) { [weak self] pid, list, focused in self?.snapshot(pid, list, focused) }
+        let worker = AppWorker(app, onSnapshot: { [weak self] pid, list, focused in self?.snapshot(pid, list, focused) },
+                               onDrag: { [weak self] id in self?.dragging(id) })
         workers[pid] = worker
         DispatchQueue.global(qos: .utility).async {
             let icon = Icons.small(app.icon)
@@ -370,6 +374,37 @@ final class Tiler {
     }
 
 
+    /// The mouse is moving tiled window `id`: where letting go puts it shows, and when the
+    /// button comes up it goes there. By the shown zone, not the window's frame: macOS may
+    /// pull a window let go across two screens back onto the one holding most of it.
+    func dragging(_ id: WindowID) {
+        guard !paused, world.locate(id) != nil else { return }
+        let z = world.dropZone(id, at: mousePoint, frames: world.frames(inner: config.inner, outer: config.outer))
+        overlay.showDrop(z?.rect)
+        let watching = drag != nil
+        drag = (id, z?.zone)
+        guard !watching else { return }
+        func check() {
+            guard NSEvent.pressedMouseButtons & 1 == 0 else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: check)
+                return
+            }
+            overlay.showDrop(nil)
+            if let (id, zone) = drag, let zone, world.locate(id) != nil {
+                let before = world
+                world.drop(id, zone)
+                if world != before {
+                    remember("Drag", windowName(id), from: before)
+                    Events.record("window.dropped", describe(id).merging(["zone": "\(zone)"]) { $1 })
+                }
+            }
+            drag = nil
+            scheduleApply()
+        }
+        check()
+    }
+
+
     /// macOS moved focus (a click, cmd-tab, a window closing).
     func syncFocus(_ id: WindowID) {
         // Overrule macOS once; a second contrary report is the user's own choice.
@@ -478,7 +513,8 @@ final class Tiler {
             refreshVeil()
         }
         guard !starting, !paused else { return }
-        if NSEvent.pressedMouseButtons & 1 != 0 {
+        // Nothing moves under the mouse, nor before a drag's drop is in the layout.
+        if NSEvent.pressedMouseButtons & 1 != 0 || drag != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.scheduleApply() }
             return
         }
@@ -570,10 +606,14 @@ final class Tiler {
     /// fullscreen app tess leaves alone), else the one with the mouse.
     var lookedAtFrame: CGRect {
         if let f = osFocused.flatMap({ infos[$0]?.frame }), let m = world.monitorIndex(for: f) { return world.monitors[m].frame }
-        let mouse = NSEvent.mouseLocation
-        let h = NSScreen.screens.first?.frame.height ?? 0
-        let p = CGPoint(x: mouse.x, y: h - mouse.y)
+        let p = mousePoint
         return world.monitors.first { $0.frame.insetBy(dx: 0, dy: -40).contains(p) }?.frame ?? activeFrame
+    }
+
+    /// The mouse in AX coordinates.
+    var mousePoint: CGPoint {
+        let mouse = NSEvent.mouseLocation
+        return CGPoint(x: mouse.x, y: (NSScreen.screens.first?.frame.height ?? 0) - mouse.y)
     }
 
 

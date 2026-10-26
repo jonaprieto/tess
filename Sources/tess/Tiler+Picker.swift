@@ -35,6 +35,16 @@ extension Tiler {
         picker.open(pickerItems(), on: lookedAtFrame, fixed: fixed, verbs: config.verbs, text: text) { [weak self] in
             self?.pickerMap() ?? Picker.Map(monitors: [], windows: [], labels: [:])
         }
+        picker.suggest = !config.jev ? nil : { [weak self] typed, candidates, done in
+            let focused = self?.focusBeforePicker.map { id in
+                "\(self?.windowName(id) ?? "") · screen \((self?.world.locate(id)?.m ?? self?.world.activeMonitor ?? 0) + 1)"
+            }
+            Jev.pick(typed, focused: focused, candidates: candidates.map { "\($0.detail) · \($0.title)" }) { answer in
+                // Fairly sure, and something fits at all.
+                guard let answer, answer.p >= 0.5, answer.fits >= 0.5 else { return done(nil) }
+                done(answer.index)
+            }
+        }
         Browsers.tabs { [weak self] tabs in self?.picker.add(tabs) }
         Browsers.history(config.history) { [weak self] pages in self?.picker.add(pages) }
     }
@@ -327,12 +337,13 @@ extension Tiler {
             items.append(Picker.Item(kind: .app(a.url), title: a.name, detail: open ? "app (open)" : "app",
                                      icon: a.icon, search: a.name))
         }
-        // tess's own commands by name, once something is typed.
+        // tess's own commands by name, once something is typed, and those for each screen.
         let command = Icons.symbol("command")
-        for (name, c) in Command.simple.sorted(by: { $0.key < $1.key }) where Picker.runnable([c]) {
-            let label = c.label ?? name
-            items.append(Picker.Item(kind: .command([c]), title: label, detail: "tess · \(name)", icon: command,
-                                     search: "\(name) \(label)", quiet: true))
+        let screens = (1...max(world.monitors.count, 1)).flatMap { n in [Command.focusMonitor(n), .moveToMonitor(n)] }
+        for c in Command.simple.values.sorted(by: { $0.description < $1.description }) + screens where Picker.runnable([c]) {
+            let label = c.label ?? c.description
+            items.append(Picker.Item(kind: .command([c]), title: label, detail: "tess · \(c.description)", icon: command,
+                                     search: "\(c.description) \(label)", quiet: true))
         }
         let settings = NSWorkspace.shared.icon(forFile: "/System/Applications/System Settings.app")
         for (title, action) in [("Sleep", "sleep"), ("Lock Screen", "lock"), ("Log Out…", "logo"),

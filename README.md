@@ -115,6 +115,13 @@ goes:
 
 Words match in any order: `slack michael` finds "Michael - Heliax - Slack".
 
+With `"jev": true` the picker also asks [TypeSafe](https://typesafe.ai)'s Jev what the text
+means, after a short pause in typing, so plain words (`the standup call`, `send this to the
+other screen`) and typos find their window, tab, app or command, which moves to the top. It
+sends the typed text, the focused window and the titles of windows, tabs, apps and commands
+to TypeSafe's API, never browser history, with `TYPESAFE_API_KEY` from the environment or
+the login shell. Off by default.
+
 Any command `tess` takes on the command line works there too: `balance`, `zen`,
 `move-to-screen 2`, `resize width +100`. It shows on top, and Enter runs it on the window
 that had focus.

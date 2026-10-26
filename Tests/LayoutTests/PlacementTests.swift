@@ -172,4 +172,5 @@ import Testing
     #expect(fuzzyWords("slack zebra", title) == nil)
     // One word is plain fuzzy matching.
     #expect(fuzzyWords("slk", title) == fuzzyScore("slk", title))
+    #expect(!Config.defaults.jev)
 }

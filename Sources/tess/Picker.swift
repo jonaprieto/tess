@@ -65,6 +65,9 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     var onCancel: () -> Void = {}
     var search: (_ verb: String, _ query: String, _ done: @escaping ([Item]) -> Void) -> Void = { _, _, _ in }
     private var searchGeneration = 0
+    /// Which of the candidates the typed text means (Jev, with the config's `jev`): their index.
+    var suggest: ((_ typed: String, _ candidates: [Item], _ done: @escaping (Int?) -> Void) -> Void)?
+    private var jevAsked: (String, Int)?
 
     private let panel: KeyPanel
     private let content = NSView()
@@ -128,6 +131,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         mapModel = map
         field.stringValue = text
         picked = nil
+        jevAsked = nil
         filter()
         showList()
         // A quick fade and a slight scale-in.
@@ -248,6 +252,53 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         list.query = q
         list.selected = 0
         list.needsDisplay = true
+        askJev(q)
+    }
+
+    /// After a pause in typing, Jev's pick among windows, tabs, commands and the apps that match
+    /// best (never browser history) goes on top, unless the selection was moved meanwhile.
+    private func askJev(_ q: String) {
+        searchGeneration += 1
+        let generation = searchGeneration
+        // Not when the top row is already exact (a typed command, a sum).
+        let exact = shown.first.map { i -> Bool in
+            switch i.kind {
+            case .command, .copy: true
+            default: false
+            }
+        } ?? false
+        guard let suggest, q.count >= 3, !exact else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self, generation == self.searchGeneration, self.isOpen else { return }
+            func kind(_ i: Item) -> Int {
+                switch i.kind {
+                case .window, .tab: 0
+                case .command, .system: 1
+                case .app: 2
+                default: 3
+                }
+            }
+            // Late history adds no candidates: the same text is not asked twice.
+            let pool = self.items.filter { kind($0) < 3 }
+            guard self.jevAsked.map({ $0 != (q, pool.count) }) ?? true else { return }
+            self.jevAsked = (q, pool.count)
+            let candidates = Array(pool
+                .sorted { a, b in
+                    (kind(a), -(fuzzyWords(q, a.search) ?? -1)) < (kind(b), -(fuzzyWords(q, b.search) ?? -1))
+                }
+                .prefix(200))
+            suggest(q, candidates) { [weak self] i in
+                guard let self, generation == self.searchGeneration, self.isOpen, self.list.selected == 0, let i else { return }
+                let pick = candidates[i]
+                let same = { (x: Item) in x.title == pick.title && x.detail == pick.detail }
+                guard !(self.shown.first.map(same) ?? false) else { return }
+                self.shown.removeAll(where: same)
+                self.shown.insert(pick, at: 0)
+                self.list.items = self.shown
+                self.list.selected = 0
+                self.list.needsDisplay = true
+            }
+        }
     }
 
     /// Commands the picker runs: not itself, and not those that only print (tree, state).

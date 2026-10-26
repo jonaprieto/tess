@@ -32,6 +32,9 @@ public struct Config: Equatable, Sendable {
     /// New windows go to an empty screen when there is one, and the settings window and a
     /// mode's keys show on the screen with the fewest windows (instead of `overlayAllScreens`).
     public var emptyScreens = true
+    /// The picker asks TypeSafe's Jev what the typed text means (it sends that text and the
+    /// titles of windows, tabs, apps and commands, never browser history).
+    public var jev = false
 
     public enum LabelMode: String, Codable, Sendable {
         /// Always on screen.
@@ -91,10 +94,11 @@ public struct Config: Equatable, Sendable {
         public var verbs: [String: String?]?
         public var modes: [String: [String: String?]]?
         public var emptyScreens: Bool?
+        public var jev: Bool?
         public var oneShot: [String]?
         public var terminal: String?
         enum CodingKeys: String, CodingKey {
-            case gaps, overlay, float, tile, ignore, history, verbs, modes, terminal
+            case gaps, overlay, float, tile, ignore, history, verbs, modes, terminal, jev
             case emptyScreens = "empty_screens"
             case oneShot = "one_shot"
         }
@@ -141,6 +145,7 @@ public struct Config: Equatable, Sendable {
                                 windowLabels: top.overlay?.windowLabels ?? base.overlay?.windowLabels,
                                 borderColor: top.overlay?.borderColor ?? base.overlay?.borderColor)
         r.emptyScreens = top.emptyScreens ?? base.emptyScreens
+        r.jev = top.jev ?? base.jev
         r.oneShot = top.oneShot ?? base.oneShot
         r.terminal = top.terminal ?? base.terminal
         r.float = top.float ?? base.float
@@ -166,6 +171,7 @@ public struct Config: Equatable, Sendable {
         if edited.gaps != base.gaps { o.gaps = edited.gaps }
         if edited.overlay != base.overlay { o.overlay = edited.overlay }
         if edited.emptyScreens != base.emptyScreens { o.emptyScreens = edited.emptyScreens }
+        if edited.jev != base.jev { o.jev = edited.jev }
         if edited.oneShot != base.oneShot { o.oneShot = edited.oneShot }
         if edited.terminal != base.terminal { o.terminal = edited.terminal }
         if edited.float != base.float { o.float = edited.float }
@@ -205,6 +211,7 @@ public struct Config: Equatable, Sendable {
             c.borderColor = rgb
         }
         c.emptyScreens = raw.emptyScreens ?? true
+        c.jev = raw.jev ?? false
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
         c.ignore = raw.ignore ?? []

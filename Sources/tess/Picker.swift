@@ -24,6 +24,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case copy(String)
         /// Sleep, lock, or a loginwindow event (log out, restart, shut down) by its code.
         case system(String)
+        /// tess commands, as the CLI and the config take them.
+        case command([Command])
     }
 
     struct Tab {
@@ -228,6 +230,13 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             .compactMap { i, item in fuzzyScore(q, item.search).map { (score: $0, i: i, item: item) } }
             .sorted { ($0.score, -$0.i) > ($1.score, -$1.i) }
             .map(\.item)
+        // A tess command as the CLI takes it (`move-to-screen 2`, `resize width +100`) on top,
+        // instead of its plain listing.
+        if let cs = try? Command.parse(q), Self.runnable(cs) {
+            shown.removeAll { if case .command(let c) = $0.kind { return c == cs }; return false }
+            shown.insert(Item(kind: .command(cs), title: Command.label(of: cs) ?? q, detail: "tess · \(q)",
+                              icon: Icons.symbol("command"), search: ""), at: 0)
+        }
         // A link verb's link on top, the rest still searched (`claude code` finds Claude Code too).
         if let l = link(q) { shown.insert(l, at: 0) }
         // Arithmetic (not a lone number) is worked out on top.
@@ -239,6 +248,14 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         list.query = q
         list.selected = 0
         list.needsDisplay = true
+    }
+
+    /// Commands the picker runs: not itself, and not those that only print (tree, state).
+    static func runnable(_ commands: [Command]) -> Bool {
+        commands.allSatisfy { c in
+            if case .pick = c { return false }
+            return c.label != nil
+        }
     }
 
     /// `verb text` for a link verb: the link with the text, opened by the app that handles it.
@@ -393,7 +410,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             guard shown.indices.contains(list.selected) else { return nil }
             let item = shown[list.selected]
             switch (item.kind, fixed) {
-            case (.copy, _), (.system, _):
+            case (.copy, _), (.system, _), (.command, _):
                 close()
                 onDone(item, .place(.here))
             case (_, let fixed?):

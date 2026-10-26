@@ -108,6 +108,9 @@ extension Tiler {
         case .system(let event):
             // loginwindow shows its own dialog before logging out, restarting or shutting down.
             Browsers.osascript("tell application \"loginwindow\" to «event aevt\(event)»") { _ in }
+        case .command(let commands):
+            let out = run(commands, source: "picker")
+            if out.hasPrefix("error: ") { toast(String(out.dropFirst(7))) }
         case .copy(let text):
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
@@ -323,6 +326,13 @@ extension Tiler {
             let open = a.bundleID.map(running.contains) ?? false
             items.append(Picker.Item(kind: .app(a.url), title: a.name, detail: open ? "app (open)" : "app",
                                      icon: a.icon, search: a.name))
+        }
+        // tess's own commands by name, once something is typed.
+        let command = Icons.symbol("command")
+        for (name, c) in Command.simple.sorted(by: { $0.key < $1.key }) where Picker.runnable([c]) {
+            let label = c.label ?? name
+            items.append(Picker.Item(kind: .command([c]), title: label, detail: "tess · \(name)", icon: command,
+                                     search: "\(name) \(label)", quiet: true))
         }
         let settings = NSWorkspace.shared.icon(forFile: "/System/Applications/System Settings.app")
         for (title, action) in [("Sleep", "sleep"), ("Lock Screen", "lock"), ("Log Out…", "logo"),

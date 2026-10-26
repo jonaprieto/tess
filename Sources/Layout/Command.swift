@@ -36,7 +36,8 @@ public enum Command: Equatable, Sendable {
     /// Renders the picker's map to a PNG at this path (for debugging without a screen).
     case debugMap(String)
 
-    static let simple: [String: Command] = [
+    /// The commands that take no argument, by name.
+    public static let simple: [String: Command] = [
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,

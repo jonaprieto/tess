@@ -1,6 +1,18 @@
 import AppKit
 
 enum Icons {
+    /// An SF Symbol in the label color of whatever appearance it is drawn in (a template image
+    /// drawn as is comes out black).
+    static func symbol(_ name: String) -> NSImage? {
+        guard let s = NSImage(systemSymbolName: name, accessibilityDescription: nil) else { return nil }
+        return NSImage(size: NSSize(width: 24, height: 24), flipped: false) { r in
+            s.draw(in: r.insetBy(dx: 3, dy: 3))
+            NSColor.secondaryLabelColor.set()
+            r.fill(using: .sourceAtop)
+            return true
+        }
+    }
+
     /// An app or file icon as one small bitmap (80 px, 40 pt), drawn once: the originals carry
     /// representations up to 1024 px that AppKit would downsample on every redraw.
     static func small(_ image: NSImage?) -> NSImage? {

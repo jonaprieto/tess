@@ -160,6 +160,8 @@ final class Tiler {
 
     let veil = Veil()
 
+    let grayscale = Grayscale()
+
 
     var searchProcess: Process?
 
@@ -186,6 +188,7 @@ final class Tiler {
             onApp(name) { [weak self] app in
                 self?.track(app)
                 self?.workers[app.processIdentifier]?.scheduleRefresh()
+                self?.refreshGray()
             }
         }
         ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -517,6 +520,7 @@ final class Tiler {
             onLayout()
             refreshDecorations()
             refreshVeil()
+            refreshGray()
         }
         guard !starting, !paused else { return }
         // Nothing moves under the mouse, nor before a drag's drop is in the layout.

@@ -40,6 +40,7 @@ final class SettingsModel {
     var inner: Double
     var outer: Double
     var overlayAllScreens: Bool
+    var grayOthers: Bool
     var emptyScreens: Bool
     var windowLabels: Config.LabelMode
     var float: [String]
@@ -59,6 +60,7 @@ final class SettingsModel {
         inner = raw.gaps?.inner ?? 10
         outer = raw.gaps?.outer ?? 10
         overlayAllScreens = raw.overlay?.allScreens ?? true
+        grayOthers = raw.overlay?.grayOthers ?? true
         emptyScreens = raw.emptyScreens ?? true
         windowLabels = raw.overlay?.windowLabels ?? .jump
         float = raw.float ?? []
@@ -75,7 +77,8 @@ final class SettingsModel {
         // What the window does not edit (history) stays as it was.
         var r = original
         r.gaps = .init(inner: inner, outer: outer)
-        r.overlay = .init(allScreens: overlayAllScreens, windowLabels: windowLabels, borderColor: original.overlay?.borderColor)
+        r.overlay = .init(allScreens: overlayAllScreens, windowLabels: windowLabels, borderColor: original.overlay?.borderColor,
+                          grayOthers: grayOthers)
         r.emptyScreens = emptyScreens
         r.float = float
         r.tile = tile
@@ -105,8 +108,8 @@ final class SettingsModel {
 
     func revert() {
         let fresh = SettingsModel(raw: original, save: saveRaw)
-        (inner, outer, overlayAllScreens, emptyScreens, windowLabels, float, tile, ignore, verbs, modes) =
-            (fresh.inner, fresh.outer, fresh.overlayAllScreens, fresh.emptyScreens, fresh.windowLabels, fresh.float, fresh.tile,
+        (inner, outer, overlayAllScreens, grayOthers, emptyScreens, windowLabels, float, tile, ignore, verbs, modes) =
+            (fresh.inner, fresh.outer, fresh.overlayAllScreens, fresh.grayOthers, fresh.emptyScreens, fresh.windowLabels, fresh.float, fresh.tile,
              fresh.ignore, fresh.verbs, fresh.modes)
         message = nil
     }
@@ -163,6 +166,7 @@ struct GeneralTab: View {
                     .foregroundStyle(.secondary)
             }
             Section("Overlays") {
+                Toggle("Other windows in black and white", isOn: $model.grayOthers)
                 Toggle("Show a mode's keys on every screen", isOn: $model.overlayAllScreens)
                     .disabled(model.emptyScreens)
                 SwiftUI.Picker("Borders and letters", selection: $model.windowLabels) {

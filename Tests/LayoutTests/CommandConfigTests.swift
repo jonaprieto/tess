@@ -201,3 +201,12 @@ import Testing
     let c = try Config.load(Data(##"{"overlay": {"border_color": "#00ff00", "all_screens": false}}"##.utf8))
     #expect(c.borderColor == [0, 1, 0] && !c.overlayAllScreens)
 }
+
+@Test func otherWindowsAreGrayUnlessTurnedOff() throws {
+    #expect(Config.defaults.grayOthers)
+    let off = try Config.load(Data(#"{"overlay": {"gray_others": false}}"#.utf8))
+    #expect(!off.grayOthers && off.windowLabels == .jump)
+    var edited = Config.defaultRaw
+    edited.overlay?.grayOthers = false
+    #expect(Config.overrides(edited, over: Config.defaultRaw).overlay?.grayOthers == false)
+}

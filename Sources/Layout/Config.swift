@@ -27,6 +27,8 @@ public struct Config: Equatable, Sendable {
     /// Borders, outlines and highlights, red, green and blue from 0 to 1; nil is the macOS
     /// accent color.
     public var borderColor: [Double]?
+    /// Every window but the focused one in black and white.
+    public var grayOthers = true
     /// Modes that go back to main after one command, unless entered again to lock them.
     public var oneShot: [String] = []
     /// New windows go to an empty screen when there is one, and the settings window and a
@@ -63,15 +65,19 @@ public struct Config: Equatable, Sendable {
             public var windowLabels: LabelMode?
             /// `#rrggbb`.
             public var borderColor: String?
+            public var grayOthers: Bool?
             enum CodingKeys: String, CodingKey {
                 case allScreens = "all_screens"
                 case windowLabels = "window_labels"
                 case borderColor = "border_color"
+                case grayOthers = "gray_others"
             }
-            public init(allScreens: Bool? = nil, windowLabels: LabelMode? = nil, borderColor: String? = nil) {
+            public init(allScreens: Bool? = nil, windowLabels: LabelMode? = nil, borderColor: String? = nil,
+                        grayOthers: Bool? = nil) {
                 self.allScreens = allScreens
                 self.windowLabels = windowLabels
                 self.borderColor = borderColor
+                self.grayOthers = grayOthers
             }
             public init(from decoder: Decoder) throws {
                 let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -83,6 +89,7 @@ public struct Config: Equatable, Sendable {
                     windowLabels = mode
                 }
                 borderColor = try c.decodeIfPresent(String.self, forKey: .borderColor)
+                grayOthers = try c.decodeIfPresent(Bool.self, forKey: .grayOthers)
             }
         }
         public var gaps: Gaps?
@@ -143,7 +150,8 @@ public struct Config: Equatable, Sendable {
         if let g = top.gaps { r.gaps = Raw.Gaps(inner: g.inner ?? base.gaps?.inner, outer: g.outer ?? base.gaps?.outer) }
         r.overlay = Raw.Overlay(allScreens: top.overlay?.allScreens ?? base.overlay?.allScreens,
                                 windowLabels: top.overlay?.windowLabels ?? base.overlay?.windowLabels,
-                                borderColor: top.overlay?.borderColor ?? base.overlay?.borderColor)
+                                borderColor: top.overlay?.borderColor ?? base.overlay?.borderColor,
+                                grayOthers: top.overlay?.grayOthers ?? base.overlay?.grayOthers)
         r.emptyScreens = top.emptyScreens ?? base.emptyScreens
         r.jev = top.jev ?? base.jev
         r.oneShot = top.oneShot ?? base.oneShot
@@ -206,6 +214,7 @@ public struct Config: Equatable, Sendable {
         c.outer = min(max(raw.gaps?.outer ?? 10, 0), 100).rounded()
         c.overlayAllScreens = raw.overlay?.allScreens ?? true
         c.windowLabels = raw.overlay?.windowLabels ?? .jump
+        c.grayOthers = raw.overlay?.grayOthers ?? true
         if let hex = raw.overlay?.borderColor {
             guard let rgb = Self.rgb(hex) else { throw ParseError("config: overlay.border_color is #rrggbb, not \"\(hex)\"") }
             c.borderColor = rgb
@@ -259,7 +268,7 @@ public struct Config: Equatable, Sendable {
     public static let defaultJSON = #"""
     {
       "gaps": {"inner": 10, "outer": 10},
-      "overlay": {"all_screens": true, "window_labels": "jump"},
+      "overlay": {"all_screens": true, "window_labels": "jump", "gray_others": true},
       "empty_screens": true,
       "one_shot": ["tess"],
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],

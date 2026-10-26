@@ -93,6 +93,10 @@ active screen an outline. With `"overlay": {"window_labels": "always"}` every la
 screen all the time; `"off"` shows none. `"overlay": {"border_color": "#ff8000"}` colors
 the borders and highlights instead of the macOS accent color.
 
+Every window but the focused one shows in black and white at 80%, so the eye goes to the one
+in use; `"overlay": {"gray_others": false}` (or Settings) turns it off. It is off while
+another app or Zen is in front.
+
 ## Zen
 
 <img src="assets/zen.svg" alt="Zen: the focused window fills its screen and the others go dark, with a pomodoro timer" width="100%">

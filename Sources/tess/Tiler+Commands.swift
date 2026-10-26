@@ -37,7 +37,10 @@ extension Tiler {
         case .move(let d): world.move(d); flash = true
         case .resize(let a, let px): world.resize(a, by: px)
         case .balance: world.balance()
-        case .flip: world.flip()
+        case .flip:
+            world.flip()
+            // Said also when a lone window shows no difference: the next one goes beside or below it.
+            toast(world.monitors[safe: world.activeMonitor]?.rows == true ? "rows" : "columns")
         case .accordion: world.toggleAccordion()
         case .fullscreen:
             world.toggleFullscreen()

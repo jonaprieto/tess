@@ -62,7 +62,7 @@ final class DecorationView: NSView {
         if active {
             let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 10, yRadius: 10)
             path.lineWidth = 2
-            NSColor.controlAccentColor.withAlphaComponent(0.45).setStroke()
+            Panels.accent.withAlphaComponent(0.45).setStroke()
             path.stroke()
         }
         // Borders first, the focused one last so it is on top.
@@ -70,7 +70,7 @@ final class DecorationView: NSView {
             let r = local(w.frame).insetBy(dx: -1, dy: -1)
             let path = NSBezierPath(roundedRect: r, xRadius: 12, yRadius: 12)
             path.lineWidth = w.focused ? 3 : 1.5
-            (w.focused ? NSColor.controlAccentColor : NSColor.labelColor.withAlphaComponent(0.22)).setStroke()
+            (w.focused ? Panels.accent : NSColor.labelColor.withAlphaComponent(0.22)).setStroke()
             path.stroke()
         }
         // Letters centred on each window's top border; windows sharing a frame (an accordion)
@@ -97,7 +97,7 @@ final class DecorationView: NSView {
 
     private func badge(_ text: String, _ r: NSRect, strong: Bool, round: Bool = false) {
         let path = NSBezierPath(roundedRect: r, xRadius: round ? r.height / 2 : 6, yRadius: round ? r.height / 2 : 6)
-        (strong ? NSColor.controlAccentColor : NSColor.windowBackgroundColor.withAlphaComponent(0.92)).setFill()
+        (strong ? Panels.accent : NSColor.windowBackgroundColor.withAlphaComponent(0.92)).setFill()
         path.fill()
         NSColor.labelColor.withAlphaComponent(strong ? 0 : 0.25).setStroke()
         path.lineWidth = 0.5

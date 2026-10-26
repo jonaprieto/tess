@@ -69,9 +69,9 @@ final class Overlay {
         let box = CGRect(origin: .zero, size: rect.size).offsetBy(dx: glow, dy: glow).insetBy(dx: 1.5, dy: 1.5)
         border.path = CGPath(roundedRect: box, cornerWidth: 14, cornerHeight: 14, transform: nil)
         border.fillColor = nil
-        border.strokeColor = NSColor.controlAccentColor.cgColor
+        border.strokeColor = Panels.accent.cgColor
         border.lineWidth = 3
-        border.shadowColor = NSColor.controlAccentColor.cgColor
+        border.shadowColor = Panels.accent.cgColor
         border.shadowRadius = 6
         border.shadowOpacity = 0.9
         border.shadowOffset = .zero
@@ -112,8 +112,8 @@ final class Overlay {
             return p
         }()
         dropPanel = p
-        p.contentView?.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.22).cgColor
-        p.contentView?.layer?.borderColor = NSColor.controlAccentColor.cgColor
+        p.contentView?.layer?.backgroundColor = Panels.accent.withAlphaComponent(0.22).cgColor
+        p.contentView?.layer?.borderColor = Panels.accent.cgColor
         let frame = Screens.flip(rect.insetBy(dx: 4, dy: 4))
         if p.frame != frame { p.setFrame(frame, display: true) }
         if !p.isVisible { p.orderFrontRegardless() }

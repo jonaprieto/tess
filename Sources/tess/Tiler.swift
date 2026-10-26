@@ -666,6 +666,9 @@ final class Tiler {
         do {
             config = try Config.load(FileManager.default.fileExists(atPath: url.path) ? Data(contentsOf: url) : nil)
             configError = nil
+            Panels.accent = config.borderColor.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) }
+                ?? .controlAccentColor
+            drawn = []  // redrawn in the new color
             Events.record("config", ["ok": true])
             if announce { toast("config reloaded") }
         } catch {

@@ -71,7 +71,8 @@ bottom-left corner. A window keeps its letter while it lives.
 
 Outside jump mode the focused window keeps its border and, with more than one screen, the
 active screen an outline. With `"overlay": {"window_labels": "always"}` every label stays on
-screen all the time; `"off"` shows none.
+screen all the time; `"off"` shows none. `"overlay": {"border_color": "#ff8000"}` colors
+the borders and highlights instead of the macOS accent color.
 
 ## Zen
 

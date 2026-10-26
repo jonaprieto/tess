@@ -75,7 +75,7 @@ final class SettingsModel {
         // What the window does not edit (history) stays as it was.
         var r = original
         r.gaps = .init(inner: inner, outer: outer)
-        r.overlay = .init(allScreens: overlayAllScreens, windowLabels: windowLabels)
+        r.overlay = .init(allScreens: overlayAllScreens, windowLabels: windowLabels, borderColor: original.overlay?.borderColor)
         r.emptyScreens = emptyScreens
         r.float = float
         r.tile = tile

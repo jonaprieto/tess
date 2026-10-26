@@ -189,3 +189,14 @@ import Testing
     #expect(Config.defaults.modes["main"]?[KeySpec(key: "t", mods: [.alt])] == [.terminal])
     #expect(Config.defaults.modes["tess"]?[KeySpec(key: "t", mods: [])] == [.terminal])
 }
+
+@Test func borderColorIsAHexColor() throws {
+    #expect(Config.defaults.borderColor == nil)
+    #expect(try Config.load(Data(##"{"overlay": {"border_color": "#ff8000"}}"##.utf8)).borderColor == [1, 128.0 / 255, 0])
+    for bad in ["orange", "#ff80", "#gg0000"] {
+        #expect(throws: ParseError.self, "\(bad)") { try Config.load(Data(##"{"overlay": {"border_color": "\##(bad)"}}"##.utf8)) }
+    }
+    // Other overlay settings keep it.
+    let c = try Config.load(Data(##"{"overlay": {"border_color": "#00ff00", "all_screens": false}}"##.utf8))
+    #expect(c.borderColor == [0, 1, 0] && !c.overlayAllScreens)
+}

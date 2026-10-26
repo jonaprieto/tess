@@ -24,6 +24,9 @@ public struct Config: Equatable, Sendable {
     public var overlayAllScreens = true
     /// When windows show their border and letter, and screens their number.
     public var windowLabels = LabelMode.jump
+    /// Borders, outlines and highlights, red, green and blue from 0 to 1; nil is the macOS
+    /// accent color.
+    public var borderColor: [Double]?
     /// Modes that go back to main after one command, unless entered again to lock them.
     public var oneShot: [String] = []
     /// New windows go to an empty screen when there is one, and the settings window and a
@@ -55,13 +58,17 @@ public struct Config: Equatable, Sendable {
         public struct Overlay: Codable, Equatable, Sendable {
             public var allScreens: Bool?
             public var windowLabels: LabelMode?
+            /// `#rrggbb`.
+            public var borderColor: String?
             enum CodingKeys: String, CodingKey {
                 case allScreens = "all_screens"
                 case windowLabels = "window_labels"
+                case borderColor = "border_color"
             }
-            public init(allScreens: Bool? = nil, windowLabels: LabelMode? = nil) {
+            public init(allScreens: Bool? = nil, windowLabels: LabelMode? = nil, borderColor: String? = nil) {
                 self.allScreens = allScreens
                 self.windowLabels = windowLabels
+                self.borderColor = borderColor
             }
             public init(from decoder: Decoder) throws {
                 let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -72,6 +79,7 @@ public struct Config: Equatable, Sendable {
                     }
                     windowLabels = mode
                 }
+                borderColor = try c.decodeIfPresent(String.self, forKey: .borderColor)
             }
         }
         public var gaps: Gaps?
@@ -130,7 +138,8 @@ public struct Config: Equatable, Sendable {
         var r = base
         if let g = top.gaps { r.gaps = Raw.Gaps(inner: g.inner ?? base.gaps?.inner, outer: g.outer ?? base.gaps?.outer) }
         r.overlay = Raw.Overlay(allScreens: top.overlay?.allScreens ?? base.overlay?.allScreens,
-                                windowLabels: top.overlay?.windowLabels ?? base.overlay?.windowLabels)
+                                windowLabels: top.overlay?.windowLabels ?? base.overlay?.windowLabels,
+                                borderColor: top.overlay?.borderColor ?? base.overlay?.borderColor)
         r.emptyScreens = top.emptyScreens ?? base.emptyScreens
         r.oneShot = top.oneShot ?? base.oneShot
         r.terminal = top.terminal ?? base.terminal
@@ -191,6 +200,10 @@ public struct Config: Equatable, Sendable {
         c.outer = min(max(raw.gaps?.outer ?? 10, 0), 100).rounded()
         c.overlayAllScreens = raw.overlay?.allScreens ?? true
         c.windowLabels = raw.overlay?.windowLabels ?? .jump
+        if let hex = raw.overlay?.borderColor {
+            guard let rgb = Self.rgb(hex) else { throw ParseError("config: overlay.border_color is #rrggbb, not \"\(hex)\"") }
+            c.borderColor = rgb
+        }
         c.emptyScreens = raw.emptyScreens ?? true
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
@@ -223,6 +236,13 @@ public struct Config: Equatable, Sendable {
             c.modes[mode] = parsed
         }
         return c
+    }
+
+    /// `#rrggbb` as red, green and blue from 0 to 1.
+    static func rgb(_ hex: String) -> [Double]? {
+        guard hex.count == 7, hex.first == "#", hex.dropFirst().allSatisfy(\.isHexDigit),
+              let v = UInt32(hex.dropFirst(), radix: 16) else { return nil }
+        return [v >> 16, v >> 8 & 0xff, v & 0xff].map { Double($0) / 255 }
     }
 
     /// The browsers the picker can read history from.

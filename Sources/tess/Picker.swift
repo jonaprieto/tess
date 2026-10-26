@@ -226,6 +226,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             .compactMap { i, item in fuzzyScore(q, item.search).map { (score: $0, i: i, item: item) } }
             .sorted { ($0.score, -$0.i) > ($1.score, -$1.i) }
             .map(\.item)
+        // A link verb's link on top, the rest still searched (`claude code` finds Claude Code too).
+        if let l = link(q) { shown.insert(l, at: 0) }
         // Arithmetic (not a lone number) is worked out on top.
         if Double(q) == nil, let v = Parse.arithmetic(q).map(Parse.number) {
             shown.insert(Item(kind: .copy(v), title: "= \(v)", detail: "Enter copies it",
@@ -237,10 +239,20 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         list.needsDisplay = true
     }
 
+    /// `verb text` for a link verb: the link with the text, opened by the app that handles it.
+    private func link(_ text: String) -> Item? {
+        let parts = text.split(separator: " ", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count == 2, let template = verbs[parts[0]], let url = Parse.link(template, parts[1]),
+              let app = NSWorkspace.shared.urlForApplication(toOpen: url), let bundle = Bundle(url: app)?.bundleIdentifier
+        else { return nil }
+        return Item(kind: .url(url, browser: bundle), title: parts[1], detail: "\(parts[0]) · \(url.host ?? "")",
+                    icon: NSWorkspace.shared.icon(forFile: app.path), search: "")
+    }
+
     /// `verb path`: the folders the path could mean, the typed one first when it exists.
     private func folders(_ text: String) -> [Item]? {
         let parts = text.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
-        guard parts.count == 2, let app = verbs[parts[0]] else { return nil }
+        guard parts.count == 2, let app = verbs[parts[0]], !app.contains("%s") else { return nil }
         let typed = parts[1]
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let path = typed.isEmpty ? home + "/" : (typed as NSString).expandingTildeInPath + (typed.hasSuffix("/") ? "/" : "")

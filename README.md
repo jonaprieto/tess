@@ -90,6 +90,8 @@ where it goes:
 The first word can also be a verb:
 
 - `cd ~/folder`, `code ~/folder`: open the folder in iTerm or VS Code (tab completes).
+- `chat text`, `claude text`: a new ChatGPT (in the browser) or Claude (the app) chat with
+  that text. A verb whose value is a link with `%s` puts the text there.
 - `f name`: files by name (Spotlight, ranked by fzf); `rg text`: text in files.
 - `book title author`, `paper title author`: find with [folio](https://github.com/jonaprieto/folio)
   (papers also on arXiv first), download to `~/Downloads` and open.

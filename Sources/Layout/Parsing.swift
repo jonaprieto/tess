@@ -171,4 +171,11 @@ public enum Parse {
     public static func number(_ v: Double) -> String {
         v == v.rounded() && abs(v) < 1e15 ? String(Int(v)) : String(format: "%.12g", v)
     }
+
+    /// A link verb's template (`https://chatgpt.com/?q=%s`) with `text`, encoded, for `%s`.
+    public static func link(_ template: String, _ text: String) -> URL? {
+        let safe = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+        guard template.contains("%s"), !text.isEmpty, let q = text.addingPercentEncoding(withAllowedCharacters: safe) else { return nil }
+        return URL(string: template.replacingOccurrences(of: "%s", with: q))
+    }
 }

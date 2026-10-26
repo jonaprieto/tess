@@ -94,3 +94,11 @@ import Testing
     #expect(Parse.number(0.1 + 0.2) == "0.3")
     #expect(Parse.number(-0.0) == "0")
 }
+
+@Test func linkVerbsEncodeTheText() {
+    #expect(Parse.link("https://chatgpt.com/?q=%s", "a&b c?")?.absoluteString == "https://chatgpt.com/?q=a%26b%20c%3F")
+    #expect(Parse.link("claude://claude.ai/new?q=%s", "héllo")?.absoluteString == "claude://claude.ai/new?q=h%C3%A9llo")
+    #expect(Parse.link("iTerm", "x") == nil)
+    #expect(Parse.link("https://chatgpt.com/?q=%s", "") == nil)
+    #expect(Config.defaults.verbs["claude"] == "claude://claude.ai/new?q=%s")
+}

@@ -15,7 +15,8 @@ public struct Config: Equatable, Sendable {
     /// Browsers whose bookmarks and history the picker lists, first one first: it wins ties
     /// and pages several of them have. One left out is not read.
     public var history: [String] = []
-    /// Picker verbs: `cd ~/x` opens the folder with the app named here.
+    /// Picker verbs: `cd ~/x` opens the folder with the app named here; for a link with `%s`,
+    /// `chat hello` opens the link with the text in its place.
     public var verbs: [String: String] = [:]
     /// The app `terminal` opens a window of.
     public var terminal = "iTerm"
@@ -238,7 +239,7 @@ public struct Config: Equatable, Sendable {
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": ["io.github.ender-wang.EdgeMark"],
       "history": ["com.brave.Browser", "com.apple.Safari"],
-      "verbs": {"cd": "iTerm", "code": "Visual Studio Code"},
+      "verbs": {"cd": "iTerm", "code": "Visual Studio Code", "chat": "https://chatgpt.com/?q=%s", "claude": "claude://claude.ai/new?q=%s"},
       "terminal": "iTerm",
       "modes": {
         "main": {

@@ -164,3 +164,12 @@ import Testing
     lone.rebuild([(5, lone.monitors[1].frame)])
     #expect(lanes(lone, 1) == [[5]] && lone.monitors[1].fullscreen == nil)
 }
+
+@Test func wordsMatchInAnyOrder() {
+    let title = "Brave Browser Michael (DM) - Heliax - Slack"
+    #expect(fuzzyScore("slack michael", title) == nil)
+    #expect(fuzzyWords("slack michael", title) != nil)
+    #expect(fuzzyWords("slack zebra", title) == nil)
+    // One word is plain fuzzy matching.
+    #expect(fuzzyWords("slk", title) == fuzzyScore("slk", title))
+}

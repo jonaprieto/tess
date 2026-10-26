@@ -113,6 +113,8 @@ goes:
 - letter or shift+letter: swap with that window; alt+letter: go beside it.
 - enter: next to the focused window; digit: that screen; `g`: just go there; `f`: float.
 
+Words match in any order: `slack michael` finds "Michael - Heliax - Slack".
+
 Any command `tess` takes on the command line works there too: `balance`, `zen`,
 `move-to-screen 2`, `resize width +100`. It shows on top, and Enter runs it on the window
 that had focus.

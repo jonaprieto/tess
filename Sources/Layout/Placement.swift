@@ -145,6 +145,19 @@ extension World {
     }
 }
 
+/// `fuzzyScore` with the query's words in any order: "slack michael" finds "Michael - Slack".
+/// Each word must match; the whole query in order scores as one when that is higher.
+public func fuzzyWords(_ query: String, _ text: String) -> Int? {
+    let words = query.split(whereSeparator: \.isWhitespace)
+    guard words.count > 1 else { return fuzzyScore(query, text) }
+    var sum = 0
+    for w in words {
+        guard let s = fuzzyScore(String(w), text) else { return fuzzyScore(query, text) }
+        sum += s
+    }
+    return max(sum, fuzzyScore(query, text) ?? 0)
+}
+
 /// Subsequence match of `query` in `text`, ignoring case; higher is better, nil if no match.
 /// Consecutive letters and letters starting a word (or a camel-case hump) count extra.
 public func fuzzyScore(_ query: String, _ text: String) -> Int? {

@@ -227,7 +227,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         }
         shown = items.enumerated()
             .filter { !$0.element.quiet || !q.isEmpty }
-            .compactMap { i, item in fuzzyScore(q, item.search).map { (score: $0, i: i, item: item) } }
+            .compactMap { i, item in fuzzyWords(q, item.search).map { (score: $0, i: i, item: item) } }
             .sorted { ($0.score, -$0.i) > ($1.score, -$1.i) }
             .map(\.item)
         // A tess command as the CLI takes it (`move-to-screen 2`, `resize width +100`) on top,

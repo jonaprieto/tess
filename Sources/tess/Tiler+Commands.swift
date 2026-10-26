@@ -117,6 +117,11 @@ extension Tiler {
         case .focusWindow(let id):
             guard infos[id] != nil else { return "error: no window \(id)" }
             use(id, .jump)
+        case .focusTab(let n):
+            guard tabList.indices.contains(n), infos[tabList[n].window] != nil else { return "error: no tab \(n)" }
+            let t = tabList[n]
+            workers[t.pid]?.press(t.element)
+            use(t.window, .jump)
         case .swapWith(let id):
             guard let f = world.focused, f != id, world.locate(f) != nil, world.locate(id) != nil else {
                 return "error: swap needs a focused tiled window and another tiled window"
@@ -148,7 +153,7 @@ extension Tiler {
         // A single cheat sheet follows to the screen being worked on.
         if mode != "main", !config.emptyScreens, !config.overlayAllScreens, world.activeMonitor != beforeMonitor,
            let m = world.monitors[safe: world.activeMonitor] {
-            overlay.showMode(mode, modeBindings, on: [m.frame])
+            overlay.showMode(mode, modeBindings, on: [m.frame], letters: labelsAreKeys)
         }
         scheduleApply()
         return ""

@@ -63,17 +63,24 @@ extension CGRect {
 /// The letters windows wear: the home row first.
 public let labelAlphabet = "asdhjklqwertyuiopzxcvbnm"
 
+/// The label letters `bindings` leave free, so they can be keys in that mode too.
+public func labelLetters(free bindings: [KeySpec: [Command]]) -> String {
+    labelAlphabet.filter { bindings[KeySpec(key: String($0), mods: [])] == nil }
+}
+
 /// Jump mode's keys: a window's letter focuses it, shift+letter swaps it with the focused
-/// window, a screen's digit focuses that screen, shift+digit moves the focused window there,
-/// and each command ends with `back`. Also the key that just goes back.
-public func jumpKeys(labels: [WindowID: Character], windows: [WindowID], screens: Int, back: [Command])
-    -> (keys: [KeySpec: [Command]], exits: [KeySpec]) {
+/// window, a tab's letter (`tabs`, by place) selects it, a screen's digit focuses that screen,
+/// shift+digit moves the focused window there, and each command ends with `back`. Also the
+/// key that just goes back.
+public func jumpKeys(labels: [WindowID: Character], windows: [WindowID], tabs: [Character] = [], screens: Int,
+                     back: [Command]) -> (keys: [KeySpec: [Command]], exits: [KeySpec]) {
     var keys: [KeySpec: [Command]] = [:]
     for id in windows {
         guard let c = labels[id] else { continue }
         keys[KeySpec(key: String(c), mods: [])] = [.focusWindow(id)] + back
         keys[KeySpec(key: String(c), mods: [.shift])] = [.swapWith(id)] + back
     }
+    for (n, c) in tabs.enumerated() { keys[KeySpec(key: String(c), mods: [])] = [.focusTab(n)] + back }
     for n in 1...min(9, max(screens, 1)) {
         keys[KeySpec(key: "\(n)", mods: [])] = [.focusMonitor(n)] + back
         keys[KeySpec(key: "\(n)", mods: [.shift])] = [.moveToMonitor(n)] + back

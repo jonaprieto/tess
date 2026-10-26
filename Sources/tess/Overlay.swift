@@ -14,8 +14,9 @@ final class Overlay {
 
     /// The keys of a mode as a glass cheat sheet in the bottom-right corner of each of `screens`:
     /// grouped columns of keycaps and plain labels, so the windows being arranged stay visible.
-    func showMode(_ name: String, _ bindings: [KeySpec: [Command]], on screens: [CGRect]) {
-        show(on: screens) { ModeSheet(name: name, bindings: bindings) }
+    /// `letters`: window and tab letters are keys too, which gets a row of its own.
+    func showMode(_ name: String, _ bindings: [KeySpec: [Command]], on screens: [CGRect], letters: Bool = false) {
+        show(on: screens) { ModeSheet(name: name, bindings: bindings, letters: letters) }
     }
 
     /// A sheet with given rows, for jump mode, whose keys are the window letters.
@@ -157,10 +158,11 @@ final class ModeSheet: NSView {
     private static let rowHeight: CGFloat = 24
     private static let pad: CGFloat = 18
 
-    init(name: String, bindings: [KeySpec: [Command]]) {
+    init(name: String, bindings: [KeySpec: [Command]], letters: Bool = false) {
         title = name == "tess" ? "tess mode" : "\(name.prefix(1).uppercased())\(name.dropFirst()) mode"
         super.init(frame: .zero)
         var groups: [Command.Group: [Row]] = [:]
+        if letters { groups[.focus] = [Row(cap: "Letter", label: "Go to that window or tab", order: (-1, ""))] }
         for (key, commands) in bindings {
             if commands == [.mode("main")] || commands == [.mode("back")] {
                 back.append(key.symbol)

@@ -42,8 +42,9 @@ Hyper+R).
 - `alt-t` opens a terminal window (iTerm, or the app `terminal` names).
 - Hyper+T is tess mode: the same actions without a modifier (`h`, `shift-h`, `1`, `f`, `a`,
   `v`, ...), plus `x` to close the window and pick what fills its place, `w` to bring back
-  lost windows, `s` to re-tile, `r` for resize mode. It lasts one command; Hyper+T again
-  keeps it on until esc.
+  lost windows, `s` to re-tile, `r` for resize mode. Every window and tab shows a letter, as
+  in jump mode, and the letter goes there. It lasts one command; Hyper+T again keeps it on
+  until esc.
 - Hyper+G opens the picker, Hyper+R jump mode, in tess mode too.
 
 Windows can also be moved with the mouse: drag a tiled one and where it will land shows as
@@ -62,10 +63,12 @@ shown and stay with apps. `tess default-config` prints every binding.
 
 <img src="assets/jump.svg" alt="Jump mode: a letter on every window, a number on every screen" width="100%">
 
-Every window shows a border and a letter on its top edge, every screen its number in the
-bottom-left corner. A window keeps its letter while it lives.
+Every window shows a border and a letter on its top edge, every tab of a window on screen
+(Brave, iTerm, any app with a tab bar) a letter, every screen its number in the bottom-left
+corner. Letters are the ones tess mode leaves free (`d q e y i o p c n m` by default),
+windows first; a window keeps its letter while it lives.
 
-- letter: focus that window; shift+letter: swap it with the focused window.
+- letter: focus that window or tab; shift+letter: swap the window with the focused one.
 - digit: focus that screen; shift+digit: send the focused window there.
 - esc: leave.
 

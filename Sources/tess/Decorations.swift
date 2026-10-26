@@ -14,7 +14,8 @@ final class Decorations {
 
     private var panels: [NSPanel] = []
 
-    func update(screens: [CGRect], windows: [Window], jumping: Bool, all: Bool, active: Int?) {
+    func update(screens: [CGRect], windows: [Window], tabs: [(frame: CGRect, label: Character)], jumping: Bool, all: Bool,
+                active: Int?) {
         while panels.count < screens.count { panels.append(Self.panel()) }
         while panels.count > screens.count { panels.removeLast().orderOut(nil) }
         for (n, screen) in screens.enumerated() {
@@ -32,6 +33,7 @@ final class Decorations {
             view.all = all
             view.active = n == active
             view.windows = windows.filter { screen.intersects($0.frame) }
+            view.tabs = tabs.filter { screen.intersects($0.frame) }
             let frame = Screens.flip(screen)
             if p.frame != frame { p.setFrame(frame, display: false) }
             view.needsDisplay = true
@@ -54,6 +56,7 @@ final class DecorationView: NSView {
     var all = false
     var active = false
     var windows: [Decorations.Window] = []
+    var tabs: [(frame: CGRect, label: Character)] = []
 
     override var isFlipped: Bool { true }
 
@@ -87,6 +90,11 @@ final class DecorationView: NSView {
             let x = r.midX - width / 2 + CGFloat(i) * (width + 4)
             badge(String(label).uppercased(), NSRect(x: x, y: r.minY - height / 2, width: width, height: height),
                   strong: w.focused || jumping)
+        }
+        // Tab letters on the tabs.
+        for t in tabs {
+            let r = local(t.frame)
+            badge(String(t.label).uppercased(), NSRect(x: r.midX - 13, y: r.midY - 12, width: 26, height: 24), strong: true)
         }
         // The screen's number in its bottom-left corner (top-left would sit on a window's
         // close button).

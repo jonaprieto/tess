@@ -47,3 +47,17 @@ import Testing
     #expect(two.count == tess.count - 2)
     #expect(forScreens(tess, 3) == tess)
 }
+
+@Test func lettersAreTheOnesTessModeLeavesFree() throws {
+    let pool = labelLetters(free: Config.defaults.modes["tess"]!)
+    #expect(pool == "dqeyiopcnm")
+    // No letter the picker's map uses for itself either (g jumps, f floats).
+    #expect(!pool.contains("g") && !pool.contains("f"))
+    // A letter that leaves the pool leaves its window.
+    #expect(stableLabels([1: "a", 2: "d"], windows: [1, 2], alphabet: pool) == [1: "q", 2: "d"])
+    // Tabs take letters after the windows and select by place.
+    let (keys, _) = jumpKeys(labels: [1: "d"], windows: [1], tabs: ["q", "e"], screens: 1, back: [.mode("main")])
+    #expect(keys[KeySpec(key: "e", mods: [])] == [.focusTab(1), .mode("main")])
+    #expect(try Command.parse("focus-tab 3") == [.focusTab(3)])
+    #expect(Command.focusTab(3).description == "focus-tab 3")
+}

@@ -99,6 +99,12 @@ final class Tiler {
     /// The picker is open (or about to open): no hotkeys, no focus changes.
     var picking = false
 
+    /// The tabs labeled while letters are keys, and their letters; `tabsAsked` drops answers
+    /// to an earlier ask.
+    var tabList: [TabTarget] = []
+    var tabLetters: [Character] = []
+    var tabsAsked = 0
+
     /// The window the mouse is moving and where it would land, until the button comes up.
     var drag: (id: WindowID, zone: DropZone?)?
 
@@ -640,11 +646,13 @@ final class Tiler {
             Events.record("mode", ["mode": m])
         }
         mode = m
+        refreshDecorations()
         registerMode()
+        refreshTabs()
         if m == "main" {
             overlay.hideMode()
         } else {
-            overlay.showMode(m, modeBindings, on: modeScreens)
+            overlay.showMode(m, modeBindings, on: modeScreens, letters: labelsAreKeys)
         }
         onChange()
     }
@@ -653,7 +661,7 @@ final class Tiler {
     func registerMode() {
         // The picker has the keyboard; closing it registers the mode again.
         guard !paused, !picking else { return }
-        let failed = hotkeys.register(modeBindings)
+        let failed = hotkeys.register(mode == "tess" ? modeBindings.merging(tessLetterKeys) { binding, _ in binding } : modeBindings)
         if !failed.isEmpty {
             Log.write("could not register: \(failed)")
             toast("could not register \(failed.joined(separator: ", "))")

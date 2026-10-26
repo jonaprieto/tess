@@ -25,6 +25,9 @@ public enum Command: Equatable, Sendable {
     case jump
     /// A window by its id (what jump mode binds to labels).
     case focusWindow(UInt32), swapWith(UInt32)
+    /// A tab by its place among the tabs tess labeled (what tess mode and jump mode bind to
+    /// tab letters).
+    case focusTab(Int)
     /// Back to the layout before the last change made with a key, the CLI or the picker, and
     /// forward again.
     case undo, redo
@@ -99,6 +102,9 @@ public enum Command: Equatable, Sendable {
         case ("focus-window", 2), ("swap-with", 2):
             guard let id = UInt32(w[1]) else { throw bad }
             return head == "focus-window" ? .focusWindow(id) : .swapWith(id)
+        case ("focus-tab", 2):
+            guard let n = Int(w[1]), n >= 0 else { throw bad }
+            return .focusTab(n)
         default: throw bad
         }
     }
@@ -157,6 +163,7 @@ extension Command: CustomStringConvertible {
         case .debugMap(let path): "debug-map \(path)"
         case .focusWindow(let id): "focus-window \(id)"
         case .swapWith(let id): "swap-with \(id)"
+        case .focusTab(let n): "focus-tab \(n)"
         default: Command.simple.first { $0.value == self }?.key ?? "nop"
         }
     }

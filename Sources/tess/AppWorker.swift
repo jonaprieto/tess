@@ -188,6 +188,43 @@ final class AppWorker {
         DispatchQueue.main.async { [onSnapshot] in onSnapshot(pid, infos, focused) }
     }
 
+    // MARK: Tabs
+
+    /// The tabs of windows `ids` that are not the selected one, left to right, with their
+    /// frames; on the main thread. A window with fewer than two tabs has none.
+    func tabs(of ids: [WindowID], _ done: @escaping ([(window: WindowID, frame: CGRect, element: AXUIElement)]) -> Void) {
+        perform { [self] in
+            var out: [(window: WindowID, frame: CGRect, element: AXUIElement)] = []
+            for id in ids {
+                guard let el = windows[id] else { continue }
+                let tabs = Self.tabButtons(in: el, depth: 0)
+                guard tabs.count > 1 else { continue }
+                for t in tabs where t.attribute(kAXValueAttribute) as? Int != 1 {
+                    if let f = t.frame { out.append((id, f, t)) }
+                }
+            }
+            DispatchQueue.main.async { done(out) }
+        }
+    }
+
+    /// The buttons of the first tab group under `e`, without looking into pages, text or lists
+    /// (a browser's page alone is thousands of elements).
+    private static func tabButtons(in e: AXUIElement, depth: Int) -> [AXUIElement] {
+        let role = e.string(kAXRoleAttribute) ?? ""
+        if role == kAXTabGroupRole { return e.elements(kAXChildrenAttribute).filter { $0.string(kAXRoleAttribute) == kAXRadioButtonRole } }
+        guard depth < 8, !["AXWebArea", kAXScrollAreaRole, kAXTableRole, kAXOutlineRole, kAXListRole, kAXTextAreaRole].contains(role)
+        else { return [] }
+        for k in e.elements(kAXChildrenAttribute) {
+            let t = tabButtons(in: k, depth: depth + 1)
+            if !t.isEmpty { return t }
+        }
+        return []
+    }
+
+    func press(_ element: AXUIElement) {
+        perform { AXUIElementPerformAction(element, kAXPressAction as CFString) }
+    }
+
     // MARK: Writing
 
     func setFrame(_ id: WindowID, _ r: CGRect) {

@@ -65,6 +65,7 @@ extension Command {
         case .zen: "Zen"
         case .focusWindow: "Go to a window"
         case .swapWith: "Swap windows"
+        case .focusTab: "Go to a tab"
         case .tree, .nop, .debugMap, .state: nil
         }
     }
@@ -84,11 +85,12 @@ extension Command {
     }
 }
 
-/// Labels that stay with their windows: windows keep their letter while they live, and new
-/// windows take the first free letters, in `windows` order. Past the alphabet, none.
+/// Labels that stay with their windows: windows keep their letter while they live (and it is
+/// still in the alphabet), and new windows take the first free letters, in `windows` order.
+/// Past the alphabet, none.
 public func stableLabels(_ current: [WindowID: Character], windows: [WindowID], alphabet: String) -> [WindowID: Character] {
     let alive = Set(windows)
-    var out = current.filter { alive.contains($0.key) }
+    var out = current.filter { alive.contains($0.key) && alphabet.contains($0.value) }
     var free = alphabet.filter { c in !out.values.contains(c) }
     for id in windows where out[id] == nil {
         guard !free.isEmpty else { break }

@@ -59,7 +59,7 @@ final class Veil {
     func show(_ screens: [CGRect]) {
         while panels.count < screens.count {
             let p = Panels.overlay(level: NSWindow.Level(rawValue: NSWindow.Level.normal.rawValue + 1))
-            p.backgroundColor = NSColor.black.withAlphaComponent(0.85)
+            p.backgroundColor = NSColor.black.withAlphaComponent(0.95)
             panels.append(p)
         }
         for (n, p) in panels.enumerated() {

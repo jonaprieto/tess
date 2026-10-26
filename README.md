@@ -39,6 +39,7 @@ Hyper+R).
   `alt-shift-space` float, `alt-r` resize mode.
 - `alt-shift-backspace` sends every window on this screen to the next one.
 - `alt-shift-semicolon` re-tiles from where the windows are now.
+- `alt-t` opens a terminal window (iTerm, or the app `terminal` names).
 - Hyper+T is tess mode: the same actions without a modifier (`h`, `shift-h`, `1`, `f`, `a`,
   `v`, ...), plus `x` to close the window and pick what fills its place, `w` to bring back
   lost windows, `s` to re-tile, `r` for resize mode. It lasts one command; Hyper+T again
@@ -101,11 +102,12 @@ bindings merge per key, and `null` removes a default binding. A config only need
 change, for example:
 
 ```json
-{"gaps": {"inner": 6}, "modes": {"main": {"alt-t": "exec open -a iTerm", "cmd-h": null}}}
+{"gaps": {"inner": 6}, "terminal": "Ghostty", "modes": {"main": {"alt-s": "exec open -a Slack", "cmd-h": null}}}
 ```
 
 `float` lists apps that never tile, `tile` apps that always do, `ignore` apps tess leaves
-alone (EdgeMark is there by default). `"one_shot": []` keeps tess mode on until esc.
+alone (EdgeMark is there by default). `terminal` is the app `alt-t` opens. `"one_shot": []`
+keeps tess mode on until esc.
 
 `history` lists the browsers whose bookmarks and history the picker reads, first one first
 (`["com.brave.Browser", "com.apple.Safari"]` by default): it wins ties, a page both have

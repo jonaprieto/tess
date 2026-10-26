@@ -50,6 +50,7 @@ extension Command {
         case .exec(let line):
             line.hasPrefix("open -a ") ? "Open \(line.dropFirst(8))" : "Run \(line)"
         case .reload: "Reload config"
+        case .terminal: "New terminal"
         case .mode(let m): m == "main" || m == "back" ? "Back" : m == "tess" ? "tess mode" : "\(m.prefix(1).uppercased())\(m.dropFirst()) mode"
         case .retile: "Re-tile"
         case .rescue: "Rescue windows"

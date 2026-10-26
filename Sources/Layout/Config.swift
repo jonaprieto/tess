@@ -17,6 +17,8 @@ public struct Config: Equatable, Sendable {
     public var history: [String] = []
     /// Picker verbs: `cd ~/x` opens the folder with the app named here.
     public var verbs: [String: String] = [:]
+    /// The app `terminal` opens a window of.
+    public var terminal = "iTerm"
     /// The keys of a mode on every screen, rather than only the one being worked on.
     public var overlayAllScreens = true
     /// When windows show their border and letter, and screens their number.
@@ -81,8 +83,9 @@ public struct Config: Equatable, Sendable {
         public var modes: [String: [String: String?]]?
         public var emptyScreens: Bool?
         public var oneShot: [String]?
+        public var terminal: String?
         enum CodingKeys: String, CodingKey {
-            case gaps, overlay, float, tile, ignore, history, verbs, modes
+            case gaps, overlay, float, tile, ignore, history, verbs, modes, terminal
             case emptyScreens = "empty_screens"
             case oneShot = "one_shot"
         }
@@ -129,6 +132,7 @@ public struct Config: Equatable, Sendable {
                                 windowLabels: top.overlay?.windowLabels ?? base.overlay?.windowLabels)
         r.emptyScreens = top.emptyScreens ?? base.emptyScreens
         r.oneShot = top.oneShot ?? base.oneShot
+        r.terminal = top.terminal ?? base.terminal
         r.float = top.float ?? base.float
         r.tile = top.tile ?? base.tile
         r.ignore = top.ignore ?? base.ignore
@@ -153,6 +157,7 @@ public struct Config: Equatable, Sendable {
         if edited.overlay != base.overlay { o.overlay = edited.overlay }
         if edited.emptyScreens != base.emptyScreens { o.emptyScreens = edited.emptyScreens }
         if edited.oneShot != base.oneShot { o.oneShot = edited.oneShot }
+        if edited.terminal != base.terminal { o.terminal = edited.terminal }
         if edited.float != base.float { o.float = edited.float }
         if edited.tile != base.tile { o.tile = edited.tile }
         if edited.ignore != base.ignore { o.ignore = edited.ignore }
@@ -194,6 +199,7 @@ public struct Config: Equatable, Sendable {
             throw ParseError("config: history lists \(historyBrowsers.joined(separator: " and ")), not \"\(b)\"")
         }
         c.verbs = (raw.verbs ?? [:]).compactMapValues { $0 }
+        c.terminal = raw.terminal ?? "iTerm"
         let modes = raw.modes ?? [:]
         guard modes["main"] != nil else { throw ParseError("config: modes.main is missing") }
         c.oneShot = raw.oneShot ?? []
@@ -233,6 +239,7 @@ public struct Config: Equatable, Sendable {
       "ignore": ["io.github.ender-wang.EdgeMark"],
       "history": ["com.brave.Browser", "com.apple.Safari"],
       "verbs": {"cd": "iTerm", "code": "Visual Studio Code"},
+      "terminal": "iTerm",
       "modes": {
         "main": {
           "alt-h": "focus left",
@@ -260,7 +267,7 @@ public struct Config: Equatable, Sendable {
           "alt-shift-3": "move-to-screen 3",
           "alt-tab": "focus-screen next",
           "alt-shift-tab": "focus-screen prev",
-          "alt-t": "exec open -a kitty",
+          "alt-t": "terminal",
           "alt-shift-r": "reload",
           "cmd-h": "nop",
           "cmd-alt-h": "nop",
@@ -296,7 +303,7 @@ public struct Config: Equatable, Sendable {
           "a": "accordion",
           "v": "flip",
           "shift-c": "close",
-          "t": "exec open -a kitty",
+          "t": "terminal",
           "x": "close-replace",
           "u": "undo",
           "shift-u": "redo",

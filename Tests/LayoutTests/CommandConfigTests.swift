@@ -181,3 +181,11 @@ import Testing
     #expect(Config.overrides(edited, over: Config.defaultRaw).oneShot == [])
     #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).oneShot == nil)
 }
+
+@Test func terminalOpensTheConfiguredApp() throws {
+    #expect(try Command.parse("terminal") == [.terminal])
+    #expect(Config.defaults.terminal == "iTerm")
+    #expect(try Config.load(Data(#"{"terminal": "Ghostty"}"#.utf8)).terminal == "Ghostty")
+    #expect(Config.defaults.modes["main"]?[KeySpec(key: "t", mods: [.alt])] == [.terminal])
+    #expect(Config.defaults.modes["tess"]?[KeySpec(key: "t", mods: [])] == [.terminal])
+}

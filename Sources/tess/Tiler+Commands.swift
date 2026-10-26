@@ -71,6 +71,12 @@ extension Tiler {
             p.executableURL = URL(fileURLWithPath: "/bin/sh")
             p.arguments = ["-c", line]
             do { try p.run() } catch { return "error: \(error)" }
+        case .terminal:
+            // Opening a folder with a terminal app gives a new window there, as the `cd` verb does.
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+            p.arguments = ["-a", config.terminal, FileManager.default.homeDirectoryForCurrentUser.path]
+            do { try p.run() } catch { return "error: \(error)" }
         case .reload: loadConfig(announce: true)
         case .mode(let m):
             // Entering a one-shot mode again keeps it on until esc.

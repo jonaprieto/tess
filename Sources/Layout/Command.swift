@@ -11,6 +11,8 @@ public enum Command: Equatable, Sendable {
     /// Monitor numbers as written, from 1.
     case focusMonitor(Int), cycleMonitor(Int), moveToMonitor(Int)
     case exec(String), reload, mode(String), retile, rescue, pause, tree, nop
+    /// A new window of the config's terminal, in the home folder.
+    case terminal
     /// The picker; close the focused window and pick what fills its place.
     case pick(String), closeReplace
     /// Send every window on the active monitor to the next one.
@@ -36,7 +38,7 @@ public enum Command: Equatable, Sendable {
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
         "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
-        "undo": .undo, "redo": .redo, "zen": .zen,
+        "undo": .undo, "redo": .redo, "zen": .zen, "terminal": .terminal,
     ]
 
     /// Commands separated by `;`. `exec` takes the rest of the line, `;` included.

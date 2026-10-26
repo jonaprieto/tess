@@ -32,7 +32,12 @@ final class StatusItem: NSObject, NSMenuDelegate {
         if let d = drawn, d.world == now.0, d.mode == now.1, d.paused == now.2, d.waiting == now.3 { return }
         drawn = now
         button.image = minimap()
-        button.title = ""
+        button.imagePosition = .imageLeft
+        // The mode by name next to the miniature, except in main, where nothing is on.
+        let word = waitingForAccess ? "" : tiler.paused ? "paused" : tiler.mode == "main" ? "" : tiler.mode
+        button.attributedTitle = NSAttributedString(string: word.isEmpty ? "" : " " + word.uppercased(), attributes: [
+            .font: NSFont.systemFont(ofSize: 12, weight: .bold), .foregroundColor: color,
+        ])
         button.toolTip = "tess: \(tiler.paused ? "paused" : tiler.mode)"
     }
 

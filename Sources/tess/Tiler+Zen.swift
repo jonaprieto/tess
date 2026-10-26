@@ -44,8 +44,16 @@ extension Tiler {
         return String(format: "%@ %d:%02d", phase.working ? "zen" : "break", left / 60, left % 60)
     }
 
+    /// The screen Zen keeps: the focused window's (tiled or floating), else the active one, so
+    /// the veil never covers the window it is for.
+    var zenMonitor: Int {
+        if let f = world.focused, let p = world.locate(f) { return p.m }
+        if let f = world.focused, let frame = infos[f]?.frame, let m = world.monitorIndex(for: frame) { return m }
+        return world.activeMonitor
+    }
+
     func refreshVeil() {
-        let m = world.activeMonitor
+        let m = zenMonitor
         veil.show(zenWorking && !paused ? world.monitors.indices.filter { $0 != m }.map { world.monitors[$0].frame } : [])
     }
 }

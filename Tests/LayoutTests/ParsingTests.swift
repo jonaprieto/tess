@@ -78,3 +78,19 @@ import Testing
     #expect(keys[KeySpec(key: "1", mods: [.shift])] == [.moveToMonitor(1), .mode("main")])
     #expect(exits.allSatisfy { keys[$0] == [.mode("main")] })
 }
+
+@Test func arithmeticForThePicker() {
+    #expect(Parse.arithmetic("2 * (3 + 4)") == 14)
+    #expect(Parse.arithmetic("1/2") == 0.5)
+    #expect(Parse.arithmetic("-2^2") == -4)
+    #expect(Parse.arithmetic("2^3^2") == 512)
+    #expect(Parse.arithmetic("10 % 3") == 1)
+    #expect(Parse.arithmetic("2^-1") == 0.5)
+    // Half typed, not arithmetic, or no number.
+    for bad in ["2+", "(1", "1)", "", "1..2", "abc", "1/0", "2+x"] {
+        #expect(Parse.arithmetic(bad) == nil, "\(bad)")
+    }
+    #expect(Parse.number(14) == "14")
+    #expect(Parse.number(0.1 + 0.2) == "0.3")
+    #expect(Parse.number(-0.0) == "0")
+}

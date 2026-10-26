@@ -20,6 +20,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case book(md5: String)
         /// An open-access PDF (arXiv, from `paper`), downloaded as `name` and then opened.
         case pdf(URL, name: String)
+        /// The calculator's result, copied.
+        case copy(String)
     }
 
     struct Tab {
@@ -224,6 +226,11 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             .compactMap { i, item in fuzzyScore(q, item.search).map { (score: $0, i: i, item: item) } }
             .sorted { ($0.score, -$0.i) > ($1.score, -$1.i) }
             .map(\.item)
+        // Arithmetic (not a lone number) is worked out on top.
+        if Double(q) == nil, let v = Parse.arithmetic(q).map(Parse.number) {
+            shown.insert(Item(kind: .copy(v), title: "= \(v)", detail: "Enter copies it",
+                              icon: NSWorkspace.shared.icon(forFile: "/System/Applications/Calculator.app"), search: ""), at: 0)
+        }
         list.items = shown
         list.query = q
         list.selected = 0
@@ -370,7 +377,10 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case (36, _, _), (76, _, _):
             guard shown.indices.contains(list.selected) else { return nil }
             let item = shown[list.selected]
-            if let fixed {
+            if case .copy = item.kind {
+                close()
+                onDone(item, .place(.here))
+            } else if let fixed {
                 close()
                 onDone(item, .place(fixed))
             } else {

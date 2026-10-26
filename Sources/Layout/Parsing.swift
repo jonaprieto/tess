@@ -121,4 +121,54 @@ public enum Parse {
     public static func short(_ path: String, home: String) -> String {
         path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
     }
+
+    /// `2 * (3 + 4)`: + - * / % ^ and parentheses on numbers (the picker's calculator); nil
+    /// for anything else, and for a result that is not a number (a division by zero).
+    public static func arithmetic(_ text: String) -> Double? {
+        var s = Substring(text.filter { !$0.isWhitespace })
+        func eat(_ ops: String) -> Character? {
+            guard let c = s.first, ops.contains(c) else { return nil }
+            s = s.dropFirst()
+            return c
+        }
+        func primary() -> Double? {
+            if eat("(") != nil {
+                guard let v = sum(), eat(")") != nil else { return nil }
+                return v
+            }
+            let digits = s.prefix { $0.isASCII && ($0.isNumber || $0 == ".") }
+            s = s.dropFirst(digits.count)
+            return Double(digits)
+        }
+        // `^` binds tightest and to the right; `-2^2` is -4.
+        func unary() -> Double? {
+            if eat("-") != nil { return unary().map { -$0 } }
+            guard let b = primary() else { return nil }
+            guard eat("^") != nil else { return b }
+            return unary().map { pow(b, $0) }
+        }
+        func product() -> Double? {
+            guard var v = unary() else { return nil }
+            while let op = eat("*/%") {
+                guard let r = unary() else { return nil }
+                v = op == "*" ? v * r : op == "/" ? v / r : v.truncatingRemainder(dividingBy: r)
+            }
+            return v
+        }
+        func sum() -> Double? {
+            guard var v = product() else { return nil }
+            while let op = eat("+-") {
+                guard let r = product() else { return nil }
+                v = op == "+" ? v + r : v - r
+            }
+            return v
+        }
+        guard let v = sum(), s.isEmpty, v.isFinite else { return nil }
+        return v
+    }
+
+    /// A result as the calculator shows it: whole numbers without a point, the rest to 12 digits.
+    public static func number(_ v: Double) -> String {
+        v == v.rounded() && abs(v) < 1e15 ? String(Int(v)) : String(format: "%.12g", v)
+    }
 }

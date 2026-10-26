@@ -80,8 +80,9 @@ what is under it, and Zen follows.
 ## Picker
 
 Type to filter windows (on every Space), Brave and Safari tabs, and apps; once you type, also
-Brave bookmarks and browser history. Enter on a window, tab or app shows a map of every
-screen to choose where it goes:
+Brave bookmarks and browser history. Arithmetic like `2 * (3 + 4)` shows its result on top,
+and Enter copies it. Enter on a window, tab or app shows a map of every screen to choose
+where it goes:
 
 - letter or shift+letter: swap with that window; alt+letter: go beside it.
 - enter: next to the focused window; digit: that screen; `g`: just go there; `f`: float.

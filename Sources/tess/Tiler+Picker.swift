@@ -93,6 +93,10 @@ extension Tiler {
             }
         case .file(let path):
             openFile(path, choice)
+        case .copy(let text):
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            toast("copied \(text)")
         case .pdf(let url, let name):
             toast("downloading \(item.title)")
             let dest = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads/\(name)")

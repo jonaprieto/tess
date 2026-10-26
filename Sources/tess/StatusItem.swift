@@ -117,6 +117,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
             e.image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: nil)
             menu.addItem(e)
         }
+        arrangements(menu)
         recent(menu)
         menu.addItem(.separator())
         menu.addItem(item("Open Picker…", "magnifyingglass", #selector(pick), for: .pick("")))
@@ -135,6 +136,74 @@ final class StatusItem: NSObject, NSMenuDelegate {
         menu.addItem(item("Open Log", "doc.text", #selector(openLog)))
         menu.addItem(.separator())
         menu.addItem(item("Quit tess", "power", #selector(quit), key: "q", mods: [.command]))
+    }
+
+    /// The commands behind the layout pictures, by button tag.
+    private var choices: [Command] = []
+
+    /// A row of pictures of the active screen, one per arrangement and fullscreen, each drawn
+    /// from the layout it would give; clicking one does it. One that would change nothing, or
+    /// that looks like one before it, is left out.
+    private func arrangements(_ menu: NSMenu) {
+        let world = tiler.world
+        let m = world.activeMonitor
+        guard !tiler.paused, world.monitors.indices.contains(m) else { return }
+        let row = NSStackView()
+        row.spacing = 6
+        row.edgeInsets = NSEdgeInsets(top: 2, left: 12, bottom: 4, right: 12)
+        // By the frames they give, not the model: lanes weighted 1 and 1 or 0.5 and 0.5 look alike.
+        var shown = [world.frames(inner: 0, outer: 0)]
+        choices = []
+        for c in Arrangement.allCases.map(Command.arrange) + [.fullscreen] {
+            var after = world
+            if case .arrange(let a) = c {
+                after.arrange(a)
+            } else {
+                guard let f = world.focused, world.locate(f)?.m == m, world.monitors[m].fullscreen != f else { continue }
+                after.toggleFullscreen()
+            }
+            let frames = after.frames(inner: 0, outer: 0)
+            guard !shown.contains(frames) else { continue }
+            shown.append(frames)
+            let b = NSButton(image: picture(after, m), target: self, action: #selector(choose(_:)))
+            b.bezelStyle = .accessoryBarAction
+            b.showsBorderOnlyWhileMouseInside = true
+            b.tag = choices.count
+            let key = tiler.config.modes["main"]?.first { $0.value == [c] }?.key.symbol
+            b.toolTip = [c.label, key].compactMap { $0 }.joined(separator: "  ")
+            row.addArrangedSubview(b)
+            choices.append(c)
+        }
+        guard !choices.isEmpty else { return }
+        menu.addItem(.separator())
+        menu.addItem(.sectionHeader(title: "Layout"))
+        row.frame.size = row.fittingSize
+        let item = NSMenuItem()
+        item.view = row
+        menu.addItem(item)
+    }
+
+    /// Monitor `m` of `world` small: its outline and its windows, the focused one in color.
+    private func picture(_ world: World, _ m: Int) -> NSImage {
+        let mon = world.monitors[m]
+        let scale = min(44 / mon.frame.width, 28 / mon.frame.height)
+        let size = NSSize(width: mon.frame.width * scale, height: mon.frame.height * scale)
+        let frames = world.frames(inner: 0, outer: 0)
+        let color = color
+        return NSImage(size: size, flipped: true) { _ in
+            let dim = NSColor.labelColor.withAlphaComponent(0.4)
+            dim.setStroke()
+            NSBezierPath(roundedRect: CGRect(origin: .zero, size: size).insetBy(dx: 0.5, dy: 0.5), xRadius: 3, yRadius: 3).stroke()
+            // The focused one last, so a fullscreen window is drawn over the others.
+            for id in mon.windows.filter({ $0 != world.focused }) + mon.windows.filter({ $0 == world.focused }) {
+                guard let f = frames[id] else { continue }
+                let r = CGRect(x: (f.minX - mon.frame.minX) * scale, y: (f.minY - mon.frame.minY) * scale,
+                               width: f.width * scale, height: f.height * scale).insetBy(dx: 2, dy: 2)
+                (id == world.focused ? color : dim).setFill()
+                NSBezierPath(roundedRect: r, xRadius: 1.5, yRadius: 1.5).fill()
+            }
+            return true
+        }
     }
 
     /// The last changes, newest first. Clicking one in effect undoes it and what came after;
@@ -189,6 +258,10 @@ final class StatusItem: NSObject, NSMenuDelegate {
     ]
 
     @objc private func revisit(_ sender: NSMenuItem) { tiler.revisit(sender.tag) }
+    @objc private func choose(_ sender: NSButton) {
+        sender.enclosingMenuItem?.menu?.cancelTracking()
+        _ = tiler.run([choices[sender.tag]], source: "menu")
+    }
     @objc private func pick() { _ = tiler.run([.pick("")], source: "menu") }
     @objc private func toggleZen() { _ = tiler.run([.zen], source: "menu") }
     @objc private func clear() { _ = tiler.run([.clearMonitor], source: "menu") }

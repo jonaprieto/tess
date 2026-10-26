@@ -64,9 +64,13 @@ a restart. A floating window joins the tiling to go fullscreen, and moving or re
 says it floats. macOS fullscreen (`alt-shift-enter`) gives the window a Space of its own,
 which tess leaves alone.
 
-The menu bar item names the mode that is on. Clicking it lists the last ten layout changes
-(keys, CLI, menu and picker): clicking one undoes it and everything after it, clicking an
-undone one redoes up to it. In tess mode `u` undoes and `shift-u` redoes.
+The menu bar item names the mode that is on. Clicking it shows pictures of the screen's
+windows as halves (the focused one left, the rest stacked right), columns, rows, a grid or
+fullscreen, but for the one they are in already: clicking one arranges them so (also
+`tess halves`, `columns`, `rows`, `grid`). Below, the
+last ten layout changes (keys, CLI, menu and picker): clicking one undoes it and everything
+after it, clicking an undone one redoes up to it. In tess mode `u` undoes and `shift-u`
+redoes.
 
 While a mode is on, its keys show on screen. Keys for screens that are not attached are not
 shown and stay with apps. `tess default-config` prints every binding.

@@ -157,6 +157,22 @@ extension World {
         monitors[p.m].fullscreen = monitors[p.m].fullscreen == id ? nil : id
     }
 
+    /// The active monitor's windows, focused first and the rest in order, as `a` with even
+    /// sizes, no accordion and no fullscreen.
+    public mutating func arrange(_ a: Arrangement) {
+        guard monitors.indices.contains(activeMonitor) else { return }
+        let all = monitors[activeMonitor].windows
+        let ws = all.filter { $0 == focused } + all.filter { $0 != focused }
+        let lanes: [[WindowID]] = switch a {
+        case .halves: [Array(ws.prefix(1)), Array(ws.dropFirst())]
+        case .columns, .rows: ws.map { [$0] }
+        case .grid: [Array(ws.prefix((ws.count + 1) / 2)), Array(ws.dropFirst((ws.count + 1) / 2))]
+        }
+        monitors[activeMonitor].lanes = lanes.filter { !$0.isEmpty }.map { Lane($0) }
+        monitors[activeMonitor].rows = a == .rows
+        monitors[activeMonitor].fullscreen = nil
+    }
+
     // MARK: Monitors
 
     /// The displays now attached, in monitor-number order. An unplugged monitor's lanes go to

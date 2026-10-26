@@ -15,6 +15,16 @@ public enum Axis: String, Sendable {
     case width, height
 }
 
+/// A shape for all of a screen's windows at once.
+public enum Arrangement: String, Sendable, CaseIterable {
+    /// The focused window on the left, the rest stacked on the right.
+    case halves
+    /// A column, or a row, for each window.
+    case columns, rows
+    /// Two columns, the first half of the windows stacked in the left one: four make quarters.
+    case grid
+}
+
 /// A column (or a row, on a monitor in rows) holding a stack of windows.
 public struct Lane: Equatable, Sendable {
     public var windows: [WindowID]

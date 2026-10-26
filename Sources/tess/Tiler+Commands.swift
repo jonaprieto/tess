@@ -42,6 +42,7 @@ extension Tiler {
         case .move(let d): world.move(d); flash = true
         case .resize(let a, let px): world.resize(a, by: px)
         case .balance: world.balance()
+        case .arrange(let a): world.arrange(a)
         case .flip:
             world.flip()
             // Said also when a lone window shows no difference: the next one goes beside or below it.

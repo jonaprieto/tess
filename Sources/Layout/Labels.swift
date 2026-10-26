@@ -40,6 +40,7 @@ extension Command {
         case .balance: "Balance"
         case .flip: "Columns ↔ rows"
         case .accordion: "Accordion"
+        case .arrange(let a): a.rawValue.capitalized
         case .fullscreen: "Fullscreen"
         case .nativeFullscreen: "macOS fullscreen"
         case .float: "Float"
@@ -74,7 +75,7 @@ extension Command {
         switch self {
         case .focus, .focusMonitor, .cycleMonitor, .jump: .focus
         case .move, .moveToMonitor, .clearMonitor: .move
-        case .resize, .balance, .flip, .accordion, .fullscreen, .nativeFullscreen, .float: .layout
+        case .resize, .balance, .flip, .accordion, .arrange, .fullscreen, .nativeFullscreen, .float: .layout
         default: .more
         }
     }

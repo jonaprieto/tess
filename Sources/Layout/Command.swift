@@ -8,6 +8,8 @@ public struct ParseError: Error, CustomStringConvertible, Equatable {
 public enum Command: Equatable, Sendable {
     case focus(Direction), move(Direction), resize(Axis, Double)
     case balance, flip, accordion, fullscreen, nativeFullscreen, float, close
+    /// Every window on the active monitor in one shape (`halves`, `columns`, `rows`, `grid`).
+    case arrange(Arrangement)
     /// Monitor numbers as written, from 1.
     case focusMonitor(Int), cycleMonitor(Int), moveToMonitor(Int)
     case exec(String), reload, mode(String), retile, rescue, pause, tree, nop
@@ -43,6 +45,7 @@ public enum Command: Equatable, Sendable {
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
         "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
         "undo": .undo, "redo": .redo, "zen": .zen, "terminal": .terminal,
+        "halves": .arrange(.halves), "columns": .arrange(.columns), "rows": .arrange(.rows), "grid": .arrange(.grid),
     ]
 
     /// Commands separated by `;`. `exec` takes the rest of the line, `;` included.

@@ -29,6 +29,25 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     #expect(w.focused == 3)
 }
 
+@Test func arrangePutsFocusedFirst() throws {
+    var w = world([[1, 2], [3], [4]], focused: 3)
+    w.monitors[0].lanes[0].accordion = true
+    w.monitors[0].fullscreen = 3
+    w.arrange(.halves)
+    #expect(lanes(w) == [[3], [1, 2, 4]])
+    #expect(w.monitors[0].lanes.allSatisfy { !$0.accordion } && w.monitors[0].fullscreen == nil)
+    w.arrange(.grid)
+    #expect(lanes(w) == [[3, 1], [2, 4]])
+    w.arrange(.rows)
+    #expect(lanes(w) == [[3], [1], [2], [4]] && w.monitors[0].rows)
+    w.arrange(.columns)
+    #expect(!w.monitors[0].rows)
+    w = world([[1]], focused: 1)
+    w.arrange(.halves)
+    #expect(lanes(w) == [[1]])
+    #expect(try Command.parse("grid") == [.arrange(.grid)])
+}
+
 @Test func moveFromSharedLanePopsOut() {
     var w = world([[1, 2], [3]], focused: 2)
     w.move(.right)

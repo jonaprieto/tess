@@ -57,15 +57,21 @@ import Testing
     #expect(w.monitors[0].rows)
 }
 
-@Test func modesCanAlwaysBeLeftTheSameWays() {
+@Test func modesAreLeftOnlyWithEsc() {
     // tess mode goes back to main; resize goes back to the mode it was entered from.
     for (mode, back) in [("tess", "main"), ("resize", "back")] {
         let m = Config.defaults.modes[mode]!
         #expect(m[KeySpec(key: "esc", mods: [])] == [.mode(back)], "\(mode) esc")
-        #expect(m[KeySpec(key: "enter", mods: [])] == [.mode(back)], "\(mode) enter")
+        #expect(m.values.filter { $0 == [.mode(back)] }.count == 1, "\(mode)")
     }
     #expect(Config.defaults.modes["service"] == nil)
     let wm = Config.defaults.modes["tess"]!
-    #expect(wm[KeySpec(key: "space", mods: [.alt])] == [.pick("")])
+    let hyper: Set<Mod> = [.cmd, .alt, .ctrl, .shift]
+    // One key per command: Hyper+G picks and Hyper+R jumps, nothing else does.
+    for (name, m) in Config.defaults.modes {
+        #expect(m.filter { $0.value == [.pick("")] }.map(\.key).allSatisfy { $0 == KeySpec(key: "g", mods: hyper) }, "\(name) pick")
+        #expect(m.filter { $0.value == [.jump] }.map(\.key).allSatisfy { $0 == KeySpec(key: "r", mods: hyper) }, "\(name) jump")
+    }
+    #expect(wm[KeySpec(key: "g", mods: hyper)] == [.pick("")])
     #expect(wm[KeySpec(key: "tab", mods: [.shift])] == [.cycleMonitor(-1)])
 }

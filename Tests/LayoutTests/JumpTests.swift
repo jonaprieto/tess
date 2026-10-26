@@ -15,12 +15,10 @@ import Testing
     #expect(Config.defaults.windowLabels == .jump)
     #expect(try Config.load(Data(#"{"overlay": {"window_labels": "always"}}"#.utf8)).windowLabels == .always)
     #expect(try Config.load(Data(#"{"overlay": {"window_labels": "off"}}"#.utf8)).windowLabels == .off)
-    // The earlier on/off switch still reads.
-    #expect(try Config.load(Data(#"{"overlay": {"window_labels": true}}"#.utf8)).windowLabels == .always)
-    #expect(try Config.load(Data(#"{"overlay": {"window_labels": false}}"#.utf8)).windowLabels == .off)
+    #expect(throws: ParseError.self) { try Config.load(Data(#"{"overlay": {"window_labels": true}}"#.utf8)) }
     #expect(throws: ParseError.self) { try Config.load(Data(#"{"overlay": {"window_labels": "sometimes"}}"#.utf8)) }
     #expect(Config.defaults.modes["main"]?[KeySpec(key: "r", mods: [.cmd, .alt, .ctrl, .shift])] == [.jump])
-    #expect(Config.defaults.modes["tess"]?[KeySpec(key: "g", mods: [])] == [.jump])
+    #expect(Config.defaults.modes["tess"]?[KeySpec(key: "g", mods: [])] == nil)
     #expect(Config.defaults.modes["tess"]?[KeySpec(key: "r", mods: [.cmd, .alt, .ctrl, .shift])] == [.jump])
 }
 
@@ -35,9 +33,8 @@ import Testing
     #expect(l[5] == nil && l.count == 3)
 }
 
-@Test func anOldWmModeInAFileBecomesTessMode() throws {
-    let c = try Config.load(Data(#"{"modes": {"main": {"cmd-alt-ctrl-shift-t": "mode wm"}, "wm": {"y": "balance"}}}"#.utf8))
-    #expect(c.modes["wm"] == nil)
-    #expect(c.modes["tess"]?[KeySpec(key: "y", mods: [])] == [.balance])
-    #expect(c.modes["main"]?[KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])] == [.mode("tess")])
+@Test func theOldWmModeIsGone() throws {
+    #expect(throws: ParseError.self) {
+        try Config.load(Data(#"{"modes": {"main": {"cmd-alt-ctrl-shift-t": "mode wm"}}}"#.utf8))
+    }
 }

@@ -10,11 +10,10 @@ import Testing
     #expect(try Command.parse("focus-screen prev") == [.cycleMonitor(-1)])
     #expect(try Command.parse("move-to-screen 3") == [.moveToMonitor(3)])
     #expect(try Command.parse("clear-screen") == [.clearMonitor])
-    // The earlier names still work.
-    #expect(try Command.parse("focus-monitor 2") == [.focusMonitor(2)])
-    #expect(try Command.parse("move-to-monitor 3") == [.moveToMonitor(3)])
-    #expect(try Command.parse("clear-monitor") == [.clearMonitor])
-    #expect(try Command.parse("mode wm") == [.mode("tess")])
+    // One name per command.
+    for old in ["focus-monitor 2", "move-to-monitor 3", "clear-monitor"] {
+        #expect(throws: ParseError.self, "\(old)") { try Command.parse(old) }
+    }
     #expect(Command.moveToMonitor(2).description == "move-to-screen 2")
     #expect(Command.clearMonitor.description == "clear-screen")
     #expect(try Command.parse("retile; mode main") == [.retile, .mode("main")])
@@ -135,7 +134,7 @@ import Testing
     #expect(wm[KeySpec(key: "2", mods: [.shift])] == [.moveToMonitor(2)])
     #expect(wm[KeySpec(key: "c", mods: [.shift])] == [.close])
     #expect(wm[KeySpec(key: "c", mods: [])] == nil)
-    #expect(wm.count == 40)
+    #expect(wm.count == 37)
     #expect(wm[KeySpec(key: "z", mods: [])] == [.zen, .mode("main")])
     #expect(wm[KeySpec(key: "u", mods: [])] == [.undo])
     #expect(wm[KeySpec(key: "u", mods: [.shift])] == [.redo])

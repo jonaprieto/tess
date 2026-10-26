@@ -43,7 +43,7 @@ Hyper+R).
   `v`, ...), plus `x` to close the window and pick what fills its place, `w` to bring back
   lost windows, `s` to re-tile, `r` for resize mode. It lasts one command; Hyper+T again
   keeps it on until esc.
-- Hyper+G or `alt-space` opens the picker, Hyper+R (or `g` in tess mode) jump mode.
+- Hyper+G opens the picker, Hyper+R jump mode, in tess mode too.
 
 The menu bar item names the mode that is on. Clicking it lists the last ten layout changes
 (keys, CLI, menu and picker): clicking one undoes it and everything after it, clicking an
@@ -60,7 +60,7 @@ bottom-left corner. A window keeps its letter while it lives.
 
 - letter: focus that window; shift+letter: swap it with the focused window.
 - digit: focus that screen; shift+digit: send the focused window there.
-- esc or enter: leave.
+- esc: leave.
 
 With `"overlay": {"window_labels": "always"}` the labels stay on screen all the time;
 `"off"` never shows them.

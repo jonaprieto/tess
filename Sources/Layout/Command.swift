@@ -35,7 +35,7 @@ public enum Command: Equatable, Sendable {
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
-        "pick": .pick(""), "close-replace": .closeReplace, "clear-monitor": .clearMonitor, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
+        "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
         "undo": .undo, "redo": .redo, "zen": .zen,
     ]
 
@@ -86,15 +86,14 @@ public enum Command: Equatable, Sendable {
         case ("resize", 3):
             guard let axis = Axis(rawValue: w[1]), let px = Double(w[2]), px.isFinite else { throw bad }
             return .resize(axis, min(max(px, -10_000), 10_000))
-        case ("focus-monitor", 2), ("focus-screen", 2):
+        case ("focus-screen", 2):
             switch w[1] {
             case "next": return .cycleMonitor(1)
             case "prev": return .cycleMonitor(-1)
             default: return .focusMonitor(try monitor(w[1]))
             }
-        case ("move-to-monitor", 2), ("move-to-screen", 2): return .moveToMonitor(try monitor(w[1]))
-        // tess mode was called "wm" before.
-        case ("mode", 2): return .mode(w[1] == "wm" ? "tess" : w[1])
+        case ("move-to-screen", 2): return .moveToMonitor(try monitor(w[1]))
+        case ("mode", 2): return .mode(w[1])
         case ("focus-window", 2), ("swap-with", 2):
             guard let id = UInt32(w[1]) else { throw bad }
             return head == "focus-window" ? .focusWindow(id) : .swapWith(id)

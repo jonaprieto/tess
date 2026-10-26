@@ -62,10 +62,7 @@ public struct Config: Equatable, Sendable {
             public init(from decoder: Decoder) throws {
                 let c = try decoder.container(keyedBy: CodingKeys.self)
                 allScreens = try c.decodeIfPresent(Bool.self, forKey: .allScreens)
-                // "always", "jump" or "off"; the earlier true/false still reads.
-                if let on = try? c.decodeIfPresent(Bool.self, forKey: .windowLabels) {
-                    windowLabels = on ? .always : .off
-                } else if let s = try c.decodeIfPresent(String.self, forKey: .windowLabels) {
+                if let s = try c.decodeIfPresent(String.self, forKey: .windowLabels) {
                     guard let mode = LabelMode(rawValue: s) else {
                         throw ParseError("config: overlay.window_labels is \"always\", \"jump\" or \"off\", not \"\(s)\"")
                     }
@@ -137,11 +134,7 @@ public struct Config: Equatable, Sendable {
         r.history = top.history ?? base.history
         r.verbs = merge(base.verbs, top.verbs)
         var modes = (base.modes ?? [:]).mapValues { canonical($0) ?? [:] }
-        // tess mode was called "wm" before; a file that still says so means tess mode.
-        for (m, bindings) in top.modes ?? [:] {
-            let name = m == "wm" ? "tess" : m
-            modes[name] = merge(modes[name], canonical(bindings))
-        }
+        for (m, bindings) in top.modes ?? [:] { modes[m] = merge(modes[m], canonical(bindings)) }
         r.modes = modes
         return r
     }
@@ -274,7 +267,6 @@ public struct Config: Equatable, Sendable {
           "alt-shift-semicolon": "retile",
           "cmd-alt-ctrl-shift-t": "mode tess",
           "cmd-alt-ctrl-shift-g": "pick",
-          "alt-space": "pick",
           "alt-shift-backspace": "clear-screen",
           "cmd-alt-ctrl-shift-r": "jump"
         },
@@ -292,7 +284,6 @@ public struct Config: Equatable, Sendable {
           "3": "focus-screen 3",
           "tab": "focus-screen next",
           "shift-tab": "focus-screen prev",
-          "alt-space": "pick",
           "shift-1": "move-to-screen 1",
           "shift-2": "move-to-screen 2",
           "shift-3": "move-to-screen 3",
@@ -309,7 +300,6 @@ public struct Config: Equatable, Sendable {
           "u": "undo",
           "shift-u": "redo",
           "z": "zen; mode main",
-          "g": "jump",
           "cmd-alt-ctrl-shift-r": "jump",
           "backspace": "clear-screen",
           "cmd-alt-ctrl-shift-g": "pick",
@@ -317,7 +307,6 @@ public struct Config: Equatable, Sendable {
           "s": "retile",
           "r": "mode resize",
           "esc": "mode main",
-          "enter": "mode main",
           "cmd-alt-ctrl-shift-t": "mode tess"
         },
         "resize": {
@@ -325,9 +314,7 @@ public struct Config: Equatable, Sendable {
           "l": "resize width +50",
           "j": "resize height +50",
           "k": "resize height -50",
-          "esc": "mode back",
-          "enter": "mode back",
-          "cmd-alt-ctrl-shift-t": "mode back"
+          "esc": "mode back"
         }
       }
     }

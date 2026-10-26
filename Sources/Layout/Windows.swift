@@ -65,7 +65,7 @@ public let labelAlphabet = "asdhjklqwertyuiopzxcvbnm"
 
 /// Jump mode's keys: a window's letter focuses it, shift+letter swaps it with the focused
 /// window, a screen's digit focuses that screen, shift+digit moves the focused window there,
-/// and each command ends with `back`. Also the keys that just go back.
+/// and each command ends with `back`. Also the key that just goes back.
 public func jumpKeys(labels: [WindowID: Character], windows: [WindowID], screens: Int, back: [Command])
     -> (keys: [KeySpec: [Command]], exits: [KeySpec]) {
     var keys: [KeySpec: [Command]] = [:]
@@ -78,8 +78,7 @@ public func jumpKeys(labels: [WindowID: Character], windows: [WindowID], screens
         keys[KeySpec(key: "\(n)", mods: [])] = [.focusMonitor(n)] + back
         keys[KeySpec(key: "\(n)", mods: [.shift])] = [.moveToMonitor(n)] + back
     }
-    let exits = [KeySpec(key: "esc", mods: []), KeySpec(key: "enter", mods: []),
-                 KeySpec(key: "r", mods: [.cmd, .alt, .ctrl, .shift]), KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])]
+    let exits = [KeySpec(key: "esc", mods: [])]
     for k in exits { keys[k] = back }
     return (keys, exits)
 }

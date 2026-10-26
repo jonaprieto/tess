@@ -1,76 +1,116 @@
 # tess
 
-A tiling window manager for macOS 27 that never hides a window. Each monitor is a row of
-columns, each column a stack (or an accordion); no virtual workspaces, so a crash, a hang
-or an unplugged monitor cannot strand a window off-screen.
+A keyboard-first tiling window manager for macOS 27 that never hides a window. Each screen
+is a row of columns, each column a stack or an accordion. There are no virtual workspaces,
+so a crash, a hang or an unplugged screen cannot strand a window off-screen.
 
-Install (macOS 27, Apple Silicon):
+## Install
+
+macOS 27 on Apple Silicon.
 
 ```sh
 brew tap jonaprieto/tap
+brew trust --formula jonaprieto/tap/tess
 brew install jonaprieto/tap/tess
-brew services start tess   # now and at login; grant Accessibility once
+brew services start tess   # now and at login
 ```
 
 From source:
 
 ```sh
-make install   # build, sign, start at login and after crashes; grant Accessibility once
+make install   # build, sign, start at login and after a crash; links ~/.local/bin/tess
 make test
-tess tree      # monitors, columns, windows, and what is not tiled
-tess focus left
 ```
+
+macOS asks once for Accessibility. To remove it: `brew services stop tess && brew uninstall tess`,
+or `make uninstall`.
 
 ## Keys
 
-Everything is in `tess default-config`. The ones to know:
+Hyper is ⌃⌥⇧⌘ (Nav+T and Nav+G on the NuPhy Air96 layout send Hyper+T and Hyper+G).
 
-- `alt-h/j/k/l` focus, `alt-shift-h/j/k/l` move, `alt-1/2/3` screens, `alt-enter` fullscreen.
-- Hyper+T (Nav+T on the Air96): tess mode, where the same actions need no modifier.
-- Hyper+G (Nav+G) or `alt-space`: the picker.
-- `alt-shift-backspace`: send everything on this screen to the next one.
-- Hyper+J (or `g` in tess mode) is jump mode: every window shows a border and a letter on its
-  top edge (it keeps the letter while it lives), every screen its number. A letter goes to
-  that window, shift+letter swaps the focused window with it, a digit goes to that screen,
-  shift+digit moves the focused window there. `"overlay": {"window_labels": "always"}` keeps
-  the labels on screen all the time; `"off"` never shows them (also in Settings).
+- `alt-h/j/k/l` focus, `alt-shift-h/j/k/l` move, `alt-1/2/3` go to a screen,
+  `alt-shift-1/2/3` send the window there, `alt-tab` next screen.
+- `alt-enter` fullscreen within tess, `alt-slash` columns or rows, `alt-shift-slash`
+  accordion, `alt-shift-minus/equal` narrower or wider, `alt-shift-0` balance,
+  `alt-shift-space` float, `alt-r` resize mode.
+- `alt-shift-backspace` sends every window on this screen to the next one.
+- `alt-shift-semicolon` re-tiles from where the windows are now.
+- Hyper+T is tess mode: the same actions without a modifier (`h`, `shift-h`, `1`, `f`, `a`,
+  `v`, ...), plus `x` to close the window and pick what fills its place, `w` to bring back
+  lost windows, `s` to re-tile, `r` for resize mode. Esc, enter or Hyper+T again leave it.
+- Hyper+G or `alt-space` opens the picker, Hyper+J (or `g` in tess mode) jump mode.
+
+While a mode is on, every screen shows its keys. `tess default-config` prints every binding.
+
+## Jump mode
+
+Every window shows a border and a letter on its top edge, every screen its number in the
+bottom-left corner. A window keeps its letter while it lives.
+
+- letter: focus that window; shift+letter: swap it with the focused window.
+- digit: focus that screen; shift+digit: send the focused window there.
+- esc or enter: leave.
+
+With `"overlay": {"window_labels": "always"}` the labels stay on screen all the time;
+`"off"` never shows them.
 
 ## Picker
 
-Type to filter windows (every Space), Brave and Safari tabs, apps, and, once you type,
-Brave bookmarks and browser history. Enter shows a map of every screen: a letter takes
-that window's place, shift+letter goes beside it, enter goes next to the focused window,
-a digit picks a screen, `g` just jumps, `f` floats.
+Type to filter windows (on every Space), Brave and Safari tabs, and apps; once you type, also
+Brave bookmarks and browser history. Enter on a window, tab or app shows a map of every
+screen to choose where it goes:
 
-- `cd ~/folder` or `code ~/folder` opens a folder in iTerm or VS Code (Tab completes).
-- `f name` finds files by name (Spotlight, ranked by fzf); `rg text` finds text in files.
-- In tess mode, `x` closes the focused window and picks what fills its place.
+- letter or shift+letter: swap with that window; alt+letter: go beside it.
+- enter: next to the focused window; digit: that screen; `g`: just go there; `f`: float.
+
+The first word can also be a verb:
+
+- `cd ~/folder`, `code ~/folder`: open the folder in iTerm or VS Code (tab completes).
+- `f name`: files by name (Spotlight, ranked by fzf); `rg text`: text in files.
+- `book title author`, `paper title author`: find with [folio](https://github.com/jonaprieto/folio)
+  (papers also on arXiv first), download to `~/Downloads` and open.
 
 ## Settings
 
-Settings in the menu bar item (or `tess settings`) edits gaps, picker verbs, app lists and
-key bindings. It writes only what differs from the defaults to
-`~/.config/tess/config.json`; the file layers on top of the defaults, and `null` removes a
-default binding.
+Settings in the menu bar item (or `tess settings`) edits gaps, overlays, labels, picker verbs,
+app lists and key bindings. It writes only what differs from the defaults to
+`~/.config/tess/config.json`, which layers on top of the built-in config: lists replace,
+bindings merge per key, and `null` removes a default binding. A config only needs what you
+change, for example:
+
+```json
+{"gaps": {"inner": 6}, "modes": {"main": {"alt-t": "exec open -a iTerm", "cmd-h": null}}}
+```
+
+`float` lists apps that never tile, `tile` apps that always do, `ignore` apps tess leaves
+alone (EdgeMark is there by default).
+
+## Command line
+
+`tess <command>` runs any command a key can, for example `tess focus left` or
+`tess move-to-screen 2`. Also:
+
+- `tess tree`: screens, columns and windows, and what is not tiled.
+- `tess state`: the model and the machine as JSON.
+- `tess rescue`: bring back windows that are mostly off-screen.
+- `tess pause`: stop tiling until run again (also in the menu).
+- `tess reload`, `tess default-config`, `tess --version`.
 
 ## Permissions
 
-Accessibility (asked at first start). Automation for Brave and Safari (asked the first time
-the picker reads tabs). Browser history needs Full Disk Access for
-`~/tess/build/tess` (System Settings, Privacy & Security); without it the picker still lists
-tabs and Brave bookmarks.
+Accessibility, asked at first start. Automation for Brave and Safari, asked the first time
+the picker reads tabs. Browser history also needs Full Disk Access (System Settings, Privacy
+& Security) for the tess binary: `$(brew --prefix)/opt/tess/bin/tess` from Homebrew, or
+`~/tess/build/tess` from source. Without it the picker still lists tabs and Brave bookmarks.
 
 ## Logs
 
 - `~/Library/Logs/tess/events.jsonl`: one JSON object per line for everything that changes:
-  apps opening and quitting, windows opening, closing, moving to another Space or keeping
-  their own size, focus (by tess or by macOS), every command and where it came from (hotkey,
-  CLI, menu, picker), the layout after it, screens, Spaces, modes, picks, config reloads,
-  watchdog exits, and how long the picker took to open. A full snapshot of the model and the
-  machine (macOS, uptime, thermal state, Low Power Mode, memory, tess's CPU and memory) is
-  written at start, on screen changes and every ten minutes. Rotated at 20 MB. It stays on
-  this Mac; picker queries are not recorded.
-- `tess state` prints the same snapshot now.
+  apps and windows opening and closing, focus, every command and where it came from (key,
+  CLI, menu, picker), the layout after it, screens, Spaces, modes, picks and config reloads.
+  A snapshot of the model and the machine is written at start, on screen changes and every
+  ten minutes. Rotated at 20 MB. It stays on this Mac; picker queries are not recorded.
 - `~/Library/Logs/tess.log`: short human-readable notes.
 
 Limits: macOS Spaces other than native fullscreen are not modeled; an app with a minimum

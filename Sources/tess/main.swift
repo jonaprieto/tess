@@ -9,8 +9,9 @@ let usage = """
 
       tess serve            run it (the LaunchAgent does this)
       tess <command>        send a command to the running tess, e.g. `tess focus left`
-      tess tree             print monitors, lanes and windows
-      tess default-config   print the built-in config (start ~/.config/tess/config.json from it)
+      tess tree             print screens, columns and windows
+      tess state            print the model and the machine as JSON
+      tess default-config   print the built-in config (~/.config/tess/config.json only needs what differs)
       tess --version        print the version
 
     """

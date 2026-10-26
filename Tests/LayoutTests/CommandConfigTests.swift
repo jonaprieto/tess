@@ -6,9 +6,17 @@ import Testing
     #expect(try Command.parse("focus left") == [.focus(.left)])
     #expect(try Command.parse("resize width -50") == [.resize(.width, -50)])
     #expect(try Command.parse("resize height +50") == [.resize(.height, 50)])
+    #expect(try Command.parse("focus-screen 2") == [.focusMonitor(2)])
+    #expect(try Command.parse("focus-screen prev") == [.cycleMonitor(-1)])
+    #expect(try Command.parse("move-to-screen 3") == [.moveToMonitor(3)])
+    #expect(try Command.parse("clear-screen") == [.clearMonitor])
+    // The earlier names still work.
     #expect(try Command.parse("focus-monitor 2") == [.focusMonitor(2)])
-    #expect(try Command.parse("focus-monitor prev") == [.cycleMonitor(-1)])
     #expect(try Command.parse("move-to-monitor 3") == [.moveToMonitor(3)])
+    #expect(try Command.parse("clear-monitor") == [.clearMonitor])
+    #expect(try Command.parse("mode wm") == [.mode("tess")])
+    #expect(Command.moveToMonitor(2).description == "move-to-screen 2")
+    #expect(Command.clearMonitor.description == "clear-screen")
     #expect(try Command.parse("retile; mode main") == [.retile, .mode("main")])
     #expect(try Command.parse("state") == [.state])
 }
@@ -52,10 +60,10 @@ import Testing
     #expect(c.float.contains("com.apple.finder"))
     let main = try #require(c.modes["main"])
     #expect(main[KeySpec(key: "h", mods: [.alt])] == [.focus(.left)])
-    #expect(main[KeySpec(key: "semicolon", mods: [.alt, .shift])] == [.mode("service")])
+    #expect(main[KeySpec(key: "semicolon", mods: [.alt, .shift])] == [.retile])
     #expect(main[KeySpec(key: "h", mods: [.cmd])] == [.nop])
-    #expect(c.modes["resize"]?[KeySpec(key: "esc", mods: [])] == [.mode("main")])
-    #expect(c.modes["service"]?[KeySpec(key: "w", mods: [])] == [.rescue, .mode("main")])
+    #expect(c.modes["resize"]?[KeySpec(key: "esc", mods: [])] == [.mode("back")])
+    #expect(c.modes["tess"]?[KeySpec(key: "s", mods: [])] == [.retile])
     #expect(!main.keys.contains(KeySpec(key: "backtick", mods: [.ctrl])))
 }
 
@@ -118,8 +126,8 @@ import Testing
 @Test func hyperTTogglesTheWMMode() throws {
     let c = Config.defaults
     let hyperT = KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])
-    #expect(c.modes["main"]?[hyperT] == [.mode("wm")])
-    let wm = try #require(c.modes["wm"])
+    #expect(c.modes["main"]?[hyperT] == [.mode("tess")])
+    let wm = try #require(c.modes["tess"])
     #expect(wm[hyperT] == [.mode("main")])
     #expect(wm[KeySpec(key: "esc", mods: [])] == [.mode("main")])
     #expect(wm[KeySpec(key: "h", mods: [])] == [.focus(.left)])

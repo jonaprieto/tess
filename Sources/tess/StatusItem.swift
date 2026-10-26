@@ -42,8 +42,8 @@ final class StatusItem: NSObject, NSMenuDelegate {
         switch tiler.mode {
         case "main": return .controlAccentColor
         case "resize": return .systemOrange
-        case "service": return .systemPurple
-        case "wm": return .systemGreen
+        case "tess": return .systemGreen
+        case "jump": return .systemTeal
         default: return .systemTeal
         }
     }

@@ -14,9 +14,18 @@ final class Overlay {
     /// The keys of a mode as a glass cheat sheet in the bottom-right corner of each of `screens`:
     /// grouped columns of keycaps and plain labels, so the windows being arranged stay visible.
     func showMode(_ name: String, _ bindings: [KeySpec: [Command]], on screens: [CGRect]) {
+        show(on: screens) { ModeSheet(name: name, bindings: bindings) }
+    }
+
+    /// A sheet with given rows, for jump mode, whose keys are the window letters.
+    func showSheet(_ title: String, rows: [(String, String)], back: [String], on screens: [CGRect]) {
+        show(on: screens) { ModeSheet(title: title, rows: rows, back: back) }
+    }
+
+    private func show(on screens: [CGRect], _ make: () -> ModeSheet) {
         hideMode()
         for screen in screens {
-            let view = ModeSheet(name: name, bindings: bindings)
+            let view = make()
             let size = view.fittingSize
             let r = CGRect(x: screen.maxX - size.width - 24, y: screen.maxY - size.height - 24, width: size.width, height: size.height)
             let p = Self.panel()
@@ -136,11 +145,11 @@ final class ModeSheet: NSView {
     private static let pad: CGFloat = 18
 
     init(name: String, bindings: [KeySpec: [Command]]) {
-        title = name == "wm" ? "tess mode" : "\(name.prefix(1).uppercased())\(name.dropFirst()) mode"
+        title = name == "tess" ? "tess mode" : "\(name.prefix(1).uppercased())\(name.dropFirst()) mode"
         super.init(frame: .zero)
         var groups: [Command.Group: [Row]] = [:]
         for (key, commands) in bindings {
-            if commands == [.mode("main")] {
+            if commands == [.mode("main")] || commands == [.mode("back")] {
                 back.append(key.symbol)
                 continue
             }
@@ -151,6 +160,14 @@ final class ModeSheet: NSView {
         columns = Command.Group.allCases.compactMap { g in
             groups[g].map { (g.title, $0.sorted { $0.order < $1.order }) }
         }
+        frame.size = fittingSize
+    }
+
+    init(title: String, rows: [(String, String)], back: [String]) {
+        self.title = title
+        super.init(frame: .zero)
+        columns = [("Keys", rows.enumerated().map { Row(cap: $0.element.0, label: $0.element.1, order: ($0.offset, "")) })]
+        self.back = back
         frame.size = fittingSize
     }
 

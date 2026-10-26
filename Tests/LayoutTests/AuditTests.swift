@@ -59,13 +59,15 @@ import Testing
 
 @Test func modesCanAlwaysBeLeftTheSameWays() {
     let hyperT = KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])
-    for mode in ["wm", "resize", "service"] {
+    // tess mode goes back to main; resize goes back to the mode it was entered from.
+    for (mode, back) in [("tess", "main"), ("resize", "back")] {
         let m = Config.defaults.modes[mode]!
-        #expect(m[KeySpec(key: "esc", mods: [])] == [.mode("main")], "\(mode) esc")
-        #expect(m[KeySpec(key: "enter", mods: [])] == [.mode("main")], "\(mode) enter")
-        #expect(m[hyperT] == [.mode("main")], "\(mode) hyper-t")
+        #expect(m[KeySpec(key: "esc", mods: [])] == [.mode(back)], "\(mode) esc")
+        #expect(m[KeySpec(key: "enter", mods: [])] == [.mode(back)], "\(mode) enter")
+        #expect(m[hyperT] == [.mode(back)], "\(mode) hyper-t")
     }
-    let wm = Config.defaults.modes["wm"]!
+    #expect(Config.defaults.modes["service"] == nil)
+    let wm = Config.defaults.modes["tess"]!
     #expect(wm[KeySpec(key: "space", mods: [.alt])] == [.pick("")])
     #expect(wm[KeySpec(key: "tab", mods: [.shift])] == [.cycleMonitor(-1)])
 }

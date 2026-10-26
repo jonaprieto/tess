@@ -617,7 +617,6 @@ final class Tiler {
             overlay.hideMode()
         } else {
             mode = "main"
-            jumping = false
             registerMode()
             rebuild()
         }
@@ -627,10 +626,14 @@ final class Tiler {
 
     // MARK: Modes and config
 
-    private func setMode(_ m: String) {
+    /// `back` is the mode the current one was entered from (resize returns to tess mode).
+    private func setMode(_ requested: String) {
+        let m = requested == "back" ? modeBefore : requested
         guard config.modes[m] != nil else { return }
-        jumping = false
-        if m != mode { Events.record("mode", ["mode": m]) }
+        if m != mode {
+            if requested != "back" { modeBefore = jumping ? jumpReturn : mode }
+            Events.record("mode", ["mode": m])
+        }
         mode = m
         registerMode()
         if m == "main" {
@@ -665,7 +668,6 @@ final class Tiler {
         }
         for (pid, w) in workers where config.ignore.contains(w.app.bundleIdentifier ?? "") { untrack(pid) }
         mode = "main"
-        jumping = false
         overlay.hideMode()
         registerMode()
         if announce { sweep(all: true) }
@@ -688,8 +690,10 @@ final class Tiler {
     /// Each window's letter, kept while the window lives (decorations, jump mode, picker map).
     private(set) var labels: [WindowID: Character] = [:]
     /// Jump mode is on: labels are keys until one is used; then back to `jumpReturn`.
-    private(set) var jumping = false
+    var jumping: Bool { mode == "jump" }
     private var jumpReturn = "main"
+    /// The mode before the current one, for `mode back`.
+    private var modeBefore = "main"
     private var drawn: [String] = []
 
     private func beginPicking() {
@@ -1175,8 +1179,8 @@ final class Tiler {
     private func startJump() {
         guard !jumping else { return }
         jumpReturn = mode
-        jumping = true
-        overlay.hideMode()
+        mode = "jump"
+        Events.record("mode", ["mode": "jump"])
         let back: [Command] = [.mode(jumpReturn)]
         var keys: [KeySpec: [Command]] = [:]
         for id in labeledWindows {
@@ -1188,15 +1192,18 @@ final class Tiler {
             keys[KeySpec(key: "\(n)", mods: [])] = [.focusMonitor(n)] + back
             keys[KeySpec(key: "\(n)", mods: [.shift])] = [.moveToMonitor(n)] + back
         }
-        for k in [KeySpec(key: "esc", mods: []), KeySpec(key: "enter", mods: []),
-                  KeySpec(key: "j", mods: [.cmd, .alt, .ctrl, .shift])] {
-            keys[k] = back
-        }
+        let exits = [KeySpec(key: "esc", mods: []), KeySpec(key: "enter", mods: []),
+                     KeySpec(key: "j", mods: [.cmd, .alt, .ctrl, .shift]), KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])]
+        for k in exits { keys[k] = back }
         let failed = hotkeys.register(keys)
         if !failed.isEmpty { Log.write("jump: could not register \(failed)") }
         drawn = []
         refreshDecorations()
-        toast("jump: a letter goes there, ⇧ swaps with it, a digit picks a screen")
+        // A cheat sheet like any mode's, for as long as jump mode lasts.
+        let n = max(world.monitors.count, 1)
+        overlay.showSheet("Jump", rows: [("A–Z", "Go to that window"), ("⇧ A–Z", "Swap it with the focused one"),
+                                         ("1–\(n)", "Go to that screen"), ("⇧ 1–\(n)", "Move the focused window there")],
+                          back: exits.map(\.symbol), on: modeScreens)
         onChange()
     }
 
@@ -1254,7 +1261,7 @@ final class Tiler {
         var out = ["mode \(mode)\(paused ? " (paused)" : "")"]
         for (m, mon) in world.monitors.enumerated() {
             let f = mon.frame
-            out.append("monitor \(m + 1) \(mon.id.prefix(8)) \(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))x\(Int(f.height))"
+            out.append("screen \(m + 1) \(mon.id.prefix(8)) \(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))x\(Int(f.height))"
                 + " \(mon.rows ? "rows" : "columns")\(m == world.activeMonitor ? " active" : "")")
             for (l, lane) in mon.lanes.enumerated() {
                 out.append("  \(mon.rows ? "row" : "column") \(l + 1)\(lane.accordion ? " accordion" : "")")

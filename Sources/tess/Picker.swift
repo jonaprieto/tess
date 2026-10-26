@@ -309,7 +309,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         place(size)
         map.frame = NSRect(x: 0, y: 30, width: size.width, height: size.height - 30)
         footer.frame = NSRect(x: 0, y: 9, width: size.width, height: 16)
-        footer.stringValue = "letter  take its place      ⇧ letter  beside it      ↵ here      1–\(max(model.monitors.count, 1))  that screen      g  just go      f  float      esc  back"
+        footer.stringValue = "letter  swap with it      ⌥ letter  beside it      ↵ here      1–\(max(model.monitors.count, 1))  that screen      g  just go      f  float      esc  back"
         for v in [magnifier, field, divider, list] as [NSView] { v.isHidden = true }
         map.isHidden = false
         map.needsDisplay = true
@@ -325,7 +325,6 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     private func key(_ e: NSEvent) -> NSEvent? {
         let ctrl = e.modifierFlags.contains(.control)
-        let shift = e.modifierFlags.contains(.shift)
         let ch = e.charactersIgnoringModifiers?.lowercased() ?? ""
         // esc, or the key that opened the picker (any Hyper key), closes it.
         let hyper = e.modifierFlags.isSuperset(of: [.command, .option, .control, .shift])
@@ -353,7 +352,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
                 if let n = Int(ch), n >= 1, n <= model.monitors.count {
                     done(.place(.monitor(n - 1)))
                 } else if let c = ch.first, let id = model.labels.first(where: { $0.value == c })?.key {
-                    done(.place(shift ? .beside(id) : .replace(id)))
+                    // A letter or ⇧ letter swaps, as in jump mode; ⌥ letter goes beside it.
+                    done(.place(e.modifierFlags.contains(.option) ? .beside(id) : .replace(id)))
                 }
             }
             return nil

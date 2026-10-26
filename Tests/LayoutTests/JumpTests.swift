@@ -5,7 +5,7 @@ import Testing
 @Test func jumpCommandsParse() throws {
     #expect(try Command.parse("jump") == [.jump])
     #expect(try Command.parse("focus-window 42") == [.focusWindow(42)])
-    #expect(try Command.parse("swap-with 7; mode wm") == [.swapWith(7), .mode("wm")])
+    #expect(try Command.parse("swap-with 7; mode tess") == [.swapWith(7), .mode("tess")])
     #expect(throws: ParseError.self) { try Command.parse("focus-window x") }
     #expect(Command.focusWindow(42).description == "focus-window 42")
     #expect(Command.jump.label == "Jump to a window")
@@ -20,7 +20,7 @@ import Testing
     #expect(try Config.load(Data(#"{"overlay": {"window_labels": false}}"#.utf8)).windowLabels == .off)
     #expect(throws: ParseError.self) { try Config.load(Data(#"{"overlay": {"window_labels": "sometimes"}}"#.utf8)) }
     #expect(Config.defaults.modes["main"]?[KeySpec(key: "j", mods: [.cmd, .alt, .ctrl, .shift])] == [.jump])
-    #expect(Config.defaults.modes["wm"]?[KeySpec(key: "g", mods: [])] == [.jump])
+    #expect(Config.defaults.modes["tess"]?[KeySpec(key: "g", mods: [])] == [.jump])
 }
 
 @Test func labelsStayWithTheirWindows() {
@@ -32,4 +32,11 @@ import Testing
     // More windows than letters: the rest go unlabeled.
     l = stableLabels(l, windows: [1, 3, 4, 5], alphabet: "asd")
     #expect(l[5] == nil && l.count == 3)
+}
+
+@Test func anOldWmModeInAFileBecomesTessMode() throws {
+    let c = try Config.load(Data(#"{"modes": {"main": {"cmd-alt-ctrl-shift-t": "mode wm"}, "wm": {"y": "balance"}}}"#.utf8))
+    #expect(c.modes["wm"] == nil)
+    #expect(c.modes["tess"]?[KeySpec(key: "y", mods: [])] == [.balance])
+    #expect(c.modes["main"]?[KeySpec(key: "t", mods: [.cmd, .alt, .ctrl, .shift])] == [.mode("tess")])
 }

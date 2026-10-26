@@ -118,7 +118,11 @@ public struct Config: Equatable, Sendable {
         r.ignore = top.ignore ?? base.ignore
         r.verbs = merge(base.verbs, top.verbs)
         var modes = (base.modes ?? [:]).mapValues { canonical($0) ?? [:] }
-        for (m, bindings) in top.modes ?? [:] { modes[m] = merge(modes[m], canonical(bindings)) }
+        // tess mode was called "wm" before; a file that still says so means tess mode.
+        for (m, bindings) in top.modes ?? [:] {
+            let name = m == "wm" ? "tess" : m
+            modes[name] = merge(modes[name], canonical(bindings))
+        }
         r.modes = modes
         return r
     }
@@ -177,7 +181,8 @@ public struct Config: Equatable, Sendable {
                 guard let line else { continue }
                 do {
                     let commands = try Command.parse(line)
-                    for case .mode(let m) in commands where modes[m] == nil {
+                    // "back" is the mode the current one was entered from.
+                    for case .mode(let m) in commands where modes[m] == nil && m != "back" {
                         throw ParseError("no mode '\(m)'")
                     }
                     parsed[try KeySpec.parse(key)] = commands
@@ -218,27 +223,27 @@ public struct Config: Equatable, Sendable {
           "alt-shift-enter": "native-fullscreen",
           "alt-shift-space": "float",
           "alt-shift-c": "close",
-          "alt-1": "focus-monitor 1",
-          "alt-2": "focus-monitor 2",
-          "alt-3": "focus-monitor 3",
-          "alt-shift-1": "move-to-monitor 1",
-          "alt-shift-2": "move-to-monitor 2",
-          "alt-shift-3": "move-to-monitor 3",
-          "alt-tab": "focus-monitor next",
-          "alt-shift-tab": "focus-monitor prev",
+          "alt-1": "focus-screen 1",
+          "alt-2": "focus-screen 2",
+          "alt-3": "focus-screen 3",
+          "alt-shift-1": "move-to-screen 1",
+          "alt-shift-2": "move-to-screen 2",
+          "alt-shift-3": "move-to-screen 3",
+          "alt-tab": "focus-screen next",
+          "alt-shift-tab": "focus-screen prev",
           "alt-t": "exec open -a kitty",
           "alt-shift-r": "reload",
           "cmd-h": "nop",
           "cmd-alt-h": "nop",
           "alt-r": "mode resize",
-          "alt-shift-semicolon": "mode service",
-          "cmd-alt-ctrl-shift-t": "mode wm",
+          "alt-shift-semicolon": "retile",
+          "cmd-alt-ctrl-shift-t": "mode tess",
           "cmd-alt-ctrl-shift-g": "pick",
           "alt-space": "pick",
-          "alt-shift-backspace": "clear-monitor",
+          "alt-shift-backspace": "clear-screen",
           "cmd-alt-ctrl-shift-j": "jump"
         },
-        "wm": {
+        "tess": {
           "h": "focus left",
           "j": "focus down",
           "k": "focus up",
@@ -247,15 +252,15 @@ public struct Config: Equatable, Sendable {
           "shift-j": "move down",
           "shift-k": "move up",
           "shift-l": "move right",
-          "1": "focus-monitor 1",
-          "2": "focus-monitor 2",
-          "3": "focus-monitor 3",
-          "tab": "focus-monitor next",
-          "shift-tab": "focus-monitor prev",
+          "1": "focus-screen 1",
+          "2": "focus-screen 2",
+          "3": "focus-screen 3",
+          "tab": "focus-screen next",
+          "shift-tab": "focus-screen prev",
           "alt-space": "pick",
-          "shift-1": "move-to-monitor 1",
-          "shift-2": "move-to-monitor 2",
-          "shift-3": "move-to-monitor 3",
+          "shift-1": "move-to-screen 1",
+          "shift-2": "move-to-screen 2",
+          "shift-3": "move-to-screen 3",
           "minus": "resize width -50",
           "equal": "resize width +50",
           "b": "balance",
@@ -267,11 +272,11 @@ public struct Config: Equatable, Sendable {
           "t": "exec open -a kitty",
           "x": "close-replace",
           "g": "jump",
-          "backspace": "clear-monitor",
+          "backspace": "clear-screen",
           "cmd-alt-ctrl-shift-g": "pick",
           "w": "rescue",
+          "s": "retile",
           "r": "mode resize",
-          "s": "mode service",
           "esc": "mode main",
           "enter": "mode main",
           "cmd-alt-ctrl-shift-t": "mode main"
@@ -281,17 +286,9 @@ public struct Config: Equatable, Sendable {
           "l": "resize width +50",
           "j": "resize height +50",
           "k": "resize height -50",
-          "esc": "mode main",
-          "enter": "mode main",
-          "cmd-alt-ctrl-shift-t": "mode main"
-        },
-        "service": {
-          "r": "retile; mode main",
-          "w": "rescue; mode main",
-          "f": "float; mode main",
-          "esc": "mode main",
-          "enter": "mode main",
-          "cmd-alt-ctrl-shift-t": "mode main"
+          "esc": "mode back",
+          "enter": "mode back",
+          "cmd-alt-ctrl-shift-t": "mode back"
         }
       }
     }

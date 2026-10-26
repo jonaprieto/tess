@@ -35,8 +35,9 @@ extension Tiler {
     /// Everything tess knows, and the machine it runs on.
     func stateJSON() -> [String: Any] {
         var state = layoutJSON()
-        let frames = world.frames(inner: config.inner, outer: config.outer)
+        let frames = targets
         state["mode"] = mode
+        state["zen"] = zenTitle ?? NSNull()
         state["paused"] = paused
         state["config_error"] = configError ?? NSNull()
         state["frontmost"] = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
@@ -60,7 +61,7 @@ extension Tiler {
             let app = workers[i.pid]?.app.localizedName ?? "?"
             return "\(id) \(app): \(i.title)\(id == world.focused ? "  <- focused" : "")\(offSpace.contains(id) ? "  (other Space)" : "")"
         }
-        let frames = world.frames(inner: config.inner, outer: config.outer)
+        let frames = targets
         var out = ["mode \(mode)\(paused ? " (paused)" : "")"]
         for (m, mon) in world.monitors.enumerated() {
             let f = mon.frame

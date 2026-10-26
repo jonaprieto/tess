@@ -61,6 +61,7 @@ extension Command {
         case .jump: "Jump to a window"
         case .undo: "Undo"
         case .redo: "Redo"
+        case .zen: "Zen"
         case .focusWindow: "Go to a window"
         case .swapWith: "Swap windows"
         case .tree, .nop, .debugMap, .state: nil

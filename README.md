@@ -46,6 +46,11 @@ The menu bar item names the mode that is on. Clicking it lists the last ten layo
 (keys, CLI, menu and picker): clicking one undoes it and everything after it, clicking an
 undone one redoes up to it. In tess mode `u` undoes and `shift-u` redoes.
 
+Zen (`z` in tess mode, `tess zen`, or the menu) is a pomodoro: for 25 minutes the focused
+window fills its screen and the other screens go dark, then a 5 minute break with the layout
+as it was, until Zen is turned off. The menu bar counts down. Clicking a dark screen focuses
+what is under it, and Zen follows.
+
 While a mode is on, every screen shows its keys. `tess default-config` prints every binding.
 
 ## Jump mode
@@ -104,6 +109,7 @@ on the screen with the fewest windows; `"empty_screens": false` turns that off.
 - `tess rescue`: bring back windows that are mostly off-screen.
 - `tess pause`: stop tiling until run again (also in the menu).
 - `tess undo`, `tess redo`: the last layout change.
+- `tess zen`: Zen on or off.
 - `tess reload`, `tess default-config`, `tess --version`.
 
 ## Permissions

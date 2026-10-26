@@ -26,6 +26,8 @@ public enum Command: Equatable, Sendable {
     /// Back to the layout before the last change made with a key, the CLI or the picker, and
     /// forward again.
     case undo, redo
+    /// The focused window alone in front, with a pomodoro timer, until run again.
+    case zen
     /// Renders the picker's map to a PNG at this path (for debugging without a screen).
     case debugMap(String)
 
@@ -34,7 +36,7 @@ public enum Command: Equatable, Sendable {
         "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
         "pick": .pick(""), "close-replace": .closeReplace, "clear-monitor": .clearMonitor, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
-        "undo": .undo, "redo": .redo,
+        "undo": .undo, "redo": .redo, "zen": .zen,
     ]
 
     /// Commands separated by `;`. `exec` takes the rest of the line, `;` included.

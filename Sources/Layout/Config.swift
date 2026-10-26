@@ -285,6 +285,7 @@ public struct Config: Equatable, Sendable {
           "x": "close-replace",
           "u": "undo",
           "shift-u": "redo",
+          "z": "zen; mode main",
           "g": "jump",
           "cmd-alt-ctrl-shift-r": "jump",
           "backspace": "clear-screen",

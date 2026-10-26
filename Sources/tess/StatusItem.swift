@@ -23,20 +23,20 @@ final class StatusItem: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) { fill(menu) }
 
     /// Cheap enough to run on every layout or focus change.
-    private var drawn: (world: World, mode: String, paused: Bool, waiting: Bool)?
+    private var drawn: (world: World, mode: String, paused: Bool, waiting: Bool, zen: String?)?
 
     /// Skipped when nothing the icon shows changed (most snapshots change nothing visible).
     func refreshIcon() {
         guard let button = item.button else { return }
-        let now = (tiler.world, tiler.mode, tiler.paused, waitingForAccess)
-        if let d = drawn, d.world == now.0, d.mode == now.1, d.paused == now.2, d.waiting == now.3 { return }
+        let now = (tiler.world, tiler.mode, tiler.paused, waitingForAccess, tiler.zenTitle)
+        if let d = drawn, d.world == now.0, d.mode == now.1, d.paused == now.2, d.waiting == now.3, d.zen == now.4 { return }
         drawn = now
         button.image = minimap()
         button.imagePosition = .imageLeft
-        // The mode by name next to the miniature, except in main, where nothing is on.
-        let word = waitingForAccess ? "" : tiler.paused ? "paused" : tiler.mode == "main" ? "" : tiler.mode
+        // The mode by name next to the miniature; in main, Zen's countdown if it is on.
+        let word = waitingForAccess ? "" : tiler.paused ? "paused" : tiler.mode == "main" ? now.4 ?? "" : tiler.mode
         button.attributedTitle = NSAttributedString(string: word.isEmpty ? "" : " " + word.uppercased(), attributes: [
-            .font: NSFont.systemFont(ofSize: 12, weight: .bold), .foregroundColor: color,
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .bold), .foregroundColor: color,
         ])
         button.toolTip = "tess: \(tiler.paused ? "paused" : tiler.mode)"
     }
@@ -45,7 +45,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
         if waitingForAccess { return .systemRed }
         if tiler.paused { return .systemGray }
         switch tiler.mode {
-        case "main": return .controlAccentColor
+        case "main": return tiler.zen == nil ? .controlAccentColor : tiler.zenWorking ? .systemIndigo : .systemMint
         case "resize": return .systemOrange
         case "tess": return .systemGreen
         case "jump": return .systemTeal
@@ -120,6 +120,9 @@ final class StatusItem: NSObject, NSMenuDelegate {
         recent(menu)
         menu.addItem(.separator())
         menu.addItem(item("Open Picker…", "magnifyingglass", #selector(pick), for: .pick("")))
+        let zen = item(tiler.zen == nil ? "Zen" : "Leave Zen", "moon", #selector(toggleZen), for: .zen)
+        zen.subtitle = tiler.zenTitle ?? "25 min focus, 5 min break"
+        menu.addItem(zen)
         menu.addItem(item("Settings…", "gearshape", #selector(openSettings), key: ",", mods: [.command]))
         menu.addItem(.separator())
         menu.addItem(item("Rescue Windows", "lifepreserver", #selector(rescue), for: .rescue))
@@ -187,6 +190,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
 
     @objc private func revisit(_ sender: NSMenuItem) { tiler.revisit(sender.tag) }
     @objc private func pick() { _ = tiler.run([.pick("")], source: "menu") }
+    @objc private func toggleZen() { _ = tiler.run([.zen], source: "menu") }
     @objc private func clear() { _ = tiler.run([.clearMonitor], source: "menu") }
     @objc private func openLog() { NSWorkspace.shared.open(Log.url) }
     @objc private func openSettings() { tiler.openSettings() }

@@ -134,6 +134,15 @@ final class Tiler {
 
     var undone = 0
 
+    /// Zen's timer while it is on, and whether it is in a work block.
+    var zen: Pomodoro?
+
+    var zenWorking = false
+
+    var zenTimer: Timer?
+
+    let veil = Veil()
+
 
     var searchProcess: Process?
 
@@ -444,17 +453,28 @@ final class Tiler {
     }
 
 
+    /// Where each window goes: the layout's frames, with Zen's window filling its screen.
+    var targets: [WindowID: CGRect] {
+        var out = world.frames(inner: config.inner, outer: config.outer)
+        // ponytail: Zen fills the screen here, not in the model, so leaving it restores nothing and
+        // undo never sees it; a re-tile during Zen reads the filled frame, as under fullscreen.
+        if zenWorking, let f = world.focused, let p = world.locate(f) { out[f] = world.monitors[p.m].frame }
+        return out
+    }
+
+
     func apply() {
         defer {
             onLayout()
             refreshDecorations()
+            refreshVeil()
         }
         guard !starting, !paused else { return }
         if NSEvent.pressedMouseButtons & 1 != 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.scheduleApply() }
             return
         }
-        for (id, target) in world.frames(inner: config.inner, outer: config.outer) where !offSpace.contains(id) {
+        for (id, target) in targets where !offSpace.contains(id) {
             guard let info = infos[id], let worker = workers[info.pid] else { continue }
             if info.frame.isNear(target) {
                 writes[id] = (target, 0)

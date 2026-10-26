@@ -49,7 +49,8 @@ The menu bar item names the mode that is on. Clicking it lists the last ten layo
 (keys, CLI, menu and picker): clicking one undoes it and everything after it, clicking an
 undone one redoes up to it. In tess mode `u` undoes and `shift-u` redoes.
 
-While a mode is on, every screen shows its keys. `tess default-config` prints every binding.
+While a mode is on, its keys show on screen. Keys for screens that are not attached are not
+shown and stay with apps. `tess default-config` prints every binding.
 
 ## Jump mode
 

@@ -522,7 +522,10 @@ final class Tiler {
 
     func updateMonitors() {
         let screens = Screens.current()
+        let before = world.monitors.count
         world.setMonitors(screens.map { (id: $0.id, frame: $0.frame) }, main: screens.first(where: \.isMain)?.id)
+        // The keys for screens follow the screens there are.
+        if world.monitors.count != before, !jumping, !picking { setMode(mode) }
         writes = [:]
         Log.write("monitors: \(screens.map { "\($0.id.prefix(8)) \(Int($0.frame.width))x\(Int($0.frame.height))" })")
         Events.record("screens", ["screens": screens.enumerated().map { n, s in
@@ -584,6 +587,10 @@ final class Tiler {
     /// Where `mode back` and the end of jump mode go from the current mode: main from a
     /// one-shot mode, since what left it was its command.
     var returnMode: String { oneShotNow ? "main" : mode }
+
+    /// The current mode's keys, without those for screens that are not attached.
+    var modeBindings: [KeySpec: [Command]] { forScreens(config.modes[mode] ?? [:], world.monitors.count) }
+
     /// `back` is the mode the current one was entered from (resize returns to a locked tess mode).
     func setMode(_ requested: String) {
         let m = requested == "back" ? modeBefore : requested
@@ -597,7 +604,7 @@ final class Tiler {
         if m == "main" {
             overlay.hideMode()
         } else {
-            overlay.showMode(m, config.modes[m] ?? [:], on: modeScreens)
+            overlay.showMode(m, modeBindings, on: modeScreens)
         }
         onChange()
     }
@@ -606,7 +613,7 @@ final class Tiler {
     func registerMode() {
         // The picker has the keyboard; closing it registers the mode again.
         guard !paused, !picking else { return }
-        let failed = hotkeys.register(config.modes[mode] ?? [:])
+        let failed = hotkeys.register(modeBindings)
         if !failed.isEmpty {
             Log.write("could not register: \(failed)")
             toast("could not register \(failed.joined(separator: ", "))")

@@ -38,3 +38,12 @@ import Testing
         try Config.load(Data(#"{"modes": {"main": {"cmd-alt-ctrl-shift-t": "mode wm"}}}"#.utf8))
     }
 }
+
+@Test func screenKeysFollowTheScreensThereAre() {
+    let tess = Config.defaults.modes["tess"]!
+    let two = forScreens(tess, 2)
+    #expect(two[KeySpec(key: "2", mods: [])] == [.focusMonitor(2)])
+    #expect(two[KeySpec(key: "3", mods: [])] == nil && two[KeySpec(key: "3", mods: [.shift])] == nil)
+    #expect(two.count == tess.count - 2)
+    #expect(forScreens(tess, 3) == tess)
+}

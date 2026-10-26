@@ -139,7 +139,7 @@ extension Tiler {
         // A single cheat sheet follows to the screen being worked on.
         if mode != "main", !config.emptyScreens, !config.overlayAllScreens, world.activeMonitor != beforeMonitor,
            let m = world.monitors[safe: world.activeMonitor] {
-            overlay.showMode(mode, config.modes[mode] ?? [:], on: [m.frame])
+            overlay.showMode(mode, modeBindings, on: [m.frame])
         }
         scheduleApply()
         return ""

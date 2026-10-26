@@ -82,3 +82,16 @@ public func jumpKeys(labels: [WindowID: Character], windows: [WindowID], screens
     for k in exits { keys[k] = back }
     return (keys, exits)
 }
+
+/// `bindings` without the keys for screens past `screens`: they neither show nor take the
+/// key from apps.
+public func forScreens(_ bindings: [KeySpec: [Command]], _ screens: Int) -> [KeySpec: [Command]] {
+    bindings.filter { _, commands in
+        !commands.contains {
+            switch $0 {
+            case .focusMonitor(let n), .moveToMonitor(let n): n > screens
+            default: false
+            }
+        }
+    }
+}

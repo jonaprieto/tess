@@ -236,8 +236,9 @@ final class AppWorker {
             let r = pendingFrames.removeValue(forKey: id)
             lock.unlock()
             guard let r, let el = windows[id] else { return }
-            // The next snapshot goes out even if it looks unchanged: the main thread assumed
-            // this write landed, and has to hear if the app refused it.
+            // A snapshot goes out after the write even if it looks unchanged: the main thread
+            // assumed this write landed, and has to hear if the app refused it. Refreshed here,
+            // since an app that keeps its own size may not move at all and so notifies nothing.
             sent = nil
             quietUntil = CFAbsoluteTimeGetCurrent() + 0.15
             // Undocumented: with AXEnhancedUserInterface on (set by VoiceOver-aware apps),
@@ -246,6 +247,7 @@ final class AppWorker {
             if enhanced { axApp.set("AXEnhancedUserInterface", kCFBooleanFalse) }
             el.setFrame(r)
             if enhanced { axApp.set("AXEnhancedUserInterface", kCFBooleanTrue) }
+            scheduleRefresh(after: 0.2)
         }
     }
 

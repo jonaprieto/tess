@@ -76,10 +76,10 @@ final class DecorationView: NSView {
             (w.focused ? Panels.accent : NSColor.labelColor.withAlphaComponent(0.22)).setStroke()
             path.stroke()
         }
-        // Letters centred on each window's top border; windows sharing a frame (an accordion)
-        // get their letters side by side.
+        // Letters on each window: in its middle while they are keys (clear of a tab bar), else
+        // on its top border; windows sharing a frame (an accordion) get theirs side by side.
         var shared: [String: Int] = [:]
-        let height: CGFloat = jumping ? 30 : 20
+        let height: CGFloat = jumping ? 40 : 20
         for w in windows {
             guard let label = w.label else { continue }
             let r = local(w.frame)
@@ -88,7 +88,7 @@ final class DecorationView: NSView {
             shared[key] = i + 1
             let width = height + 6
             let x = r.midX - width / 2 + CGFloat(i) * (width + 4)
-            badge(String(label).uppercased(), NSRect(x: x, y: r.minY - height / 2, width: width, height: height),
+            badge(String(label).uppercased(), NSRect(x: x, y: (jumping ? r.midY : r.minY) - height / 2, width: width, height: height),
                   strong: w.focused || jumping)
         }
         // Tab letters on the tabs.

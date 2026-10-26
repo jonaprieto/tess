@@ -61,3 +61,13 @@ import Testing
     #expect(try Command.parse("focus-tab 3") == [.focusTab(3)])
     #expect(Command.focusTab(3).description == "focus-tab 3")
 }
+
+@Test func onlyTheFrontWindowAtAPointIsLabeled() {
+    // 2 covers the right half of 1.
+    let stack: [(id: WindowID, frame: CGRect)] = [(2, CGRect(x: 500, y: 0, width: 500, height: 800)),
+                                                  (1, CGRect(x: 0, y: 0, width: 1000, height: 800))]
+    #expect(onTop(CGPoint(x: 250, y: 400), 1, stack))
+    #expect(!onTop(CGPoint(x: 750, y: 400), 1, stack))
+    #expect(onTop(CGPoint(x: 750, y: 400), 2, stack))
+    #expect(!onTop(CGPoint(x: 1500, y: 400), 1, stack))
+}

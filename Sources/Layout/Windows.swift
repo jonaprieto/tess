@@ -63,6 +63,12 @@ extension CGRect {
 /// The letters windows wear: the home row first.
 public let labelAlphabet = "asdhjklqwertyuiopzxcvbnm"
 
+/// Whether window `id` is the front one at `point` in `stack` (front to back): a label there
+/// is on something the eye can see.
+public func onTop(_ point: CGPoint, _ id: WindowID, _ stack: [(id: WindowID, frame: CGRect)]) -> Bool {
+    stack.first { $0.frame.contains(point) }?.id == id
+}
+
 /// The label letters `bindings` leave free, so they can be keys in that mode too.
 public func labelLetters(free bindings: [KeySpec: [Command]]) -> String {
     labelAlphabet.filter { bindings[KeySpec(key: String($0), mods: [])] == nil }

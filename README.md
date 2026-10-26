@@ -63,10 +63,11 @@ shown and stay with apps. `tess default-config` prints every binding.
 
 <img src="assets/jump.svg" alt="Jump mode: a letter on every window, a number on every screen" width="100%">
 
-Every window shows a border and a letter on its top edge, every tab of a window on screen
-(Brave, iTerm, any app with a tab bar) a letter, every screen its number in the bottom-left
-corner. Letters are the ones tess mode leaves free (`d q e y i o p c n m` by default),
-windows first; a window keeps its letter while it lives.
+Every window in sight shows a border and a letter in its middle, every tab in sight (Brave,
+iTerm, any app with a tab bar) a letter, every screen its number in the bottom-left corner.
+What is hidden behind another window gets no letter. Letters are the ones tess mode leaves
+free (`d q e y i o p c n m` by default), windows first; a window keeps its letter while it
+lives.
 
 - letter: focus that window or tab; shift+letter: swap the window with the focused one.
 - digit: focus that screen; shift+digit: send the focused window there.

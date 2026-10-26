@@ -25,18 +25,37 @@ extension Tiler {
     }
 
 
-    /// Borders and letters on every window, tab letters and numbers on every screen when
-    /// letters are keys or labels are always on; otherwise the focused window's border and,
-    /// with more than one screen, the active screen's outline (overlay.window_labels).
+    /// The windows on screen front to back, by the window server (app windows only, not
+    /// tess's panels).
+    var windowStack: [(id: WindowID, frame: CGRect)] {
+        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        return list.compactMap { w in
+            guard (w[kCGWindowLayer as String] as? Int) == 0, let id = (w[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
+                  let b = w[kCGWindowBounds as String] as? NSDictionary, let r = CGRect(dictionaryRepresentation: b) else { return nil }
+            return (id, r)
+        }
+    }
+
+    /// The shown windows whose middle is not under another window.
+    func visibleWindows(_ stack: [(id: WindowID, frame: CGRect)]) -> [WindowID] {
+        shownWindows.filter { id in infos[id].map { onTop(CGPoint(x: $0.frame.midX, y: $0.frame.midY), id, stack) } ?? false }
+    }
+
+
+    /// Borders and letters on every visible window, tab letters and numbers on every screen
+    /// when letters are keys or labels are always on; otherwise the focused window's border
+    /// and, with more than one screen, the active screen's outline (overlay.window_labels).
+    /// Only what can be seen gets a letter.
     func refreshDecorations() {
-        labels = stableLabels(labels, windows: labeledWindows, alphabet: labelPool)
+        let visible = visibleWindows(windowStack)
+        labels = stableLabels(labels, windows: visible, alphabet: labelPool)
         let all = config.windowLabels == .always || labelsAreKeys
         guard config.windowLabels != .off, !paused, !starting else {
             if !drawn.isEmpty { decorations.hide() }
             drawn = []
             return
         }
-        let windows = shownWindows.compactMap { id -> Decorations.Window? in
+        let windows = (all ? visible : shownWindows).compactMap { id -> Decorations.Window? in
             guard all || id == world.focused, let f = infos[id]?.frame else { return nil }
             return Decorations.Window(frame: f, label: all ? labels[id] : nil, focused: id == world.focused)
         }
@@ -59,7 +78,7 @@ extension Tiler {
         tabList = []
         tabLetters = []
         guard labelsAreKeys else { return }
-        let shown = shownWindows, f = world.focused
+        let shown = visibleWindows(windowStack), f = world.focused
         let order = shown.filter { $0 == f } + shown.filter { $0 != f }
         let byApp = Dictionary(grouping: order.filter { infos[$0].flatMap { workers[$0.pid] } != nil }) { infos[$0]!.pid }
         var found: [WindowID: [TabTarget]] = [:]
@@ -70,6 +89,9 @@ extension Tiler {
                 for t in tabs { found[t.window, default: []].append(TabTarget(pid: pid, window: t.window, frame: t.frame, element: t.element)) }
                 left -= 1
                 guard left == 0 else { return }
+                // Tabs of a window partly covered: only those in sight.
+                let stack = self.windowStack
+                for (id, ts) in found { found[id] = ts.filter { onTop(CGPoint(x: $0.frame.midX, y: $0.frame.midY), id, stack) } }
                 let free = self.labelPool.filter { !self.labels.values.contains($0) }
                 self.tabList = Array(order.flatMap { found[$0] ?? [] }.prefix(free.count))
                 self.tabLetters = Array(free.prefix(self.tabList.count))

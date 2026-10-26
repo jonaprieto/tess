@@ -1,4 +1,6 @@
-# tess
+<p align="center">
+  <img src="assets/hero.svg" alt="tess: keyboard-first tiling for macOS that never hides a window" width="100%">
+</p>
 
 A keyboard-first tiling window manager for macOS 27 that never hides a window. Each screen
 is a row of columns, each column a stack or an accordion. There are no virtual workspaces,
@@ -46,14 +48,11 @@ The menu bar item names the mode that is on. Clicking it lists the last ten layo
 (keys, CLI, menu and picker): clicking one undoes it and everything after it, clicking an
 undone one redoes up to it. In tess mode `u` undoes and `shift-u` redoes.
 
-Zen (`z` in tess mode, `tess zen`, or the menu) is a pomodoro: for 25 minutes the focused
-window fills its screen and the other screens go dark, then a 5 minute break with the layout
-as it was, until Zen is turned off. The menu bar counts down. Clicking a dark screen focuses
-what is under it, and Zen follows.
-
 While a mode is on, every screen shows its keys. `tess default-config` prints every binding.
 
 ## Jump mode
+
+<img src="assets/jump.svg" alt="Jump mode: a letter on every window, a number on every screen" width="100%">
 
 Every window shows a border and a letter on its top edge, every screen its number in the
 bottom-left corner. A window keeps its letter while it lives.
@@ -64,6 +63,15 @@ bottom-left corner. A window keeps its letter while it lives.
 
 With `"overlay": {"window_labels": "always"}` the labels stay on screen all the time;
 `"off"` never shows them.
+
+## Zen
+
+<img src="assets/zen.svg" alt="Zen: the focused window fills its screen and the others go dark, with a pomodoro timer" width="100%">
+
+Zen (`z` in tess mode, `tess zen`, or the menu) is a pomodoro: for 25 minutes the focused
+window fills its screen and the other screens go dark, then a 5 minute break with the layout
+as it was, until Zen is turned off. The menu bar counts down. Clicking a dark screen focuses
+what is under it, and Zen follows.
 
 ## Picker
 

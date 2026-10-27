@@ -80,30 +80,27 @@ extension World {
     }
 
     /// Where tiled window `id` dragged to `point` would land (`frames`: where the layout puts
-    /// each window), and the rect that shows it; nil off every screen. Over another window, or
+    /// each window); nil off every screen. Over another window, or
     /// in the gap beside it: near an edge along the lanes, a lane of its own on that side; near
     /// an edge across them, that window's lane on that side; the middle, they swap. Over its
     /// own place, it stays. Over nothing on another screen, the right end of that screen.
-    public func dropZone(_ id: WindowID, at point: CGPoint, frames: [WindowID: CGRect]) -> (zone: DropZone, rect: CGRect)? {
+    public func dropZone(_ id: WindowID, at point: CGPoint, frames: [WindowID: CGRect]) -> DropZone? {
         guard let from = locate(id) else { return nil }
         let others = frames.filter { $0.key != id && locate($0.key) != nil }
         let over = others.first { $0.value.contains(point) }
-        if over == nil, let own = frames[id], own.contains(point) { return (.stay, own) }
+        if over == nil, let own = frames[id], own.contains(point) { return .stay }
         func away(_ r: CGRect) -> Double { hypot(max(r.minX - point.x, 0, point.x - r.maxX), max(r.minY - point.y, 0, point.y - r.maxY)) }
         let near = others.filter { away($0.value) <= 12 }.min { away($0.value) < away($1.value) }
         guard let (t, f) = over ?? near else {
             guard let m = monitors.firstIndex(where: { $0.frame.contains(point) }) else { return nil }
-            return m == from.m ? (.stay, frames[id] ?? monitors[m].frame) : (.screen(m), monitors[m].frame)
+            return m == from.m ? .stay : .screen(m)
         }
         let u = (point.x - f.minX) / f.width, v = (point.y - f.minY) / f.height
-        if min(u, 1 - u, v, 1 - v) > 0.25 { return (.swap(t), f) }
+        if min(u, 1 - u, v, 1 - v) > 0.25 { return .swap(t) }
         let horizontal = min(u, 1 - u) <= min(v, 1 - v)
         let first = horizontal ? u < 0.5 : v < 0.5
-        let rect = horizontal
-            ? CGRect(x: first ? f.minX : f.midX, y: f.minY, width: f.width / 2, height: f.height)
-            : CGRect(x: f.minX, y: first ? f.minY : f.midY, width: f.width, height: f.height / 2)
         let rows = monitors[locate(t)!.m].rows
-        return (horizontal != rows ? .lane(t, after: !first) : .stack(t, after: !first), rect)
+        return horizontal != rows ? .lane(t, after: !first) : .stack(t, after: !first)
     }
 
     /// `id` (tiled) moved to `zone` and focused.

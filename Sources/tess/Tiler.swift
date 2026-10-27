@@ -404,10 +404,17 @@ final class Tiler {
     /// pull a window let go across two screens back onto the one holding most of it.
     func dragging(_ id: WindowID) {
         guard !paused, world.locate(id) != nil else { return }
-        let z = world.dropZone(id, at: mousePoint, frames: world.frames(inner: config.inner, outer: config.outer))
-        overlay.showDrop(z?.rect)
+        let zone = world.dropZone(id, at: mousePoint, frames: world.frames(inner: config.inner, outer: config.outer))
+        // The drop shown as it would come out: the window where it lands, after the others
+        // make room, and in a swap the other one where it goes.
+        var trial = world
+        if let zone { trial.drop(id, zone) }
+        let after = trial.frames(inner: config.inner, outer: config.outer)
+        var swapped: CGRect?
+        if case .swap(let t) = zone { swapped = after[t] }
+        overlay.showDrop(zone == nil ? nil : after[id], caption: zone.map(caption) ?? "", also: swapped)
         let watching = drag != nil
-        drag = (id, z?.zone)
+        drag = (id, zone)
         guard !watching else { return }
         func check() {
             guard NSEvent.pressedMouseButtons & 1 == 0 else {
@@ -429,6 +436,23 @@ final class Tiler {
             scheduleApply()
         }
         check()
+    }
+
+
+    /// What a drop does, in words, on its preview.
+    func caption(_ zone: DropZone) -> String {
+        switch zone {
+        case .stay: return "Back in place"
+        case .swap(let t): return "Swap with \(appName(t))"
+        case .screen(let m): return "Screen \(m + 1)"
+        case .lane(let t, let after), .stack(let t, let after):
+            // A lane is beside in columns and above or below in rows; a stack the other way.
+            var stack = false
+            if case .stack = zone { stack = true }
+            let rows = world.locate(t).map { world.monitors[$0.m].rows } ?? false
+            let side = stack == rows ? (after ? "Right of" : "Left of") : (after ? "Below" : "Above")
+            return "\(side) \(appName(t))"
+        }
     }
 
 

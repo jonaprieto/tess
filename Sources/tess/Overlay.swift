@@ -9,6 +9,8 @@ final class Overlay {
     private var toastPanel: NSPanel?
     private var flashPanel: NSPanel?
     private var dropPanel: NSPanel?
+    private var dropCaption: NSView?
+    private var swapPanel: NSPanel?
     private var toastHide: DispatchWorkItem?
     private var flashHide: DispatchWorkItem?
 
@@ -97,25 +99,61 @@ final class Overlay {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: hide)
     }
 
-    /// Where a dragged window would land, tinted orange; nil hides it.
-    func showDrop(_ rect: CGRect?) {
+    /// Where a dragged window would land, tinted orange with what the drop does in words, and
+    /// in a swap a faint outline where the other window goes; nil hides them.
+    func showDrop(_ rect: CGRect?, caption: String = "", also: CGRect? = nil) {
         guard let rect else {
             dropPanel?.orderOut(nil)
+            swapPanel?.orderOut(nil)
             return
         }
-        let p = dropPanel ?? {
-            let p = Self.panel()
-            let v = NSView()
-            v.wantsLayer = true
-            v.layer?.borderWidth = 3
-            v.layer?.cornerRadius = 12
-            p.contentView = v
-            return p
-        }()
-        dropPanel = p
         // Orange, apart from the focus border, so where a drop lands is never mistaken for focus.
-        p.contentView?.layer?.backgroundColor = NSColor.systemOrange.withAlphaComponent(0.22).cgColor
-        p.contentView?.layer?.borderColor = NSColor.systemOrange.cgColor
+        let p = dropPanel ?? Self.outline(width: 3, color: .systemOrange, fill: NSColor.systemOrange.withAlphaComponent(0.22))
+        dropPanel = p
+        let pill = dropCaption ?? {
+            let label = NSTextField(labelWithString: "")
+            label.font = .systemFont(ofSize: 15, weight: .semibold)
+            label.textColor = .white
+            let pill = NSView()
+            pill.wantsLayer = true
+            pill.layer?.backgroundColor = NSColor.systemOrange.cgColor
+            pill.layer?.cornerRadius = 10
+            pill.addSubview(label)
+            p.contentView?.addSubview(pill)
+            return pill
+        }()
+        dropCaption = pill
+        Self.show(p, rect)
+        if let label = pill.subviews.first as? NSTextField, let box = p.contentView?.bounds {
+            label.stringValue = caption
+            let size = label.fittingSize
+            pill.frame = NSRect(x: box.midX - size.width / 2 - 14, y: box.midY - size.height / 2 - 7,
+                                width: size.width + 28, height: size.height + 14)
+            label.frame = NSRect(x: 14, y: 7, width: size.width, height: size.height)
+            pill.isHidden = caption.isEmpty
+        }
+        if let also {
+            let s = swapPanel ?? Self.outline(width: 2, color: NSColor.systemOrange.withAlphaComponent(0.7), fill: .clear)
+            swapPanel = s
+            Self.show(s, also)
+        } else {
+            swapPanel?.orderOut(nil)
+        }
+    }
+
+    private static func outline(width: CGFloat, color: NSColor, fill: NSColor) -> NSPanel {
+        let p = panel()
+        let v = NSView()
+        v.wantsLayer = true
+        v.layer?.borderWidth = width
+        v.layer?.cornerRadius = 12
+        v.layer?.borderColor = color.cgColor
+        v.layer?.backgroundColor = fill.cgColor
+        p.contentView = v
+        return p
+    }
+
+    private static func show(_ p: NSPanel, _ rect: CGRect) {
         let frame = Screens.flip(rect.insetBy(dx: 4, dy: 4))
         if p.frame != frame { p.setFrame(frame, display: true) }
         if !p.isVisible { p.orderFrontRegardless() }

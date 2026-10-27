@@ -66,9 +66,9 @@ final class Tiler {
     /// Windows whose app refused the frame tess asked for (a minimum size, usually).
     var refused: Set<WindowID> = []
 
-    /// A window that leaves the AX list right after a Space change went to another Space;
-    /// otherwise it was closed (apps often keep closed windows around, ordered out, so the
-    /// window server list alone cannot tell).
+    /// A window that leaves the AX list right after a Space or screen change went to another
+    /// Space or is between screens; otherwise it was closed (apps often keep closed windows
+    /// around, ordered out, so the window server list alone cannot tell).
     var spaceChangedAt = Date.distantPast
 
     /// Window ids only grow: anything at or below this existed before tess started. Such a
@@ -575,6 +575,9 @@ final class Tiler {
     // MARK: Monitors
 
     func screensChanged() {
+        // A lid closing drops its screen's windows from their app's list for a moment: they
+        // stay in the layout, to be parked with the screen and come back with it.
+        spaceChangedAt = Date()
         screensWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.updateMonitors() }
         screensWork = work

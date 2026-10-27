@@ -60,7 +60,13 @@ extension Tiler {
         let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
         let focused = world.focused.flatMap { id in infos[id]?.pid == front ? id : nil }
         let windows = (all ? visible : shownWindows).compactMap { id -> Decorations.Window? in
-            guard all || id == focused, let f = infos[id]?.frame else { return nil }
+            guard all || id == focused, var f = infos[id]?.frame else { return nil }
+            // Only on its own screen: a window wider than its place (one that keeps its own
+            // size) would carry its border onto the next screen.
+            if let m = world.locate(id)?.m ?? world.monitorIndex(for: f), let screen = world.monitors[safe: m]?.frame {
+                f = f.intersection(screen)
+            }
+            guard !f.isNull else { return nil }
             return Decorations.Window(frame: f, label: all ? labels[id] : nil, focused: id == focused)
         }
         let tabs = zip(tabList, tabLetters).map { (frame: $0.frame, label: $1) }

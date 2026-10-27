@@ -82,8 +82,15 @@ final class CmdTab {
 
 /// The cmd-tab panel: a card per window, the picked one tinted, on the screen being looked at.
 final class Switcher {
+    /// A window, or an app with no window on the cards (none open, hidden, minimized, on another
+    /// Space): picking it brings the app forward as its Dock icon would.
+    enum Target: Hashable {
+        case window(WindowID)
+        case app(pid_t)
+    }
+
     struct Card {
-        var id: WindowID
+        var target: Target
         var icon: NSImage?
         var app: String
         var title: String
@@ -96,10 +103,10 @@ final class Switcher {
     private(set) var selected = 0
     private var panel: NSPanel?
     private let view = SwitcherView()
-    /// The picked window while the panel shows, nil once it closes: tess outlines it on screen.
-    var onPick: (WindowID?) -> Void = { _ in }
+    /// The pick while the panel shows, nil once it closes: tess outlines a window on screen.
+    var onPick: (Target?) -> Void = { _ in }
 
-    var pick: WindowID? { cards.indices.contains(selected) ? cards[selected].id : nil }
+    var pick: Target? { cards.indices.contains(selected) ? cards[selected].target : nil }
 
     func open(_ cards: [Card], selected: Int, on screen: CGRect) {
         self.cards = cards
@@ -120,9 +127,9 @@ final class Switcher {
     }
 
     /// Better titles arrived while open.
-    func retitle(_ title: (WindowID) -> String?) {
+    func retitle(_ title: (Target) -> String?) {
         guard !cards.isEmpty else { return }
-        for i in cards.indices { if let t = title(cards[i].id) { cards[i].title = t } }
+        for i in cards.indices { if let t = title(cards[i].target) { cards[i].title = t } }
         view.cards = cards
         view.needsDisplay = true
     }

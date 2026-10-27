@@ -180,8 +180,11 @@ final class Tiler {
 
     var clickTyped = ""
 
-    /// cmd-tab's letters, each window's for as long as it lives, whatever is visible.
-    var switcherLetters: [WindowID: Character] = [:]
+    /// cmd-tab's letters, each window's and app's for as long as it lives, whatever is visible.
+    var switcherLetters: [Switcher.Target: Character] = [:]
+
+    /// Apps by when they last came forward, most recent first, for cmd-tab's app cards.
+    var recentApps: [pid_t] = []
 
     /// Jev's pick of each window title's parts, by title, for cmd-tab's cards.
     var shortTitles: [String: String] = [:]
@@ -217,6 +220,8 @@ final class Tiler {
                 // Another app in front: click mode's labels are on what was.
                 if self?.clickTargets.isEmpty == false { self?.endClick() }
                 if name == NSWorkspace.didActivateApplicationNotification {
+                    self?.recentApps.removeAll { $0 == app.processIdentifier }
+                    self?.recentApps.insert(app.processIdentifier, at: 0)
                     self?.workers[app.processIdentifier]?.activated()
                 } else {
                     self?.workers[app.processIdentifier]?.scheduleRefresh()
@@ -259,9 +264,11 @@ final class Tiler {
         registerMode()
         cmdTab = CmdTab { [weak self] in self?.onCmdTab($0) }
         // The window cmd-tab would go to, in the drag preview's orange, even under others.
-        switcher.onPick = { [weak self] id in
+        switcher.onPick = { [weak self] pick in
             guard let self else { return }
-            self.overlay.showDrop(id.flatMap { self.offSpace.contains($0) ? nil : self.infos[$0]?.frame })
+            var frame: CGRect?
+            if case .window(let id)? = pick, !self.offSpace.contains(id) { frame = self.infos[id]?.frame }
+            self.overlay.showDrop(frame)
         }
         Log.write("started")
     }

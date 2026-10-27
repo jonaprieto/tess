@@ -98,7 +98,7 @@ extension Command {
 /// Labels that stay with their windows: windows keep their letter while they live (and it is
 /// still in the alphabet), and new windows take the first free letters, in `windows` order.
 /// Past the alphabet, none.
-public func stableLabels(_ current: [WindowID: Character], windows: [WindowID], alphabet: String) -> [WindowID: Character] {
+public func stableLabels<K: Hashable>(_ current: [K: Character], windows: [K], alphabet: String) -> [K: Character] {
     let alive = Set(windows)
     var out = current.filter { alive.contains($0.key) && alphabet.contains($0.value) }
     var free = alphabet.filter { c in !out.values.contains(c) }

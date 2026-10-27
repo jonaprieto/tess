@@ -12,29 +12,42 @@ extension Tiler {
                 pickerClosed(cancelled: true)
             }
             let ids = recentWindows
-            guard !ids.isEmpty else { return }
-            switcherLetters = stableLabels(switcherLetters, windows: ids, alphabet: labelAlphabet)
+            let apps = windowlessApps(besides: Set(ids.compactMap { infos[$0]?.pid }))
+            let targets = ids.map(Switcher.Target.window) + apps.map { .app($0.processIdentifier) }
+            guard !targets.isEmpty else { return }
+            switcherLetters = stableLabels(switcherLetters, windows: targets, alphabet: labelAlphabet)
             let letters = switcherLetters
-            let memory = Usage.memory(Set(ids.compactMap { infos[$0]?.pid }))
+            let memory = Usage.memory(Set(ids.compactMap { infos[$0]?.pid } + apps.map(\.processIdentifier)))
+            // The screen if there are several, the app's memory and how long it has been open.
+            func detail(_ app: NSRunningApplication?, screen: Int?) -> String {
+                var d: [String] = []
+                if world.monitors.count > 1, let screen { d.append("Screen \(screen + 1)") }
+                if let pid = app?.processIdentifier, let bytes = memory[pid], bytes > 0 {
+                    d.append(ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .memory))
+                }
+                if let launched = app?.launchDate { d.append("open \(Self.age(launched))") }
+                return d.joined(separator: " · ")
+            }
             let cards = ids.map { id in
                 let worker = infos[id].flatMap { workers[$0.pid] }
                 let app = worker?.app.localizedName ?? ""
-                var detail: [String] = []
-                if world.monitors.count > 1, let m = world.locate(id)?.m ?? infos[id].flatMap({ world.monitorIndex(for: $0.frame) }) {
-                    detail.append("Screen \(m + 1)")
-                }
-                if let bytes = infos[id].flatMap({ memory[$0.pid] }), bytes > 0 {
-                    detail.append(ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .memory))
-                }
-                if let launched = worker?.app.launchDate { detail.append("open \(Self.age(launched))") }
-                return Switcher.Card(id: id, icon: worker?.icon ?? worker?.app.icon, app: app,
+                let m = world.locate(id)?.m ?? infos[id].flatMap { world.monitorIndex(for: $0.frame) }
+                return Switcher.Card(target: .window(id), icon: worker?.icon ?? worker?.app.icon, app: app,
                                      title: shortTitle(infos[id]?.title ?? "", app: app),
-                                     detail: detail.joined(separator: " · "), label: letters[id])
+                                     detail: detail(worker?.app, screen: m), label: letters[.window(id)])
+            } + apps.map { app in
+                Switcher.Card(target: .app(app.processIdentifier), icon: workers[app.processIdentifier]?.icon ?? app.icon,
+                              app: app.localizedName ?? "", title: app.isHidden ? "Hidden" : "No window on screen",
+                              detail: detail(app, screen: nil), label: letters[.app(app.processIdentifier)])
             }
-            // The window before this one, as macOS's goes to the app before; the first when
+            // The one before what is in front, as macOS's goes to the app before; the first when
             // what is in front is not one of these.
             let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
-            let inFront = infos[ids[0]]?.pid == front
+            let inFront: Bool
+            switch targets[0] {
+            case .window(let id): inFront = infos[id]?.pid == front
+            case .app(let pid): inFront = pid == front
+            }
             switcher.open(cards, selected: back ? cards.count - 1 : inFront ? min(1, cards.count - 1) : 0, on: lookedAtFrame)
             askShortTitles(ids)
         case .step(let back):
@@ -43,13 +56,13 @@ extension Tiler {
             guard let c = Hotkeys.codes.first(where: { $0.value == UInt32(code) })?.key.first,
                   let card = switcher.cards.first(where: { $0.label == c }) else { return }
             switcher.close()
-            use(card.id, .jump)
+            go(card.target)
         case .cancel:
             switcher.close()
         case .release:
-            guard let id = switcher.pick else { return }
+            guard let pick = switcher.pick else { return }
             switcher.close()
-            use(id, .jump)
+            go(pick)
         }
     }
 
@@ -77,7 +90,10 @@ extension Tiler {
             // second (counters, spinners) would want an expiry instead.
             if self.shortTitles.count > 500 { self.shortTitles = [:] }
             self.shortTitles.merge(picks) { $1 }
-            self.switcher.retitle { id in self.infos[id].flatMap { self.shortTitles[$0.title] } }
+            self.switcher.retitle { t in
+                guard case .window(let id) = t else { return nil }
+                return self.infos[id].flatMap { self.shortTitles[$0.title] }
+            }
         }
     }
 
@@ -85,6 +101,32 @@ extension Tiler {
     static func age(_ since: Date) -> String {
         let m = max(0, Int(-since.timeIntervalSinceNow / 60))
         return m < 60 ? "\(m)m" : m < 1440 ? "\(m / 60)h" : "\(m / 1440)d"
+    }
+
+    /// A window gets focus; an app comes forward as its Dock icon would bring it: shown if it
+    /// was hidden, and most apps then open a window.
+    func go(_ target: Switcher.Target) {
+        switch target {
+        case .window(let id):
+            use(id, .jump)
+        case .app(let pid):
+            guard let app = NSRunningApplication(processIdentifier: pid) else { return }
+            if let url = app.bundleURL {
+                NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+            } else {
+                app.activate()
+            }
+        }
+    }
+
+    /// Running apps with none of their windows among `pids`' (none open, hidden, minimized, on
+    /// another Space), the most recently in front first.
+    func windowlessApps(besides pids: Set<pid_t>) -> [NSRunningApplication] {
+        let apps = NSWorkspace.shared.runningApplications.filter {
+            $0.activationPolicy == .regular && !$0.isTerminated && $0.processIdentifier != getpid() && !pids.contains($0.processIdentifier)
+        }
+        let recent = recentApps.compactMap { pid in apps.first { $0.processIdentifier == pid } }
+        return recent + apps.filter { !recentApps.contains($0.processIdentifier) }
     }
 
     /// Every window tess knows, most recently focused first, then the rest in screen order.

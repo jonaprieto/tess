@@ -4,7 +4,7 @@ import Layout
 /// cmd-tab through tess. An event tap on a thread of its own (a busy main thread must never
 /// hold up typing) takes cmd-tab before the Dock's switcher sees it. While cmd stays down, tab
 /// and shift-tab (or the arrows) step, a letter goes to its window, esc cancels, and letting go
-/// of cmd goes to the one picked. Every other key passes untouched.
+/// of cmd (or return) goes to the one picked. Every other key passes untouched.
 final class CmdTab {
     enum Key { case open(back: Bool), step(back: Bool), letter(UInt16), cancel, release }
 
@@ -72,6 +72,9 @@ final class CmdTab {
         case 53:
             open = false
             send(.cancel)
+        case 36, 76:  // return, enter: the picked one, as letting go of cmd
+            open = false
+            send(.release)
         default: send(.letter(UInt16(code)))
         }
         return nil

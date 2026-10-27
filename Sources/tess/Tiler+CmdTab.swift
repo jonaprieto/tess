@@ -53,7 +53,8 @@ extension Tiler {
         case .step(let back):
             switcher.step(back ? -1 : 1)
         case .letter(let code):
-            guard let c = Hotkeys.codes.first(where: { $0.value == UInt32(code) })?.key.first,
+            // Letters only: "down" or "f1" must not go to the card labeled d or f.
+            guard let c = Hotkeys.codes.first(where: { $0.value == UInt32(code) && $0.key.count == 1 })?.key.first,
                   let card = switcher.cards.first(where: { $0.label == c }) else { return }
             switcher.close()
             go(card.target)

@@ -115,10 +115,10 @@ Clicking a dark screen focuses what is under it, and Zen follows.
 ## Picker
 
 Type to filter windows (on every Space), Brave and Safari tabs, and apps; once you type, also
-Brave bookmarks, browser history, and Sleep, Lock Screen, Log Out, Restart and Shut Down (the
-last three ask first). Arithmetic like `2 * (3 + 4)` shows its result on top, and Enter
-copies it. Enter on a window, tab or app shows a map of every screen to choose where it
-goes:
+Sleep, Lock Screen, Log Out, Restart and Shut Down (the last three ask first). Bookmarks and
+browser history only after `web` (below), so they never crowd out a window or an app.
+Arithmetic like `2 * (3 + 4)` shows its result on top, and Enter copies it. Enter on a
+window, tab or app shows a map of every screen to choose where it goes:
 
 - letter or shift+letter: swap with that window; alt+letter: go beside it.
 - enter: next to the focused window; digit: that screen; `g`: just go there; `f`: float.
@@ -141,9 +141,23 @@ The first word can also be a verb:
 - `cd ~/folder`, `code ~/folder`: open the folder in iTerm or VS Code (tab completes).
 - `chat text`, `claude text`: a new ChatGPT (in the browser) or Claude (the app) chat with
   that text. A verb whose value is a link with `%s` puts the text there.
-- `f name`: files by name (Spotlight, ranked by fzf); `rg text`: text in files.
+- `file name` (or `f name`): files by name only (Spotlight, ranked by fzf), no tabs or
+  history; `rg text`: text in files.
 - `book title author`, `paper title author`: find with [folio](https://github.com/jonaprieto/folio)
   (papers also on arXiv first), download to `~/Downloads` and open.
+
+- `web text` (or `brave text`): only browser tabs, bookmarks and history; an address
+  (`github.com/anoma`) also shows on top to open.
+- `slack name`: Slack in front, its ⌘K switcher open with the name typed; Enter there goes
+  to that channel or person.
+
+Verbs are config, merged key by key: a value is an app (`cd`), a link with `%s` (`chat`),
+one of tess's searches (`search:files`, `search:text`, `search:books`, `search:papers`,
+`search:history`), or
+`keys:App:shortcut` (`slack`), which brings the app forward, presses the shortcut and types
+the text (`"vs": "keys:Visual Studio Code:cmd-p"` would open a file there by name).
+`{"verbs": {"f": null, "find": "search:files", "g": "https://www.google.com/search?q=%s"}}`
+renames the file search and adds a Google verb.
 
 ## Settings
 

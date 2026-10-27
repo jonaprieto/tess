@@ -26,6 +26,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case system(String)
         /// tess commands, as the CLI and the config take them.
         case command([Command])
+        /// Text typed into an app after a shortcut, from a `keys:` verb (`slack michael`).
+        case keys(KeysVerb, text: String)
     }
 
     struct Tab {
@@ -59,11 +61,10 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     static let alphabet = labelAlphabet
     /// `f name` searches file names, `rg text` file contents; results come from `search`.
-    static let searchVerbs: Set<String> = ["f", "rg", "book", "paper"]
 
     var onDone: (Item, Choice) -> Void = { _, _ in }
     var onCancel: () -> Void = {}
-    var search: (_ verb: String, _ query: String, _ done: @escaping ([Item]) -> Void) -> Void = { _, _, _ in }
+    var search: (_ kind: PickerSearch, _ query: String, _ done: @escaping ([Item]) -> Void) -> Void = { _, _, _ in }
     private var searchGeneration = 0
     /// Which of the candidates the typed text means (Jev, with the config's `jev`): their index.
     var suggest: ((_ typed: String, _ candidates: [Item], _ done: @escaping (Int?) -> Void) -> Void)?
@@ -194,22 +195,30 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     private func filter() {
         let q = field.stringValue.trimmingCharacters(in: .whitespaces)
         let words = field.stringValue.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
-        if words.count == 2, Self.searchVerbs.contains(words[0]) {
+        if words.count == 2, verbs[words[0]].flatMap(PickerSearch.init(verb:)) == .history {
+            pages(words[1].trimmingCharacters(in: .whitespaces))
+            return
+        }
+        if words.count == 2, let kind = verbs[words[0]].flatMap(PickerSearch.init(verb:)) {
             searchGeneration += 1
             let generation = searchGeneration
             let query = words[1].trimmingCharacters(in: .whitespaces)
             shown = []
             list.items = []
-            let hint = ["f": "Type part of a file name", "rg": "Type text to find in files",
-                        "book": "Type a title and an author's surname",
-                        "paper": "Type a title and an author's surname (arXiv first)"][words[0]] ?? ""
+            let hint = switch kind {
+            case .files: "Type part of a file name"
+            case .text: "Type text to find in files"
+            case .books: "Type a title and an author's surname"
+            case .papers: "Type a title and an author's surname (arXiv first)"
+            case .history: ""
+            }
             list.empty = query.isEmpty ? hint : "Searching…"
             list.needsDisplay = true
             guard !query.isEmpty else { return }
             // Wait for a pause in typing, and drop answers to older queries.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { [weak self] in
                 guard let self, generation == self.searchGeneration else { return }
-                self.search(words[0], query) { [weak self] found in
+                self.search(kind, query) { [weak self] found in
                     guard let self, generation == self.searchGeneration, self.isOpen else { return }
                     self.shown = found
                     self.list.items = found
@@ -229,8 +238,13 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             list.needsDisplay = true
             return
         }
+        // Bookmarks and history only under a `search:history` verb (`web`): they outnumber
+        // and outscore the windows and apps that are usually wanted.
         shown = items.enumerated()
-            .filter { !$0.element.quiet || !q.isEmpty }
+            .filter { i in
+                if case .url = i.element.kind { return false }
+                return !i.element.quiet || !q.isEmpty
+            }
             .compactMap { i, item in fuzzyWords(q, item.search).map { (score: $0, i: i, item: item) } }
             .sorted { ($0.score, -$0.i) > ($1.score, -$1.i) }
             .map(\.item)
@@ -242,7 +256,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
                               icon: Icons.symbol("command"), search: ""), at: 0)
         }
         // A link verb's link on top, the rest still searched (`claude code` finds Claude Code too).
-        if let l = link(q) { shown.insert(l, at: 0) }
+        if let l = link(q) ?? keys(q) { shown.insert(l, at: 0) }
         // Arithmetic (not a lone number) is worked out on top.
         if Double(q) == nil, let v = Parse.arithmetic(q).map(Parse.number) {
             shown.insert(Item(kind: .copy(v), title: "= \(v)", detail: "Enter copies it",
@@ -324,10 +338,45 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
                     icon: NSWorkspace.shared.icon(forFile: app.path), search: "")
     }
 
+    /// A `search:history` verb: only the browsers' tabs, bookmarks and history, and the text
+    /// itself on top when it is an address.
+    private func pages(_ query: String) {
+        shown = items.enumerated()
+            .filter { _, item in
+                switch item.kind {
+                case .url, .tab: true
+                default: false
+                }
+            }
+            .compactMap { i, item in fuzzyWords(query, item.search).map { (score: $0, i: i, item: item) } }
+            .sorted { ($0.score, -$0.i) > ($1.score, -$1.i) }
+            .map(\.item)
+        if let url = Parse.address(query), let app = NSWorkspace.shared.urlForApplication(toOpen: url),
+           let browser = Bundle(url: app)?.bundleIdentifier {
+            shown.insert(Item(kind: .url(url, browser: browser), title: url.absoluteString, detail: "open",
+                              icon: NSWorkspace.shared.icon(forFile: app.path), search: ""), at: 0)
+        }
+        list.items = shown
+        list.query = query
+        list.empty = query.isEmpty ? "Type part of a page's title or address, or an address to open" : "Nothing matches"
+        list.selected = 0
+        list.needsDisplay = true
+    }
+
+    /// `verb text` for a `keys:` verb: that app, the shortcut, then the text.
+    private func keys(_ text: String) -> Item? {
+        let parts = text.split(separator: " ", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count == 2, let k = verbs[parts[0]].flatMap(KeysVerb.init(verb:)) else { return nil }
+        let icon = items.first { if case .app = $0.kind { return $0.title == k.app }; return false }?.icon
+        return Item(kind: .keys(k, text: parts[1]), title: parts[1], detail: "\(parts[0]) · \(k.app) \(k.key.symbol)",
+                    icon: icon ?? Icons.symbol("keyboard"), search: "")
+    }
+
     /// `verb path`: the folders the path could mean, the typed one first when it exists.
     private func folders(_ text: String) -> [Item]? {
         let parts = text.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
-        guard parts.count == 2, let app = verbs[parts[0]], !app.contains("%s") else { return nil }
+        guard parts.count == 2, let app = verbs[parts[0]], !app.contains("%s"), KeysVerb(verb: app) == nil,
+              PickerSearch(verb: app) == nil else { return nil }
         let typed = parts[1]
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let path = typed.isEmpty ? home + "/" : (typed as NSString).expandingTildeInPath + (typed.hasSuffix("/") ? "/" : "")
@@ -466,7 +515,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             guard shown.indices.contains(list.selected) else { return nil }
             let item = shown[list.selected]
             switch (item.kind, fixed) {
-            case (.copy, _), (.system, _), (.command, _):
+            case (.copy, _), (.system, _), (.command, _), (.keys, _):
                 close()
                 onDone(item, .place(.here))
             case (_, let fixed?):

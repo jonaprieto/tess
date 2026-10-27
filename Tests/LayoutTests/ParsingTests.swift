@@ -102,3 +102,20 @@ import Testing
     #expect(Parse.link("https://chatgpt.com/?q=%s", "") == nil)
     #expect(Config.defaults.verbs["claude"] == "claude://claude.ai/new?q=%s")
 }
+
+@Test func searchVerbsAreConfig() throws {
+    #expect(Config.defaults.verbs["file"].flatMap(PickerSearch.init(verb:)) == .files)
+    #expect(PickerSearch(verb: "iTerm") == nil && PickerSearch(verb: "https://x/?q=%s") == nil)
+    let c = try Config.load(Data(#"{"verbs": {"f": null, "find": "search:files"}}"#.utf8))
+    #expect(c.verbs["f"] == nil && c.verbs["find"] == "search:files" && c.verbs["rg"] == "search:text")
+    #expect(throws: ParseError.self) { try Config.load(Data(#"{"verbs": {"x": "search:music"}}"#.utf8)) }
+    #expect(Config.defaults.verbs["web"].flatMap(PickerSearch.init(verb:)) == .history)
+    #expect(Parse.address("github.com/anoma")?.absoluteString == "https://github.com/anoma")
+    #expect(Parse.address("http://x.org")?.absoluteString == "http://x.org")
+    #expect(Parse.address("standup notes") == nil && Parse.address("localhost") == nil && Parse.address("") == nil)
+    let slack = Config.defaults.verbs["slack"].flatMap(KeysVerb.init(verb:))
+    #expect(slack?.app == "Slack" && slack?.key == KeySpec(key: "k", mods: [.cmd]))
+    #expect(KeysVerb(verb: "keys:Visual Studio Code:cmd-shift-p")?.app == "Visual Studio Code")
+    #expect(KeysVerb(verb: "Slack") == nil && KeysVerb(verb: "keys:Slack") == nil)
+    #expect(throws: ParseError.self) { try Config.load(Data(#"{"verbs": {"x": "keys:Slack:cmd-?"}}"#.utf8)) }
+}

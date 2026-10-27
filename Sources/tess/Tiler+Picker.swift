@@ -125,6 +125,8 @@ extension Tiler {
         case .command(let commands):
             let out = run(commands, source: "picker")
             if out.hasPrefix("error: ") { toast(String(out.dropFirst(7))) }
+        case .keys(let k, let text):
+            press(k, then: text)
         case .copy(let text):
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
@@ -221,6 +223,55 @@ extension Tiler {
     }
 
 
+    /// A `keys:` verb: its app in front (opened if need be), its shortcut, then `text`, as if
+    /// typed. Events go to whatever is in front, so nothing is sent until the app is.
+    func press(_ k: KeysVerb, then text: String) {
+        guard let url = apps().first(where: { $0.name.caseInsensitiveCompare(k.app) == .orderedSame })?.url,
+              let code = Hotkeys.codes[k.key.key] else { return toast("no app named \(k.app)") }
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { [weak self] app, _ in
+            DispatchQueue.main.async {
+                guard let pid = app?.processIdentifier else { return }
+                func send(tries: Int) {
+                    guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else {
+                        if tries > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { send(tries: tries - 1) } }
+                        else { self?.toast("\(k.app) did not come to the front") }
+                        return
+                    }
+                    var flags: CGEventFlags = []
+                    if k.key.mods.contains(.cmd) { flags.insert(.maskCommand) }
+                    if k.key.mods.contains(.alt) { flags.insert(.maskAlternate) }
+                    if k.key.mods.contains(.ctrl) { flags.insert(.maskControl) }
+                    if k.key.mods.contains(.shift) { flags.insert(.maskShift) }
+                    Self.post(CGKeyCode(code), flags)
+                    // The switcher opens before it takes text.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { Self.type(text) }
+                }
+                // A window has to be key too, not only the app frontmost.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { send(tries: 30) }
+            }
+        }
+    }
+
+    static func post(_ code: CGKeyCode, _ flags: CGEventFlags) {
+        for down in [true, false] {
+            let e = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down)
+            e?.flags = flags
+            e?.post(tap: .cghidEventTap)
+        }
+    }
+
+    /// `text` as key events carrying the characters, whatever the keyboard layout.
+    static func type(_ text: String) {
+        for ch in text {
+            let units = Array(String(ch).utf16)
+            for down in [true, false] {
+                let e = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: down)
+                e?.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
+                e?.post(tap: .cghidEventTap)
+            }
+        }
+    }
+
     /// Opens a file with its default app; with a place, that app's next window goes there.
     func openFile(_ path: String, _ choice: Picker.Choice) {
         let url = URL(fileURLWithPath: path)
@@ -249,43 +300,44 @@ extension Tiler {
     }
 
 
-    /// `f`: file names from Spotlight, ranked by fzf when it is installed. `rg`: file contents
+    /// Files: names from Spotlight, ranked by fzf when it is installed. Text: file contents
     /// with ripgrep. Both under the home folder, in the background, the previous one stopped.
-    func search(_ verb: String, _ query: String, _ done: @escaping ([Picker.Item]) -> Void) {
+    func search(_ kind: PickerSearch, _ query: String, _ done: @escaping ([Picker.Item]) -> Void) {
         Proc.stop(searchProcess)
         let skip = "-g '!Library' -g '!Movies' -g '!Music' -g '!Pictures' -g '!Applications'"
         let script: String
-        switch verb {
-        case "f":
+        switch kind {
+        case .files:
             script = """
                 mdfind -onlyin "$HOME" -name "$1" 2>/dev/null | grep -v '/Library/' | head -n 500 |
                 { if command -v fzf >/dev/null; then fzf --filter "$1"; else cat; fi; } | head -n 60
                 """
-        case "rg":
+        case .text:
             script = """
                 cd "$HOME" && rg --line-number --no-heading --smart-case --max-count 1 --max-filesize 1M \
                   --max-columns 160 --max-columns-preview \(skip) -- "$1" . 2>/dev/null | head -n 80
                 """
-        case "book", "paper":
+        // ponytail: the picker filters its own pages for this one and never asks.
+        case .history: return done([])
+        case .books, .papers:
             // Query words as separate arguments, no globbing.
-            script = "set -f; set -- $1; folio search --json -n 25 --ext \(verb == "paper" ? "pdf" : "pdf,epub") -- \"$@\""
-        default: return
+            script = "set -f; set -- $1; folio search --json -n 25 --ext \(kind == .papers ? "pdf" : "pdf,epub") -- \"$@\""
         }
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         searchProcess = Proc.run("/bin/sh", ["-c", script, "sh", query], env: Proc.env, timeout: 20) { output in
             let text = output ?? ""
             func short(_ path: String) -> String { Parse.short(path, home: home) }
-            if verb == "book" || verb == "paper" {
+            if kind == .books || kind == .papers {
                 let books = Parse.folio(text).map { b in
                     Picker.Item(kind: .book(md5: b.md5), title: b.title, detail: b.detail,
                                 icon: NSWorkspace.shared.icon(for: b.ext == "epub" ? .epub : .pdf), search: "")
                 }
-                guard verb == "paper" else { return done(books) }
+                guard kind == .papers else { return done(books) }
                 Self.arxiv(query) { papers in done(papers + books) }
                 return
             }
             let items = text.split(separator: "\n").compactMap { line -> Picker.Item? in
-                if verb == "f" {
+                if kind == .files {
                     let path = String(line)
                     return Picker.Item(kind: .file(path), title: (path as NSString).lastPathComponent,
                                        detail: short((path as NSString).deletingLastPathComponent),

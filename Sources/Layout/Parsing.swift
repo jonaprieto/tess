@@ -2,6 +2,37 @@ import Foundation
 
 /// Text that comes back from other programs (arXiv, folio, rg, the browsers), turned into
 /// plain values; the app adds icons and actions.
+/// tess's own picker searches, which a verb names as its value: `"file": "search:files"`.
+public enum PickerSearch: String, CaseIterable, Sendable {
+    /// File names (Spotlight), text in files (ripgrep), books and papers (folio, papers also
+    /// on arXiv).
+    case files, text, books, papers
+    /// Only the pages the picker has from browsers (tabs, bookmarks, history), and an address
+    /// to open when the text is one.
+    case history
+
+    /// The search a verb's value names; nil for an app or a link.
+    public init?(verb value: String) {
+        guard value.hasPrefix("search:") else { return nil }
+        self.init(rawValue: String(value.dropFirst(7)))
+    }
+}
+
+/// A verb whose value is `keys:Slack:cmd-k`: the app in front, the shortcut pressed, then the
+/// text typed, for an app's own switcher or search.
+public struct KeysVerb: Equatable, Sendable {
+    public var app: String
+    public var key: KeySpec
+
+    public init?(verb value: String) {
+        let parts = value.split(separator: ":", maxSplits: 2).map(String.init)
+        guard parts.count == 3, parts[0] == "keys", !parts[1].isEmpty, let key = try? KeySpec.parse(parts[2])
+        else { return nil }
+        app = parts[1]
+        self.key = key
+    }
+}
+
 public enum Parse {
     // MARK: arXiv
 
@@ -170,6 +201,16 @@ public enum Parse {
     /// A result as the calculator shows it: whole numbers without a point, the rest to 12 digits.
     public static func number(_ v: Double) -> String {
         v == v.rounded() && abs(v) < 1e15 ? String(Int(v)) : String(format: "%.12g", v)
+    }
+
+    /// Text that is a web address: `https://x.y/z` as it is, `x.y/z` with https in front. Not
+    /// text with spaces, nor a host without a dot.
+    public static func address(_ text: String) -> URL? {
+        let t = text.trimmingCharacters(in: .whitespaces)
+        guard !t.isEmpty, !t.contains(" ") else { return nil }
+        guard let url = URL(string: t.contains("://") ? t : "https://" + t), url.scheme == "https" || url.scheme == "http",
+              let host = url.host, host.contains("."), !host.hasPrefix("."), !host.hasSuffix(".") else { return nil }
+        return url
     }
 
     /// A link verb's template (`https://chatgpt.com/?q=%s`) with `text`, encoded, for `%s`.

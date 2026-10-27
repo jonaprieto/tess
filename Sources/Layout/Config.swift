@@ -16,7 +16,9 @@ public struct Config: Equatable, Sendable {
     /// and pages several of them have. One left out is not read.
     public var history: [String] = []
     /// Picker verbs: `cd ~/x` opens the folder with the app named here; for a link with `%s`,
-    /// `chat hello` opens the link with the text in its place.
+    /// `chat hello` opens the link with the text in its place; `search:files` (and the other
+    /// `PickerSearch` cases) runs one of tess's own searches on the text; `keys:Slack:cmd-k`
+    /// presses the shortcut in that app and types the text.
     public var verbs: [String: String] = [:]
     /// The app `terminal` opens a window of.
     public var terminal = "iTerm"
@@ -229,6 +231,13 @@ public struct Config: Equatable, Sendable {
             throw ParseError("config: history lists \(historyBrowsers.joined(separator: " and ")), not \"\(b)\"")
         }
         c.verbs = (raw.verbs ?? [:]).compactMapValues { $0 }
+        for (verb, value) in c.verbs where value.hasPrefix("search:") && PickerSearch(verb: value) == nil {
+            let known = PickerSearch.allCases.map { "search:\($0.rawValue)" }.joined(separator: ", ")
+            throw ParseError("config: verbs.\(verb) is one of \(known), not \"\(value)\"")
+        }
+        for (verb, value) in c.verbs where value.hasPrefix("keys:") && KeysVerb(verb: value) == nil {
+            throw ParseError("config: verbs.\(verb) is keys:App:shortcut, like keys:Slack:cmd-k, not \"\(value)\"")
+        }
         c.terminal = raw.terminal ?? "iTerm"
         let modes = raw.modes ?? [:]
         guard modes["main"] != nil else { throw ParseError("config: modes.main is missing") }
@@ -275,7 +284,9 @@ public struct Config: Equatable, Sendable {
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": ["io.github.ender-wang.EdgeMark"],
       "history": ["com.brave.Browser", "com.apple.Safari"],
-      "verbs": {"cd": "iTerm", "code": "Visual Studio Code", "chat": "https://chatgpt.com/?q=%s", "claude": "claude://claude.ai/new?q=%s"},
+      "verbs": {"cd": "iTerm", "code": "Visual Studio Code", "chat": "https://chatgpt.com/?q=%s", "claude": "claude://claude.ai/new?q=%s",
+                "web": "search:history", "brave": "search:history", "file": "search:files", "f": "search:files",
+                "rg": "search:text", "book": "search:books", "paper": "search:papers", "slack": "keys:Slack:cmd-k"},
       "terminal": "iTerm",
       "modes": {
         "main": {

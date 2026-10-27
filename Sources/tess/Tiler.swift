@@ -92,7 +92,7 @@ final class Tiler {
         let p = Picker()
         p.onDone = { [weak self] item, choice in self?.picked(item, choice) }
         p.onCancel = { [weak self] in self?.pickerClosed(cancelled: true) }
-        p.search = { [weak self] verb, query, done in self?.search(verb, query, done) }
+        p.search = { [weak self] kind, query, done in self?.search(kind, query, done) }
         return p
     }()
 

@@ -24,8 +24,10 @@ final class AppWorker {
     /// Subrole and fullscreen button change rarely; read once per window (while it is not
     /// minimized and its app not hidden, when the subrole reads as a dialog).
     private var traits: [WindowID: (standard: Bool, button: Bool)] = [:]
-    /// The last snapshot sent; an identical one is not sent again.
+    /// The last snapshot sent; an identical one is not sent again, unless `resend` says the
+    /// main thread has to hear it anyway. Kept meanwhile: a drag is told apart from a resize by it.
     private var sent: (infos: [WinInfo], focused: WindowID?)?
+    private var resend = false
     /// tess's own frame writes fire moved and resized; until then they wait for one refresh.
     private var quietUntil: CFAbsoluteTime = 0
 
@@ -122,7 +124,7 @@ final class AppWorker {
     /// The app came forward (a click on its window, cmd-tab): its focused window may be the
     /// one it had, which tess's focus has to hear even though nothing in the app changed.
     func activated() {
-        perform { [self] in sent = nil }
+        perform { [self] in resend = true }
         scheduleRefresh()
     }
 
@@ -189,8 +191,9 @@ final class AppWorker {
         windows = seen
         traits = traits.filter { seen[$0.key] != nil }
         let focused = axApp.element(kAXFocusedWindowAttribute)?.windowID
-        if let sent, sent.infos == infos, sent.focused == focused { return }
+        if !resend, let sent, sent.infos == infos, sent.focused == focused { return }
         sent = (infos, focused)
+        resend = false
         let pid = pid
         DispatchQueue.main.async { [onSnapshot] in onSnapshot(pid, infos, focused) }
     }
@@ -246,7 +249,7 @@ final class AppWorker {
             // A snapshot goes out after the write even if it looks unchanged: the main thread
             // assumed this write landed, and has to hear if the app refused it. Refreshed here,
             // since an app that keeps its own size may not move at all and so notifies nothing.
-            sent = nil
+            resend = true
             quietUntil = CFAbsoluteTimeGetCurrent() + 0.15
             // Undocumented: with AXEnhancedUserInterface on (set by VoiceOver-aware apps),
             // frame changes animate and get lost (yabai 3fe4c77, Rectangle 285).

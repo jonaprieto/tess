@@ -58,8 +58,6 @@ extension Tiler {
                 let on = world.locate(f).map { world.monitors[$0.m].fullscreen == f } ?? false
                 toast(on ? "fullscreen" : "fullscreen off")
             }
-        case .nativeFullscreen:
-            if let id = world.focused ?? osFocused, let info = infos[id] { workers[info.pid]?.toggleNativeFullscreen(id) }
         case .float:
             guard let id = world.focused ?? osFocused, world.contains(id) else { return "error: no tiled or floating window focused" }
             world.toggleFloating(id)

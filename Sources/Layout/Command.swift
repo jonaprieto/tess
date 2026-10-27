@@ -25,7 +25,7 @@ public enum Command: Equatable, Sendable {
     case focus(Direction), move(Direction), resize(Axis, Double)
     /// Bigger or smaller along the lanes' axis: wider in columns, taller in rows (`grow +50`).
     case grow(Double)
-    case balance, flip, accordion, fullscreen, nativeFullscreen, float, close
+    case balance, flip, accordion, fullscreen, float, close
     /// Every window on the active monitor in one shape (`halves`, `columns`, `rows`, `grid`).
     case arrange(Arrangement)
     /// Monitor numbers as written, from 1.
@@ -70,7 +70,7 @@ public enum Command: Equatable, Sendable {
     /// The commands that take no argument, by name.
     public static let simple: [String: Command] = [
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
-        "native-fullscreen": .nativeFullscreen, "float": .float, "close": .close, "reload": .reload,
+        "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
         "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
         "undo": .undo, "redo": .redo, "zen": .zen, "terminal": .terminal,

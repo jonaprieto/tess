@@ -43,7 +43,6 @@ extension Command {
         case .accordion: "Accordion"
         case .arrange(let a): a.rawValue.capitalized
         case .fullscreen: "Fullscreen"
-        case .nativeFullscreen: "macOS fullscreen"
         case .float: "Float"
         case .close: "Close window"
         case .focusMonitor(let n): "Screen \(n)"
@@ -84,7 +83,7 @@ extension Command {
         switch self {
         case .focus, .focusMonitor, .cycleMonitor, .cycleWindow, .jump: .focus
         case .move, .moveToMonitor, .clearMonitor: .move
-        case .resize, .grow, .balance, .flip, .accordion, .arrange, .fullscreen, .nativeFullscreen, .float: .layout
+        case .resize, .grow, .balance, .flip, .accordion, .arrange, .fullscreen, .float: .layout
         default: .more
         }
     }

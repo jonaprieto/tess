@@ -283,11 +283,8 @@ final class AppWorker {
         perform { [self] in windows[id]?.press(kAXCloseButtonAttribute) }
     }
 
-    func toggleNativeFullscreen(_ id: WindowID) {
-        perform { [self] in
-            guard let el = windows[id] else { return }
-            el.set("AXFullScreen", el.bool("AXFullScreen") == true ? kCFBooleanFalse : kCFBooleanTrue)
-        }
+    func leaveNativeFullscreen(_ id: WindowID) {
+        perform { [self] in windows[id]?.set("AXFullScreen", kCFBooleanFalse) }
     }
 
     func stop() {

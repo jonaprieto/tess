@@ -63,8 +63,8 @@ place it stays; over an empty part of another screen it goes to that screen.
 Fullscreen within tess (`alt-enter`) fills the screen edge to edge in front of its other
 windows until `alt-enter` again, or another window there takes focus or opens; it survives
 a restart. A floating window joins the tiling to go fullscreen, and moving or resizing one
-says it floats. macOS fullscreen (`alt-shift-enter`) gives the window a Space of its own,
-which tess leaves alone.
+says it floats. macOS fullscreen (the green button, or a video's or call's own fullscreen)
+becomes fullscreen within tess, so the window never leaves for a Space of its own.
 
 The menu bar item names the mode that is on. Clicking it shows pictures of the screen's
 windows as halves (the focused one left, the rest stacked right), columns, rows, a grid or

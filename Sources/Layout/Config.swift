@@ -313,7 +313,6 @@ public struct Config: Equatable, Sendable {
           "cmd-shift-equal": "grow +50",
           "alt-shift-0": "balance",
           "alt-enter": "fullscreen",
-          "alt-shift-enter": "native-fullscreen",
           "alt-shift-space": "float",
           "alt-shift-c": "close",
           "alt-1": "focus-screen 1",

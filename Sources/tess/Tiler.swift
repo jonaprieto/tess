@@ -347,12 +347,25 @@ final class Tiler {
         guard !starting, !paused else { return }
         var found: [WinInfo] = []
         for info in list {
+            // macOS fullscreen takes a window to a Space of its own, out of reach of tess's keys:
+            // it gets tess fullscreen on its screen instead.
+            if info.nativeFullscreen {
+                workers[pid]?.leaveNativeFullscreen(info.id)
+                if world.locate(info.id) == nil {
+                    world.place(info.id, .monitor(world.monitorIndex(for: info.frame) ?? world.activeMonitor))
+                }
+                if let p = world.locate(info.id), world.monitors[p.m].fullscreen != info.id {
+                    world.focused = info.id
+                    world.monitors[p.m].fullscreen = info.id
+                    Events.record("window.fullscreen", describe(info.id).merging(["how": "instead of macOS fullscreen"]) { $1 })
+                }
+                continue
+            }
             switch kind(info) {
             case .skip:
                 if world.contains(info.id) {
                     world.remove(info.id)
-                    Events.record("window.untiled", describe(info.id).merging(
-                        ["why": info.nativeFullscreen ? "native fullscreen" : "minimized or hidden"]) { $1 })
+                    Events.record("window.untiled", describe(info.id).merging(["why": "minimized or hidden"]) { $1 })
                 }
             case .tile where !world.contains(info.id):
                 if info.id <= preexisting || known.contains(info.id) {
@@ -573,7 +586,8 @@ final class Tiler {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.scheduleApply() }
             return
         }
-        for (id, target) in targets where !offSpace.contains(id) {
+        // A window still leaving macOS fullscreen cannot be moved yet.
+        for (id, target) in targets where !offSpace.contains(id) && infos[id]?.nativeFullscreen != true {
             guard let info = infos[id], let worker = workers[info.pid] else { continue }
             if info.frame.isNear(target) {
                 writes[id] = (target, 0)

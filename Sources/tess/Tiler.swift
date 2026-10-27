@@ -198,7 +198,11 @@ final class Tiler {
                      NSWorkspace.didUnhideApplicationNotification] {
             onApp(name) { [weak self] app in
                 self?.track(app)
-                self?.workers[app.processIdentifier]?.scheduleRefresh()
+                if name == NSWorkspace.didActivateApplicationNotification {
+                    self?.workers[app.processIdentifier]?.activated()
+                } else {
+                    self?.workers[app.processIdentifier]?.scheduleRefresh()
+                }
                 self?.refreshDecorations()
                 self?.refreshGray()
             }

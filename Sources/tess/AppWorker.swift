@@ -119,6 +119,13 @@ final class AppWorker {
         }
     }
 
+    /// The app came forward (a click on its window, cmd-tab): its focused window may be the
+    /// one it had, which tess's focus has to hear even though nothing in the app changed.
+    func activated() {
+        perform { [self] in sent = nil }
+        scheduleRefresh()
+    }
+
     private func refresh() {
         // A drag may be pulling a tab out into a new window, or moving a tiled one: wait for
         // the mouse to come up.

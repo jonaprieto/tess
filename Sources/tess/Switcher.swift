@@ -137,7 +137,8 @@ final class Switcher {
         view.cards = cards
         view.selected = selected
         let p = panel ?? {
-            let p = Panels.overlay(level: .statusBar)
+            // Above everything, the picked window's orange outline and open menus included.
+            let p = Panels.overlay(level: .popUpMenu)
             p.contentView = Panels.glass(view, radius: 22)
             return p
         }()

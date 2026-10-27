@@ -188,6 +188,19 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     #expect(w.frames(inner: 0, outer: 0)[3]?.width == 1000)
 }
 
+@Test func eachSetOfScreensKeepsItsArrangement() {
+    var w = world([[1]], [[2], [3]])
+    w.setMonitors([left])
+    #expect(lanes(w) == [[1], [2], [3]])
+    // Arranged anew on A alone, and 4 opened there.
+    w.monitors[0].lanes = [[3], [1], [2], [4]].map { Lane($0) }
+    w.setMonitors([left, right])
+    #expect(lanes(w) == [[1], [4]])
+    #expect(lanes(w, 1) == [[2], [3]])
+    w.setMonitors([left])
+    #expect(lanes(w) == [[3], [1], [2], [4]])
+}
+
 @Test func noMonitorsKeepsTheLayout() {
     var w = world([[1]], [[2]])
     w.setMonitors([])

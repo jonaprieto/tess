@@ -193,7 +193,8 @@ extension World {
 
     /// The displays now attached, in monitor-number order. An unplugged monitor's lanes go to
     /// the right end of `main` (else the first monitor) and are remembered by display UUID;
-    /// when that display comes back, its windows still alive go back to it.
+    /// when that display comes back, its windows still alive go back to it. A set of displays
+    /// seen before gets back the arrangement it was left in, as undo restores one.
     public mutating func setMonitors(_ infos: [(id: String, frame: CGRect)], main: String? = nil) {
         guard !infos.isEmpty else { return }  // displays flapping: keep the layout
         let old = monitors
@@ -229,6 +230,14 @@ extension World {
             }
         }
         activeMonitor = focusedPosition?.m ?? min(activeMonitor, monitors.count - 1)
+        let was = Set(old.map(\.id)), now = Set(monitors.map(\.id))
+        guard was != now else { return }
+        if !was.isEmpty { layouts[was] = old }
+        guard let saved = layouts[now] else { return }
+        var then = self
+        then.monitors = saved
+        for id in floating { then.detach(id) }  // floated since: stays floating
+        self = restoring(then)
     }
 
     /// The nearest monitor whose center lies mostly in direction `d`.
@@ -354,6 +363,7 @@ extension World {
         var w = old
         for id in w.tiled + Array(w.floating) where !contains(id) { w.remove(id) }
         w.parked = parked
+        w.layouts = layouts
         w.setMonitors(monitors.map { (id: $0.id, frame: $0.frame) })
         for (m, mon) in monitors.enumerated() {
             for id in mon.windows where !w.contains(id) { w.place(id, .monitor(m)) }

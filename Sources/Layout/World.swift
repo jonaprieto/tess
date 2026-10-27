@@ -90,6 +90,8 @@ public struct World: Equatable, Sendable {
     public var activeMonitor = 0
     /// Lanes of unplugged monitors, by display UUID, restored when the display comes back.
     public var parked: [String: [Lane]] = [:]
+    /// Each set of displays' arrangement as it was left, by display UUIDs.
+    public var layouts: [Set<String>: [Monitor]] = [:]
     /// Most recently focused first.
     public internal(set) var mru: [WindowID] = []
 

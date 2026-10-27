@@ -32,6 +32,15 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case run(String)
         /// One of the person's Shortcuts, by name, run as it is.
         case shortcut(String)
+
+        /// The file, folder or app it is, for cmd-enter.
+        var path: String? {
+            switch self {
+            case .app(let url): url.path
+            case .open(_, let path), .file(let path), .match(let path, _): path
+            default: nil
+            }
+        }
     }
 
     struct Tab {
@@ -54,6 +63,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     enum Choice {
         case place(Spot)
         case jump
+        /// cmd-enter: the file, folder or app shown in Finder instead of opened.
+        case reveal
     }
 
     /// Step 2's picture: monitors and tiled windows in AX coordinates.
@@ -428,7 +439,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         list.frame = NSRect(x: 10, y: 34, width: size.width - 20, height: rows * ListView.row)
         footer.frame = NSRect(x: 0, y: 9, width: size.width, height: 16)
         footer.stringValue = fixed == nil
-            ? "↵ pick, then where     ⌃N ⌃P move     cd / code + folder (⇥ completes)     f name     rg text     book / paper title     esc close"
+            ? "↵ pick, then where     ⌘↵ in Finder     ⌃N ⌃P move     cd / code + folder (⇥ completes)     f name     rg text     book / paper title     esc close"
             : "↵ fill the empty place      ⌃N ⌃P move      esc leave it empty"
         for v in [magnifier, field, divider, list] as [NSView] { v.isHidden = false }
         map.isHidden = true
@@ -527,6 +538,11 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case (36, _, _), (76, _, _):
             guard shown.indices.contains(list.selected) else { return nil }
             let item = shown[list.selected]
+            if e.modifierFlags.contains(.command), item.kind.path != nil {
+                close()
+                onDone(item, .reveal)
+                return nil
+            }
             switch (item.kind, fixed) {
             case (.copy, _), (.system, _), (.command, _), (.keys, _), (.run, _), (.shortcut, _):
                 close()

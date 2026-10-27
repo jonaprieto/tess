@@ -70,10 +70,15 @@ extension Tiler {
         let how: String
         switch choice {
         case .jump: how = "jump"
+        case .reveal: how = "reveal"
         case .place(let spot): how = "\(spot)"
         }
         Events.record("pick", ["kind": "\(item.kind)".components(separatedBy: "(").first ?? "", "title": item.title,
                                "detail": item.detail, "where": how])
+        if case .reveal = choice, let path = item.kind.path {
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+            return
+        }
         switch item.kind {
         case .window(let id):
             use(id, choice)

@@ -123,6 +123,8 @@ extension Tiler {
             return path
         case .settings: openSettings()
         case .jump: startJump()
+        case .click: startClick()
+        case .clickKey(let k): clickKey(k)
         case .undo: return undo()
         case .redo: return redo()
         case .zen: toggleZen()

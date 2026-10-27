@@ -121,3 +121,10 @@ public func titleParts(_ title: String, app: String) -> [String] {
         return !l.isEmpty && !a.hasPrefix(l) && !l.hasSuffix(a) && seen.insert(l).inserted
     }
 }
+
+/// `n` labels from `alphabet` for click mode: one letter each while there are enough, else two
+/// each, so no label starts another.
+public func hintLabels(_ n: Int, alphabet: String) -> [String] {
+    let a = alphabet.map(String.init)
+    return Array((n <= a.count ? a : a.flatMap { x in a.map { x + $0 } }).prefix(n))
+}

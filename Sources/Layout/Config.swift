@@ -328,6 +328,7 @@ public struct Config: Equatable, Sendable {
           "cmd-h": "nop",
           "cmd-alt-h": "nop",
           "alt-r": "mode resize",
+          "alt-f": "click",
           "alt-shift-semicolon": "retile",
           "alt-space": "pick",
           "alt-shift-backspace": "clear-screen"
@@ -370,6 +371,7 @@ public struct Config: Equatable, Sendable {
           "s": "retile",
           "r": "mode resize",
           "esc": "mode main",
+          "alt-f": "click",
           "alt-t": "mode tess"
         },
         "resize": {

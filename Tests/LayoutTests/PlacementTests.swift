@@ -189,3 +189,15 @@ import Testing
     #expect(titleParts("main.swift — tess — Visual Studio Code", app: "Code") == ["main.swift", "tess"])
     #expect(titleParts("Slack", app: "Slack").isEmpty)
 }
+
+@Test func clickLabelsAreOneLetterWhileThereAreEnough() {
+    #expect(hintLabels(3, alphabet: "asd") == ["a", "s", "d"])
+    #expect(hintLabels(5, alphabet: "asd") == ["aa", "as", "ad", "sa", "ss"])
+    #expect(hintLabels(0, alphabet: "asd").isEmpty)
+}
+
+@Test func clickModeParsesAndPrints() throws {
+    #expect(try Command.parse("click") == [.click])
+    #expect(try Command.parse("click-key a") == [.clickKey("a")])
+    #expect(Command.clickKey("esc").description == "click-key esc")
+}

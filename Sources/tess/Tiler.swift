@@ -175,6 +175,11 @@ final class Tiler {
 
     let switcher = Switcher()
 
+    /// Click mode's labels while it lasts, and what has been typed of one.
+    var clickTargets: [ClickTarget] = []
+
+    var clickTyped = ""
+
     /// cmd-tab's letters, each window's for as long as it lives, whatever is visible.
     var switcherLetters: [WindowID: Character] = [:]
 
@@ -209,6 +214,8 @@ final class Tiler {
                      NSWorkspace.didUnhideApplicationNotification] {
             onApp(name) { [weak self] app in
                 self?.track(app)
+                // Another app in front: click mode's labels are on what was.
+                if self?.clickTargets.isEmpty == false { self?.endClick() }
                 if name == NSWorkspace.didActivateApplicationNotification {
                     self?.workers[app.processIdentifier]?.activated()
                 } else {

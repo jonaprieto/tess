@@ -69,13 +69,14 @@ extension Command {
         case .clearMonitor: "Clear this screen"
         case .settings: "Settings"
         case .jump: "Jump to a window"
+        case .click: "Click by label"
         case .undo: "Undo"
         case .redo: "Redo"
         case .zen: "Zen"
         case .focusWindow: "Go to a window"
         case .swapWith: "Swap windows"
         case .focusTab: "Go to a tab"
-        case .tree, .nop, .debugMap, .state: nil
+        case .tree, .nop, .debugMap, .state, .clickKey: nil
         }
     }
 

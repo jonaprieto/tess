@@ -47,6 +47,9 @@ Every default key is on any Mac keyboard; `alt` is ⌥ Option.
   and tab shows a letter, and the letter goes there. It lasts one command; `alt-t` again
   keeps it on until esc.
 - `alt-space` opens the picker, in tess mode too.
+- `alt-f` is click mode, in tess mode too: everything clickable in the window in front gets a
+  label (Slack's channels and DMs, a page's links and buttons); typing one clicks it, esc
+  leaves.
 
 A keyboard with a spare key can send any binding. On a NuPhy Air96 set Nav+T, Nav+G and
 Nav+R to send Hyper (⌃⌥⇧⌘) +T, +G and +R, and bind those in the config:

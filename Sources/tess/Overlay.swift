@@ -11,6 +11,7 @@ final class Overlay {
     private var dropPanel: NSPanel?
     private var dropCaption: NSView?
     private var swapPanel: NSPanel?
+    private var hintPanel: NSPanel?
     private var toastHide: DispatchWorkItem?
     private var flashHide: DispatchWorkItem?
 
@@ -139,6 +140,25 @@ final class Overlay {
         } else {
             swapPanel?.orderOut(nil)
         }
+    }
+
+    /// Click mode's labels, each at the left of what it presses, with the letters typed so far
+    /// dimmed; none hides them.
+    func showHints(_ hints: [(label: String, frame: CGRect)], typed: String = "") {
+        guard let area = hints.map(\.frame).reduce(nil, { (u: CGRect?, r) in u?.union(r) ?? r })?.insetBy(dx: -30, dy: -30) else {
+            hintPanel?.orderOut(nil)
+            return
+        }
+        let p = hintPanel ?? Self.panel()
+        hintPanel = p
+        let view = p.contentView as? HintView ?? HintView()
+        p.contentView = view
+        view.origin = area.origin
+        view.hints = hints
+        view.typed = typed
+        p.setFrame(Screens.flip(area), display: false)
+        view.needsDisplay = true
+        p.orderFrontRegardless()
     }
 
     private static func outline(width: CGFloat, color: NSColor, fill: NSColor) -> NSPanel {
@@ -302,5 +322,33 @@ final class ModeSheet: NSView {
         let attrs: [NSAttributedString.Key: Any] = [.font: Self.capFont, .foregroundColor: NSColor.labelColor]
         let s = (text as NSString).size(withAttributes: attrs)
         (text as NSString).draw(at: NSPoint(x: r.midX - s.width / 2, y: r.midY - s.height / 2), withAttributes: attrs)
+    }
+}
+
+/// Click mode's labels: a small tag at the left edge of each element, centered on it.
+final class HintView: NSView {
+    var origin = CGPoint.zero
+    var hints: [(label: String, frame: CGRect)] = []
+    var typed = ""
+
+    override var isFlipped: Bool { true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .bold)
+        for h in hints {
+            let text = NSMutableAttributedString(string: h.label.uppercased(), attributes: [.font: font, .foregroundColor: NSColor.white])
+            text.addAttribute(.foregroundColor, value: NSColor.white.withAlphaComponent(0.45),
+                              range: NSRange(location: 0, length: min(typed.count, h.label.count)))
+            let size = text.size()
+            let r = NSRect(x: h.frame.minX - origin.x - 2, y: h.frame.midY - origin.y - (size.height + 4) / 2,
+                           width: size.width + 8, height: size.height + 4)
+            let path = NSBezierPath(roundedRect: r, xRadius: 4, yRadius: 4)
+            Panels.accent.setFill()
+            path.fill()
+            NSColor.white.withAlphaComponent(0.7).setStroke()
+            path.lineWidth = 1
+            path.stroke()
+            text.draw(at: NSPoint(x: r.minX + 4, y: r.minY + 2))
+        }
     }
 }

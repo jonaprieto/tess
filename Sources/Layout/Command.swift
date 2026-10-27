@@ -54,6 +54,11 @@ public enum Command: Equatable, Sendable {
     case state
     /// Jump mode: every window's label and screen number as a key.
     case jump
+    /// Click mode: a label on everything that can be pressed in the focused window; typing
+    /// one presses it.
+    case click
+    /// A key typed in click mode: a label's letter, or esc to leave.
+    case clickKey(String)
     /// A window by its id (what jump mode binds to labels).
     case focusWindow(UInt32), swapWith(UInt32)
     /// A tab by its place among the tabs tess labeled (what tess mode and jump mode bind to
@@ -72,7 +77,7 @@ public enum Command: Equatable, Sendable {
         "balance": .balance, "flip": .flip, "accordion": .accordion, "fullscreen": .fullscreen,
         "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
-        "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
+        "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump, "click": .click,
         "undo": .undo, "redo": .redo, "zen": .zen, "terminal": .terminal,
         "wifi": .wifi(nil), "caffeine": .caffeine(nil), "speedtest": .speedtest,
         "halves": .arrange(.halves), "columns": .arrange(.columns), "rows": .arrange(.rows), "grid": .arrange(.grid),
@@ -160,6 +165,7 @@ public enum Command: Equatable, Sendable {
         case ("focus-window", 2), ("swap-with", 2):
             guard let id = UInt32(w[1]) else { throw bad }
             return head == "focus-window" ? .focusWindow(id) : .swapWith(id)
+        case ("click-key", 2): return .clickKey(w[1])
         case ("focus-tab", 2):
             guard let n = Int(w[1]), n >= 0 else { throw bad }
             return .focusTab(n)
@@ -237,6 +243,7 @@ extension Command: CustomStringConvertible {
         case .focusWindow(let id): "focus-window \(id)"
         case .swapWith(let id): "swap-with \(id)"
         case .focusTab(let n): "focus-tab \(n)"
+        case .clickKey(let k): "click-key \(k)"
         default: Command.simple.first { $0.value == self }?.key ?? "nop"
         }
     }

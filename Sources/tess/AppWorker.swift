@@ -235,6 +235,96 @@ final class AppWorker {
         perform { AXUIElementPerformAction(element, kAXPressAction as CFString) }
     }
 
+    // MARK: Click mode
+
+    /// Containers, where a press means nothing in particular, and text, which a press only focuses.
+    private static let notClickable: Set<String> = [kAXWindowRole, kAXToolbarRole, kAXScrollAreaRole, "AXWebArea", kAXListRole,
+                                                     kAXTabGroupRole, kAXSplitGroupRole, kAXTextAreaRole, kAXTextFieldRole,
+                                                     kAXComboBoxRole]
+
+    /// Clickable by what they are, a press or not: web views often leave the press out of
+    /// links, buttons and menus that a click works on.
+    private static let clickableRoles: Set<String> = [kAXButtonRole, "AXLink", kAXPopUpButtonRole, kAXMenuButtonRole,
+                                                      kAXCheckBoxRole, kAXRadioButtonRole, kAXMenuItemRole,
+                                                      kAXDisclosureTriangleRole, kAXRowRole]
+
+    /// Electron apps (Slack, VS Code) build their accessibility tree only once asked for it, and
+    /// keep it up to date while they have it: more work for them, so it is let go two minutes
+    /// after the last click mode here. Worker thread only.
+    private var treeAsked = false
+    private var treeRelease: CFRunLoopTimer?
+
+    /// What can be pressed in window `id`, and where; on the main thread. The first time, the
+    /// app gets half a second to build its tree. Containers, anything as big as half the window,
+    /// and an element on the frame of one already found are left out.
+    func clickables(in id: WindowID, _ done: @escaping ([(frame: CGRect, element: AXUIElement)]) -> Void) {
+        perform { [self] in
+            if let t = treeRelease { CFRunLoopRemoveTimer(runLoop, t, .defaultMode) }
+            let release = CFRunLoopTimerCreateWithHandler(nil, CFAbsoluteTimeGetCurrent() + 120, 0, 0, 0) { [self] _ in
+                axApp.set("AXManualAccessibility", kCFBooleanFalse)
+                treeAsked = false
+                treeRelease = nil
+            }
+            treeRelease = release
+            CFRunLoopAddTimer(runLoop, release, .defaultMode)
+            guard treeAsked else {
+                treeAsked = true
+                axApp.set("AXManualAccessibility", kCFBooleanTrue)
+                let t = CFRunLoopTimerCreateWithHandler(nil, CFAbsoluteTimeGetCurrent() + 0.5, 0, 0, 0) { [self] _ in
+                    readClickables(in: id, done)
+                }
+                CFRunLoopAddTimer(runLoop, t, .defaultMode)
+                return
+            }
+            readClickables(in: id, done)
+        }
+    }
+
+    // ponytail: reads at most 3000 elements or for 0.4 s; a huge page keeps what was found by then.
+    private func readClickables(in id: WindowID, _ done: @escaping ([(frame: CGRect, element: AXUIElement)]) -> Void) {
+        var out: [(frame: CGRect, element: AXUIElement)] = []
+        if let win = windows[id], let wf = win.frame {
+            let start = CFAbsoluteTimeGetCurrent()
+            var queue = [win], read = 0
+            while read < queue.count, read < 3000, CFAbsoluteTimeGetCurrent() - start < 0.4 {
+                let e = queue[read]
+                read += 1
+                let v = e.attributes([kAXRoleAttribute, kAXChildrenAttribute, kAXPositionAttribute, kAXSizeAttribute])
+                if let kids = v[1], CFGetTypeID(kids) == CFArrayGetTypeID() {
+                    queue += (kids as! [CFTypeRef]).compactMap { CFGetTypeID($0) == AXUIElementGetTypeID() ? ($0 as! AXUIElement) : nil }
+                }
+                var origin = CGPoint.zero, size = CGSize.zero
+                let role = v[0] as? String ?? ""
+                guard !Self.notClickable.contains(role),
+                      let p = v[2], CFGetTypeID(p) == AXValueGetTypeID(), AXValueGetValue(p as! AXValue, .cgPoint, &origin),
+                      let z = v[3], CFGetTypeID(z) == AXValueGetTypeID(), AXValueGetValue(z as! AXValue, .cgSize, &size)
+                else { continue }
+                let f = CGRect(origin: origin, size: size)
+                guard f.width >= 6, f.height >= 6, wf.contains(CGPoint(x: f.midX, y: f.midY)),
+                      f.width * f.height < wf.width * wf.height / 2, !out.contains(where: { $0.frame.isNear(f) }) else { continue }
+                if !Self.clickableRoles.contains(role) {
+                    var actions: CFArray?
+                    guard AXUIElementCopyActionNames(e, &actions) == .success,
+                          (actions as? [String])?.contains(kAXPressAction) == true else { continue }
+                }
+                out.append((f, e))
+            }
+        }
+        let found = out
+        DispatchQueue.main.async { done(found) }
+    }
+
+    /// Presses `element`; one that will not take a press gets a click in its middle.
+    func click(_ element: AXUIElement, at frame: CGRect) {
+        perform {
+            guard AXUIElementPerformAction(element, kAXPressAction as CFString) != .success else { return }
+            let p = CGPoint(x: frame.midX, y: frame.midY)
+            for t in [CGEventType.leftMouseDown, .leftMouseUp] {
+                CGEvent(mouseEventSource: nil, mouseType: t, mouseCursorPosition: p, mouseButton: .left)?.post(tap: .cghidEventTap)
+            }
+        }
+    }
+
     // MARK: Writing
 
     func setFrame(_ id: WindowID, _ r: CGRect) {

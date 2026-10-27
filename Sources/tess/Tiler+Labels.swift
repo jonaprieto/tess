@@ -55,9 +55,13 @@ extension Tiler {
             drawn = []
             return
         }
+        // Focus is only marked while its app is in front: with tess's own Settings or a window
+        // tess does not track in front, a border on the window behind it would cross that one.
+        let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        let focused = world.focused.flatMap { id in infos[id]?.pid == front ? id : nil }
         let windows = (all ? visible : shownWindows).compactMap { id -> Decorations.Window? in
-            guard all || id == world.focused, let f = infos[id]?.frame else { return nil }
-            return Decorations.Window(frame: f, label: all ? labels[id] : nil, focused: id == world.focused)
+            guard all || id == focused, let f = infos[id]?.frame else { return nil }
+            return Decorations.Window(frame: f, label: all ? labels[id] : nil, focused: id == focused)
         }
         let tabs = zip(tabList, tabLetters).map { (frame: $0.frame, label: $1) }
         let screens = world.monitors.map(\.frame)

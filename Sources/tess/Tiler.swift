@@ -188,6 +188,7 @@ final class Tiler {
             onApp(name) { [weak self] app in
                 self?.track(app)
                 self?.workers[app.processIdentifier]?.scheduleRefresh()
+                self?.refreshDecorations()
                 self?.refreshGray()
             }
         }

@@ -651,7 +651,7 @@ final class MapView: NSView {
             path.stroke()
             // The screen's number key heads it, in the inverse of the window letters.
             if let digit = "\(n + 1)".first {
-                keycap(digit, NSRect(x: box.minX + 8, y: box.minY + 7, width: 24, height: 24), fill: .labelColor, text: .textBackgroundColor)
+                Self.keycap(digit, NSRect(x: box.minX + 8, y: box.minY + 7, width: 24, height: 24), fill: .labelColor, text: .textBackgroundColor)
             }
             ("Screen \(n + 1)" as NSString).draw(at: NSPoint(x: box.minX + 40, y: box.minY + 11), withAttributes: [
                 .font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.secondaryLabelColor,
@@ -686,7 +686,7 @@ final class MapView: NSView {
                 let side = min(24, r.height - 6)
                 var x = r.minX + 6
                 if let label {
-                    keycap(label, NSRect(x: x, y: r.midY - side / 2, width: side, height: side))
+                    Self.keycap(label, NSRect(x: x, y: r.midY - side / 2, width: side, height: side))
                     x += side + 6
                 }
                 let icon = min(18, r.height - 6)
@@ -713,13 +713,13 @@ final class MapView: NSView {
                 (w.title as NSString).draw(in: NSRect(x: r.minX + 8, y: iconRect.maxY + 22, width: r.width - 16, height: 15), withAttributes: [
                     .font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: clip,
                 ])
-                if let label { keycap(label, NSRect(x: r.minX + 9, y: r.minY + 9, width: 28, height: 28)) }
+                if let label { Self.keycap(label, NSRect(x: r.minX + 9, y: r.minY + 9, width: 28, height: 28)) }
             }
             NSGraphicsContext.restoreGraphicsState()
         }
     }
 
-    private func keycap(_ label: Character, _ cap: NSRect, fill: NSColor = .controlAccentColor, text color: NSColor = .white) {
+    static func keycap(_ label: Character, _ cap: NSRect, fill: NSColor = .controlAccentColor, text color: NSColor = .white) {
         fill.setFill()
         NSBezierPath(roundedRect: cap, xRadius: cap.height / 4, yRadius: cap.height / 4).fill()
         let text = String(label).uppercased() as NSString

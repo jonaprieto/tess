@@ -173,6 +173,14 @@ final class Tiler {
 
     let grayscale = Grayscale()
 
+    let switcher = Switcher()
+
+    /// cmd-tab's letters, each window's for as long as it lives, whatever is visible.
+    var switcherLetters: [WindowID: Character] = [:]
+
+    /// cmd-tab's event tap, from start on.
+    var cmdTab: CmdTab?
+
 
     var searchProcess: Process?
 
@@ -239,6 +247,12 @@ final class Tiler {
             _ = self?.picker
         }
         registerMode()
+        cmdTab = CmdTab { [weak self] in self?.onCmdTab($0) }
+        // The window cmd-tab would go to, in the drag preview's orange, even under others.
+        switcher.onPick = { [weak self] id in
+            guard let self else { return }
+            self.overlay.showDrop(id.flatMap { self.offSpace.contains($0) ? nil : self.infos[$0]?.frame })
+        }
         Log.write("started")
     }
 

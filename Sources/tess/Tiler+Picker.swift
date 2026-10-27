@@ -50,15 +50,15 @@ extension Tiler {
     }
 
 
-    func pickerClosed(cancelled: Bool) {
+    func pickerClosed(cancelled: Bool, refocus: Bool = true) {
         picking = false
         setMode(mode)
         if cancelled { Events.record("picker.close", ["why": "cancelled"]) }
-        // tess was the active app for the picker: hand the keyboard back. A pick then moves
-        // focus on to what was picked.
+        // tess was the active app for the picker: hand the keyboard back, unless the pick
+        // brings something forward itself.
         if cancelled && closeReplacing {
             afterFocusChange()
-        } else if let back = focusBeforePicker, infos[back] != nil {
+        } else if refocus, let back = focusBeforePicker, infos[back] != nil {
             focus(back)
         }
         closeReplacing = false
@@ -66,7 +66,13 @@ extension Tiler {
 
 
     func picked(_ item: Picker.Item, _ choice: Picker.Choice) {
-        pickerClosed(cancelled: false)
+        // Focus goes back only for picks that leave it where it was. Handing it back before one
+        // that brings a window or app forward races it: an app slow to answer AX takes focus
+        // after the pick has it (and under Zen fills the screen over the pick).
+        switch item.kind {
+        case .command, .copy, .system, .shortcut, .book, .pdf: pickerClosed(cancelled: false)
+        default: pickerClosed(cancelled: false, refocus: false)
+        }
         let how: String
         switch choice {
         case .jump: how = "jump"

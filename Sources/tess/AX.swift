@@ -2,7 +2,7 @@ import AppKit
 import ApplicationServices
 import Layout
 
-/// Private, but stable for years: AeroSpace and yabai use it to get a window's CGWindowID.
+/// Private, but stable for years: yabai uses it to get a window's CGWindowID.
 @_silgen_name("_AXUIElementGetWindow")
 func _AXUIElementGetWindow(_ element: AXUIElement, _ id: UnsafeMutablePointer<CGWindowID>) -> AXError
 
@@ -66,7 +66,7 @@ extension AXUIElement {
     }
 
     /// Size, then position, then size again: some apps clamp a size that does not fit at the
-    /// old position (AeroSpace issues 143 and 335).
+    /// old position.
     func setFrame(_ r: CGRect) {
         var size = r.size, origin = r.origin
         guard let s = AXValueCreate(.cgSize, &size), let p = AXValueCreate(.cgPoint, &origin) else { return }

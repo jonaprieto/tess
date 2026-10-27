@@ -29,7 +29,7 @@ public struct WinInfo: Equatable, Sendable {
             if config.tile.contains(b) { return .tile }
         }
         // Windows without a working fullscreen button are not meant to be big (dialogs,
-        // settings, About windows): the same heuristic AeroSpace uses.
+        // settings, About windows).
         return fullscreenButton ? .tile : .float
     }
 }

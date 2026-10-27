@@ -121,7 +121,7 @@ final class AppWorker {
 
     private func refresh() {
         // A drag may be pulling a tab out into a new window, or moving a tiled one: wait for
-        // the mouse to come up (AeroSpace issue 1001).
+        // the mouse to come up.
         if NSEvent.pressedMouseButtons & 1 != 0 {
             scheduleRefresh(after: 0.2)
             return

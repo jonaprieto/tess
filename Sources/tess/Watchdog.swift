@@ -1,6 +1,6 @@
 import Foundation
 
-/// The failure AeroSpace shows most: alive, but hotkeys dead. A background thread watches a
+/// The failure tiling window managers show most: alive, but hotkeys dead. A background thread watches a
 /// main-thread heartbeat; after 5 s without one, tess exits and launchd starts it again.
 /// Nothing is ever hidden, so restarting costs nothing but the restart.
 enum Watchdog {

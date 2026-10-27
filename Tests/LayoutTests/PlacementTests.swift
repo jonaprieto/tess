@@ -182,3 +182,10 @@ import Testing
     #expect(fuzzyWords("slk", title) == fuzzyScore("slk", title))
     #expect(!Config.defaults.jev)
 }
+
+@Test func titlesSplitIntoPartsWithoutTheAppsName() {
+    #expect(titleParts("Michael (DM) - Heliax - 1 new item - Slack", app: "Slack") == ["Michael (DM)", "Heliax", "1 new item"])
+    #expect(titleParts("Blog — vveiln ✨ - Brave", app: "Brave Browser") == ["Blog", "vveiln ✨"])
+    #expect(titleParts("main.swift — tess — Visual Studio Code", app: "Code") == ["main.swift", "tess"])
+    #expect(titleParts("Slack", app: "Slack").isEmpty)
+}

@@ -108,3 +108,16 @@ public func forScreens(_ bindings: [KeySpec: [Command]], _ screens: Int) -> [Key
         }
     }
 }
+
+/// A window title's parts at " - ", " — ", " | " and the like, without the app's own name
+/// ("Brave" in a Brave Browser title, "Slack" in Slack's), each once.
+public func titleParts(_ title: String, app: String) -> [String] {
+    var parts = [title]
+    for sep in [" — ", " – ", " - ", " | ", " · ", " • "] { parts = parts.flatMap { $0.components(separatedBy: sep) } }
+    let a = app.lowercased()
+    var seen = Set<String>()
+    return parts.map { $0.trimmingCharacters(in: .whitespaces) }.filter { p in
+        let l = p.lowercased()
+        return !l.isEmpty && !a.hasPrefix(l) && !l.hasSuffix(a) && seen.insert(l).inserted
+    }
+}

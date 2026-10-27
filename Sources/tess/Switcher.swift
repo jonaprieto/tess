@@ -119,6 +119,14 @@ final class Switcher {
         if panel?.isVisible == true { onPick(pick) }
     }
 
+    /// Better titles arrived while open.
+    func retitle(_ title: (WindowID) -> String?) {
+        guard !cards.isEmpty else { return }
+        for i in cards.indices { if let t = title(cards[i].id) { cards[i].title = t } }
+        view.cards = cards
+        view.needsDisplay = true
+    }
+
     func close() {
         cards = []
         panel?.orderOut(nil)

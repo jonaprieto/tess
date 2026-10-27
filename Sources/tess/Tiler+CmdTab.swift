@@ -23,7 +23,7 @@ extension Tiler {
                     detail.append("Screen \(m + 1)")
                 }
                 return Switcher.Card(id: id, icon: worker?.icon ?? worker?.app.icon, app: app,
-                                     title: infos[id]?.title ?? "",
+                                     title: shortTitle(infos[id]?.title ?? "", app: app),
                                      detail: detail.joined(separator: " · "), label: letters[id])
             }
             // The window before this one, as macOS's goes to the app before; the first when
@@ -31,6 +31,7 @@ extension Tiler {
             let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
             let inFront = infos[ids[0]]?.pid == front
             switcher.open(cards, selected: back ? cards.count - 1 : inFront ? min(1, cards.count - 1) : 0, on: lookedAtFrame)
+            askShortTitles(ids)
         case .step(let back):
             switcher.step(back ? -1 : 1)
         case .letter(let code):
@@ -44,6 +45,34 @@ extension Tiler {
             guard let id = switcher.pick else { return }
             switcher.close()
             use(id, .jump)
+        }
+    }
+
+    /// What a card says under the app's name: Jev's pick of the title's parts once it has
+    /// answered, else the parts as they are.
+    func shortTitle(_ title: String, app: String) -> String {
+        shortTitles[title] ?? titleParts(title, app: app).joined(separator: " · ")
+    }
+
+    /// Asks Jev about the titles of `ids` it has not been asked about, in one request; the
+    /// cards change if they are still up when it answers, and the next cmd-tab has them.
+    func askShortTitles(_ ids: [WindowID]) {
+        guard config.jev else { return }
+        var asked = Set<String>()
+        let items = ids.compactMap { id -> (app: String, title: String, parts: [String])? in
+            guard let title = infos[id]?.title, shortTitles[title] == nil, asked.insert(title).inserted else { return nil }
+            let app = appName(id)
+            let parts = titleParts(title, app: app)
+            return parts.count > 1 ? (app, title, parts) : nil
+        }
+        guard !items.isEmpty else { return }
+        Jev.titleParts(items) { [weak self] picks in
+            guard let self else { return }
+            // ponytail: one entry per title ever seen, dropped at 500; titles that change every
+            // second (counters, spinners) would want an expiry instead.
+            if self.shortTitles.count > 500 { self.shortTitles = [:] }
+            self.shortTitles.merge(picks) { $1 }
+            self.switcher.retitle { id in self.infos[id].flatMap { self.shortTitles[$0.title] } }
         }
     }
 

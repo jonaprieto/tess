@@ -178,6 +178,9 @@ final class Tiler {
     /// cmd-tab's letters, each window's for as long as it lives, whatever is visible.
     var switcherLetters: [WindowID: Character] = [:]
 
+    /// Jev's pick of each window title's parts, by title, for cmd-tab's cards.
+    var shortTitles: [String: String] = [:]
+
     /// cmd-tab's event tap, from start on.
     var cmdTab: CmdTab?
 

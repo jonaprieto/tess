@@ -424,6 +424,8 @@ final class Tiler {
                 }
             }
             drag = nil
+            // Moved by hand: put back even when its place is one it would not fit before.
+            writes[id] = nil
             scheduleApply()
         }
         check()

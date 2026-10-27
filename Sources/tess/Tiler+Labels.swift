@@ -45,12 +45,12 @@ extension Tiler {
     /// Borders and letters on every visible window, tab letters and numbers on every screen
     /// when letters are keys or labels are always on; otherwise the focused window's border
     /// and, with more than one screen, the active screen's outline (overlay.window_labels).
-    /// Only what can be seen gets a letter.
+    /// Only what can be seen gets a letter. None during a drag, whose windows they would not follow.
     func refreshDecorations() {
         let visible = visibleWindows(windowStack)
         labels = stableLabels(labels, windows: visible, alphabet: labelPool)
         let all = config.windowLabels == .always || labelsAreKeys
-        guard config.windowLabels != .off, !paused, !starting else {
+        guard config.windowLabels != .off, !paused, !starting, drag == nil else {
             if !drawn.isEmpty { decorations.hide() }
             drawn = []
             return

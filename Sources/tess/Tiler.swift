@@ -418,6 +418,7 @@ final class Tiler {
         let watching = drag != nil
         drag = (id, zone)
         guard !watching else { return }
+        refreshDecorations()  // borders and letters stand still under a drag: hidden until the drop
         func check() {
             guard NSEvent.pressedMouseButtons & 1 == 0 else {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: check)

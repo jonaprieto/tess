@@ -5,6 +5,22 @@ public struct ParseError: Error, CustomStringConvertible, Equatable {
     public init(_ description: String) { self.description = description }
 }
 
+/// A change to the speakers' volume.
+public enum Volume: Equatable, Sendable {
+    /// From 0 to 100; up or down by that much; muted or not.
+    case level(Int), step(Int), mute, unmute
+
+    /// As the config and the CLI write it, after `volume`.
+    public var word: String {
+        switch self {
+        case .level(let n): "\(n)"
+        case .step(let n): n >= 0 ? "+\(n)" : "\(n)"
+        case .mute: "mute"
+        case .unmute: "unmute"
+        }
+    }
+}
+
 public enum Command: Equatable, Sendable {
     case focus(Direction), move(Direction), resize(Axis, Double)
     /// Bigger or smaller along the lanes' axis: wider in columns, taller in rows (`grow +50`).
@@ -16,6 +32,13 @@ public enum Command: Equatable, Sendable {
     case focusMonitor(Int), cycleMonitor(Int), moveToMonitor(Int)
     /// The next or previous window, across screens (`focus next`, `focus prev`).
     case cycleWindow(Int)
+    /// The speakers (`volume 30`, `volume +10`, `volume mute`).
+    case volume(Volume)
+    /// Wi-Fi on, off, or (nil) the other way round (`wifi on`, `wifi`).
+    case wifi(Bool?)
+    /// The Mac kept awake for that many minutes, until turned off (nil, `caffeine`, which
+    /// turns it off when it is on), or no longer (0, `caffeine off`).
+    case caffeine(Int?)
     case exec(String), reload, mode(String), retile, rescue, pause, tree, nop
     /// A new window of the config's terminal, in the home folder.
     case terminal
@@ -49,6 +72,7 @@ public enum Command: Equatable, Sendable {
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
         "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
         "undo": .undo, "redo": .redo, "zen": .zen, "terminal": .terminal,
+        "wifi": .wifi(nil), "caffeine": .caffeine(nil),
         "halves": .arrange(.halves), "columns": .arrange(.columns), "rows": .arrange(.rows), "grid": .arrange(.grid),
     ]
 
@@ -104,6 +128,22 @@ public enum Command: Equatable, Sendable {
         case ("resize", 3):
             guard let axis = Axis(rawValue: w[1]), let px = Double(w[2]), px.isFinite else { throw bad }
             return .resize(axis, min(max(px, -10_000), 10_000))
+        case ("volume", 2):
+            switch w[1] {
+            case "mute": return .volume(.mute)
+            case "unmute": return .volume(.unmute)
+            default:
+                guard let n = Int(w[1]) else { throw bad }
+                let signed = w[1].hasPrefix("+") || w[1].hasPrefix("-")
+                return .volume(signed ? .step(min(max(n, -100), 100)) : .level(min(max(n, 0), 100)))
+            }
+        case ("wifi", 2):
+            guard w[1] == "on" || w[1] == "off" else { throw bad }
+            return .wifi(w[1] == "on")
+        case ("caffeine", 2):
+            if w[1] == "off" { return .caffeine(0) }
+            guard let n = Int(w[1]), n > 0 else { throw bad }
+            return .caffeine(min(n, 24 * 60))
         case ("grow", 2):
             guard let px = Double(w[1]), px.isFinite else { throw bad }
             return .grow(min(max(px, -10_000), 10_000))
@@ -183,6 +223,9 @@ extension Command: CustomStringConvertible {
         case .focusMonitor(let n): "focus-screen \(n)"
         case .cycleMonitor(let s): "focus-screen \(s > 0 ? "next" : "prev")"
         case .cycleWindow(let s): "focus \(s > 0 ? "next" : "prev")"
+        case .volume(let v): "volume \(v.word)"
+        case .wifi(let on?): "wifi \(on ? "on" : "off")"
+        case .caffeine(let m?): m == 0 ? "caffeine off" : "caffeine \(m)"
         case .moveToMonitor(let n): "move-to-screen \(n)"
         case .clearMonitor: "clear-screen"
         case .exec(let s): "exec \(s)"

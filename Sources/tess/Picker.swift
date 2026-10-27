@@ -30,6 +30,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case keys(KeysVerb, text: String)
         /// A shell line run in the terminal app, from a `run:` verb (`brew install fzf`).
         case run(String)
+        /// One of the person's Shortcuts, by name, run as it is.
+        case shortcut(String)
     }
 
     struct Tab {
@@ -526,7 +528,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             guard shown.indices.contains(list.selected) else { return nil }
             let item = shown[list.selected]
             switch (item.kind, fixed) {
-            case (.copy, _), (.system, _), (.command, _), (.keys, _), (.run, _):
+            case (.copy, _), (.system, _), (.command, _), (.keys, _), (.run, _), (.shortcut, _):
                 close()
                 onDone(item, .place(.here))
             case (_, let fixed?):

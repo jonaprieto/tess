@@ -49,6 +49,12 @@ extension Command {
         case .focusMonitor(let n): "Screen \(n)"
         case .cycleMonitor(let s): s > 0 ? "Next screen" : "Previous screen"
         case .cycleWindow(let s): s > 0 ? "Next window" : "Previous window"
+        case .volume(.level(let n)): "Volume \(n)%"
+        case .volume(.step(let n)): n >= 0 ? "Louder" : "Quieter"
+        case .volume(.mute): "Mute"
+        case .volume(.unmute): "Unmute"
+        case .wifi(let on): on.map { $0 ? "Wi-Fi on" : "Wi-Fi off" } ?? "Wi-Fi on or off"
+        case .caffeine(let m): m == 0 ? "Caffeine off" : m.map { "Caffeine for \($0) min" } ?? "Caffeine"
         case .moveToMonitor(let n): "Move to screen \(n)"
         case .exec(let line):
             line.hasPrefix("open -a ") ? "Open \(line.dropFirst(8))" : "Run \(line)"

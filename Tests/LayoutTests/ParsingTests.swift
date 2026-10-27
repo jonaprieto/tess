@@ -122,3 +122,21 @@ import Testing
     #expect(KeysVerb(verb: "Slack") == nil && KeysVerb(verb: "keys:Slack") == nil)
     #expect(throws: ParseError.self) { try Config.load(Data(#"{"verbs": {"x": "keys:Slack:cmd-?"}}"#.utf8)) }
 }
+
+@Test func machineCommandsParseAndPrint() throws {
+    let cases: [(String, Command)] = [
+        ("volume 30", .volume(.level(30))), ("volume +10", .volume(.step(10))), ("volume -5", .volume(.step(-5))),
+        ("volume mute", .volume(.mute)), ("volume 400", .volume(.level(100))), ("wifi", .wifi(nil)),
+        ("wifi off", .wifi(false)), ("caffeine", .caffeine(nil)), ("caffeine 90", .caffeine(90)), ("caffeine off", .caffeine(0)),
+    ]
+    for (line, c) in cases {
+        #expect(try Command.parse(line) == [c], "\(line)")
+        #expect(try Command.parse(c.description) == [c], "\(c.description)")
+    }
+    #expect(throws: ParseError.self) { try Command.parse("caffeine soon") }
+    #expect(throws: ParseError.self) { try Command.parse("wifi maybe") }
+    let ports = "Hardware Port: Ethernet\nDevice: en1\n\nHardware Port: Wi-Fi\nDevice: en0\nEthernet Address: x\n"
+    #expect(Parse.wifiDevice(ports) == "en0" && Parse.wifiDevice("") == nil)
+    #expect(Parse.wifiPower("Wi-Fi Power (en0): On\n") == true && Parse.wifiPower("Wi-Fi Power (en0): Off") == false)
+    #expect(Parse.wifiPower("Error") == nil)
+}

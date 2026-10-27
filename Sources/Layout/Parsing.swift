@@ -213,6 +213,20 @@ public enum Parse {
         return url
     }
 
+    /// The Wi-Fi device in `networksetup -listallhardwareports` (`en0`).
+    public static func wifiDevice(_ listing: String) -> String? {
+        let lines = listing.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard let i = lines.firstIndex(of: "Hardware Port: Wi-Fi"), lines.indices.contains(i + 1),
+              lines[i + 1].hasPrefix("Device: ") else { return nil }
+        return String(lines[i + 1].dropFirst(8))
+    }
+
+    /// Whether `networksetup -getairportpower` says Wi-Fi is on; nil when it says neither.
+    public static func wifiPower(_ output: String) -> Bool? {
+        output.hasSuffix(": On") || output.contains(": On\n") ? true
+            : output.hasSuffix(": Off") || output.contains(": Off\n") ? false : nil
+    }
+
     /// A `run:` verb's shell line (`run:brew %s`) with `text` for `%s`, as typed: it is a
     /// command the person wrote, so it is not quoted.
     public static func run(_ value: String, _ text: String) -> String? {

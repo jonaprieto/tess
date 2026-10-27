@@ -23,21 +23,37 @@ final class StatusItem: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) { fill(menu) }
 
     /// Cheap enough to run on every layout or focus change.
-    private var drawn: (world: World, mode: String, paused: Bool, waiting: Bool, zen: String?)?
+    private var drawn: (world: World, mode: String, paused: Bool, waiting: Bool, zen: String?, cup: Bool)?
 
     /// Skipped when nothing the icon shows changed (most snapshots change nothing visible).
     func refreshIcon() {
         guard let button = item.button else { return }
-        let now = (tiler.world, tiler.mode, tiler.paused, waitingForAccess, tiler.zenTitle)
-        if let d = drawn, d.world == now.0, d.mode == now.1, d.paused == now.2, d.waiting == now.3, d.zen == now.4 { return }
+        let now = (tiler.world, tiler.mode, tiler.paused, waitingForAccess, tiler.zenTitle, tiler.caffeine != nil)
+        if let d = drawn, d.world == now.0, d.mode == now.1, d.paused == now.2, d.waiting == now.3, d.zen == now.4,
+           d.cup == now.5 { return }
         drawn = now
         button.image = minimap()
         button.imagePosition = .imageLeft
         // The mode by name next to the miniature; in main, Zen's countdown if it is on.
         let word = waitingForAccess ? "" : tiler.paused ? "paused" : tiler.mode == "main" ? now.4 ?? "" : tiler.mode
-        button.attributedTitle = NSAttributedString(string: word.isEmpty ? "" : " " + word.uppercased(), attributes: [
+        let title = NSMutableAttributedString(string: word.isEmpty ? "" : " " + word.uppercased(), attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .bold), .foregroundColor: color,
         ])
+        // A cup while caffeine keeps the Mac awake, so it is not left on by accident.
+        if now.5, let symbol = NSImage(systemSymbolName: "cup.and.saucer.fill", accessibilityDescription: "caffeine") {
+            let color = color
+            let cup = NSTextAttachment()
+            cup.image = NSImage(size: NSSize(width: 15, height: 13), flipped: false) { r in
+                symbol.draw(in: r)
+                color.set()
+                r.fill(using: .sourceAtop)
+                return true
+            }
+            cup.bounds = CGRect(x: 0, y: -2, width: 15, height: 13)
+            title.insert(NSAttributedString(attachment: cup), at: 0)
+            title.insert(NSAttributedString(string: " "), at: 0)
+        }
+        button.attributedTitle = title
         button.toolTip = "tess: \(tiler.paused ? "paused" : tiler.mode)"
     }
 
@@ -124,6 +140,12 @@ final class StatusItem: NSObject, NSMenuDelegate {
         let zen = item(tiler.zen == nil ? "Zen" : "Leave Zen", "moon", #selector(toggleZen), for: .zen)
         zen.subtitle = tiler.zenTitle ?? "25 min focus, 5 min break"
         menu.addItem(zen)
+        let cup = item(tiler.caffeine == nil ? "Caffeine" : "Caffeine Off", "cup.and.saucer", #selector(toggleCaffeine),
+                       for: .caffeine(nil))
+        cup.subtitle = tiler.caffeine.map { c in
+            c.until.map { "awake until \($0.formatted(date: .omitted, time: .shortened))" } ?? "awake until turned off"
+        } ?? "keep the Mac awake"
+        menu.addItem(cup)
         menu.addItem(item("Settings…", "gearshape", #selector(openSettings), key: ",", mods: [.command]))
         menu.addItem(.separator())
         menu.addItem(item("Rescue Windows", "lifepreserver", #selector(rescue), for: .rescue))
@@ -264,6 +286,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
     }
     @objc private func pick() { _ = tiler.run([.pick("")], source: "menu") }
     @objc private func toggleZen() { _ = tiler.run([.zen], source: "menu") }
+    @objc private func toggleCaffeine() { _ = tiler.run([.caffeine(nil)], source: "menu") }
     @objc private func clear() { _ = tiler.run([.clearMonitor], source: "menu") }
     @objc private func openLog() { NSWorkspace.shared.open(Log.url) }
     @objc private func openSettings() { tiler.openSettings() }

@@ -129,6 +129,8 @@ extension Tiler {
             press(k, then: text)
         case .run(let line):
             runInTerminal(line)
+        case .shortcut(let name):
+            runShortcut(name)
         case .copy(let text):
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
@@ -414,6 +416,13 @@ extension Tiler {
             items.append(Picker.Item(kind: .app(a.url), title: a.name, detail: open ? "app (open)" : "app",
                                      icon: a.icon, search: a.name))
         }
+        // The person's Shortcuts, once something is typed (a Do Not Disturb toggle made there
+        // is how the picker reaches Focus, which has no API).
+        let shortcutIcon = NSWorkspace.shared.icon(forFile: "/System/Applications/Shortcuts.app")
+        for name in shortcuts {
+            items.append(Picker.Item(kind: .shortcut(name), title: name, detail: "shortcut", icon: shortcutIcon,
+                                     search: name, quiet: true))
+        }
         // tess's own commands by name, once something is typed, and those for each screen.
         let command = Icons.symbol("command")
         let screens = (1...max(world.monitors.count, 1)).flatMap { n in [Command.focusMonitor(n), .moveToMonitor(n)] }
@@ -444,6 +453,7 @@ extension Tiler {
 
     /// Rescans only when an app folder changed (an app installed or removed).
     func refreshApps() {
+        refreshShortcuts()
         let ignore = config.ignore
         let previous = appCache
         DispatchQueue.global(qos: .utility).async { [weak self] in

@@ -125,6 +125,10 @@ window, tab or app shows a map of every screen to choose where it goes:
 
 Words match in any order: `slack michael` finds "Michael - Heliax - Slack".
 
+Your Shortcuts are listed too, once you type, and Enter runs one. Focus has no API, so Do
+Not Disturb comes from a shortcut: one made in the Shortcuts app with its Set Focus action,
+named "Do Not Disturb", is then `do not` away in the picker.
+
 With `"jev": true` the picker also asks [TypeSafe](https://typesafe.ai)'s Jev what the text
 means, after a short pause in typing, so plain words (`the standup call`, `send this to the
 other screen`) and typos find their window, tab, app or command, which moves to the top. It
@@ -195,6 +199,10 @@ on the screen with the fewest windows; `"empty_screens": false` turns that off.
 - `tess rescue`: bring back windows that are mostly off-screen.
 - `tess pause`: stop tiling until run again (also in the menu).
 - `tess undo`, `tess redo`: the last layout change.
+- `tess volume 30` (or `+10`, `-10`, `mute`, `unmute`), `tess wifi` (`on`, `off`, or the
+  other way round), `tess caffeine` (keeps the Mac awake until run again; `caffeine 60` for
+  an hour, `caffeine off`). A cup in the menu bar says caffeine is on, and the menu has it.
+  Typed in the picker these work too, and they take keys like any command.
 - `tess zen`: Zen on or off.
 - `tess reload`, `tess default-config`, `tess --version`.
 

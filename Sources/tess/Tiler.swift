@@ -158,6 +158,14 @@ final class Tiler {
 
     var zenTimer: Timer?
 
+    /// The power assertion that keeps the Mac awake, and until when (nil: until turned off).
+    var caffeine: (id: UInt32, until: Date?)?
+
+    var caffeineTimer: Timer?
+
+    /// The Shortcuts the picker lists, by name; read with the app list.
+    var shortcuts: [String] = []
+
     let veil = Veil()
 
     let grayscale = Grayscale()

@@ -641,20 +641,33 @@ final class MapView: NSView {
             CGRect(x: offset.x + (r.minX - all.minX) * scale, y: offset.y + (r.minY - all.minY) * scale,
                    width: r.width * scale, height: r.height * scale)
         }
-        for (n, m) in model.monitors.enumerated() {
-            let box = mini(m).insetBy(dx: 5, dy: 5)
+        let boxes = model.monitors.map { mini($0).insetBy(dx: 5, dy: 5) }
+        for (n, box) in boxes.enumerated() {
             let path = NSBezierPath(roundedRect: box, xRadius: 12, yRadius: 12)
             NSColor.labelColor.withAlphaComponent(0.05).setFill()
             path.fill()
             NSColor.labelColor.withAlphaComponent(0.25).setStroke()
             path.lineWidth = 1
             path.stroke()
-            ("\(n + 1)" as NSString).draw(at: NSPoint(x: box.maxX - 14, y: box.minY - 20), withAttributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 15, weight: .semibold), .foregroundColor: NSColor.tertiaryLabelColor,
+            // The screen's number key heads it, in the inverse of the window letters.
+            if let digit = "\(n + 1)".first {
+                keycap(digit, NSRect(x: box.minX + 8, y: box.minY + 7, width: 24, height: 24), fill: .labelColor, text: .textBackgroundColor)
+            }
+            ("Screen \(n + 1)" as NSString).draw(at: NSPoint(x: box.minX + 40, y: box.minY + 11), withAttributes: [
+                .font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.secondaryLabelColor,
             ])
         }
+        // A window inside its screen's box, below the header.
+        func inScreen(_ r: CGRect) -> CGRect {
+            guard let i = model.monitors.firstIndex(where: { $0.contains(CGPoint(x: r.midX, y: r.midY)) }) else { return mini(r) }
+            let m = model.monitors[i], b = boxes[i]
+            let inner = CGRect(x: b.minX + 2, y: b.minY + 36, width: b.width - 4, height: b.height - 38)
+            return CGRect(x: inner.minX + (r.minX - m.minX) / m.width * inner.width,
+                          y: inner.minY + (r.minY - m.minY) / m.height * inner.height,
+                          width: r.width / m.width * inner.width, height: r.height / m.height * inner.height)
+        }
         for w in model.windows {
-            let r = mini(w.frame).insetBy(dx: 4, dy: 4)
+            let r = inScreen(w.frame).insetBy(dx: 4, dy: 4)
             guard r.width > 4, r.height > 4 else { continue }
             let isPicked = w.id == picked
             let path = NSBezierPath(roundedRect: r, xRadius: min(9, r.height / 3), yRadius: min(9, r.height / 3))
@@ -706,11 +719,11 @@ final class MapView: NSView {
         }
     }
 
-    private func keycap(_ label: Character, _ cap: NSRect) {
-        NSColor.controlAccentColor.setFill()
+    private func keycap(_ label: Character, _ cap: NSRect, fill: NSColor = .controlAccentColor, text color: NSColor = .white) {
+        fill.setFill()
         NSBezierPath(roundedRect: cap, xRadius: cap.height / 4, yRadius: cap.height / 4).fill()
         let text = String(label).uppercased() as NSString
-        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: cap.height * 0.55, weight: .bold), .foregroundColor: NSColor.white]
+        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: cap.height * 0.55, weight: .bold), .foregroundColor: color]
         let s = text.size(withAttributes: attrs)
         text.draw(at: NSPoint(x: cap.midX - s.width / 2, y: cap.midY - s.height / 2), withAttributes: attrs)
     }

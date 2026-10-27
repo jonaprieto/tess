@@ -139,4 +139,8 @@ import Testing
     #expect(Parse.wifiDevice(ports) == "en0" && Parse.wifiDevice("") == nil)
     #expect(Parse.wifiPower("Wi-Fi Power (en0): On\n") == true && Parse.wifiPower("Wi-Fi Power (en0): Off") == false)
     #expect(Parse.wifiPower("Error") == nil)
+    #expect(try Command.parse("speedtest") == [.speedtest])
+    let json = #"{"base_rtt": 21.6, "dl_throughput": 412345678, "ul_throughput": 38123456, "responsiveness": 1200}"#
+    #expect(Parse.speedtest(json) == "↓ 412 Mbps  ↑ 38 Mbps  22 ms")
+    #expect(Parse.speedtest("{}") == nil && Parse.speedtest("not json") == nil)
 }

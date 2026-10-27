@@ -227,6 +227,16 @@ public enum Parse {
             : output.hasSuffix(": Off") || output.contains(": Off\n") ? false : nil
     }
 
+    /// `networkQuality -c`'s JSON as one line: `↓ 412 Mbps  ↑ 38 Mbps  22 ms`. Throughput comes
+    /// in bits per second, the idle latency (`base_rtt`) in milliseconds.
+    public static func speedtest(_ json: String) -> String? {
+        guard let d = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
+              let down = (d["dl_throughput"] as? NSNumber)?.doubleValue,
+              let up = (d["ul_throughput"] as? NSNumber)?.doubleValue else { return nil }
+        let rtt = (d["base_rtt"] as? NSNumber).map { "  \(Int($0.doubleValue.rounded())) ms" } ?? ""
+        return "↓ \(Int((down / 1e6).rounded())) Mbps  ↑ \(Int((up / 1e6).rounded())) Mbps\(rtt)"
+    }
+
     /// A `run:` verb's shell line (`run:brew %s`) with `text` for `%s`, as typed: it is a
     /// command the person wrote, so it is not quoted.
     public static func run(_ value: String, _ text: String) -> String? {

@@ -46,7 +46,7 @@ final class Overlay {
         modePanels = []
     }
 
-    func toast(_ message: String, on screen: CGRect) {
+    func toast(_ message: String, on screen: CGRect, seconds: Double = 1.5) {
         toastHide?.cancel()
         toastPanel?.orderOut(nil)
         toastPanel = bubble(NSAttributedString(string: message, attributes: [
@@ -57,7 +57,7 @@ final class Overlay {
             self?.toastPanel = nil
         }
         toastHide = hide
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: hide)
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: hide)
     }
 
     /// A rounded, softly glowing border on `rect` that fades in and out.

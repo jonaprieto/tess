@@ -72,6 +72,7 @@ extension Tiler {
         case .volume(let v): setVolume(v)
         case .wifi(let on): setWifi(on)
         case .caffeine(let minutes): setCaffeine(minutes)
+        case .speedtest: runSpeedtest()
         case .moveToMonitor(let n):
             if let id = world.focused, world.floating.contains(id) {
                 moveFloating(id, to: n - 1)

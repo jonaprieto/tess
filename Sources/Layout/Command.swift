@@ -39,6 +39,8 @@ public enum Command: Equatable, Sendable {
     /// The Mac kept awake for that many minutes, until turned off (nil, `caffeine`, which
     /// turns it off when it is on), or no longer (0, `caffeine off`).
     case caffeine(Int?)
+    /// Download and upload speed and idle latency, with macOS's own `networkQuality`.
+    case speedtest
     case exec(String), reload, mode(String), retile, rescue, pause, tree, nop
     /// A new window of the config's terminal, in the home folder.
     case terminal
@@ -72,7 +74,7 @@ public enum Command: Equatable, Sendable {
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
         "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump,
         "undo": .undo, "redo": .redo, "zen": .zen, "terminal": .terminal,
-        "wifi": .wifi(nil), "caffeine": .caffeine(nil),
+        "wifi": .wifi(nil), "caffeine": .caffeine(nil), "speedtest": .speedtest,
         "halves": .arrange(.halves), "columns": .arrange(.columns), "rows": .arrange(.rows), "grid": .arrange(.grid),
     ]
 

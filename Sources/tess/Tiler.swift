@@ -166,6 +166,9 @@ final class Tiler {
     /// The Shortcuts the picker lists, by name; read with the app list.
     var shortcuts: [String] = []
 
+    /// A speed test under way, so a second one does not halve the first.
+    var speedtest: Process?
+
     let veil = Veil()
 
     let grayscale = Grayscale()
@@ -707,7 +710,7 @@ final class Tiler {
     }
 
 
-    func toast(_ s: String) { overlay.toast(s, on: lookedAtFrame) }
+    func toast(_ s: String, seconds: Double = 1.5) { overlay.toast(s, on: lookedAtFrame, seconds: seconds) }
 }
 
 extension Array {

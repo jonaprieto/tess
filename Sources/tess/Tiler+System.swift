@@ -61,6 +61,17 @@ extension Tiler {
         toast(minutes.map { "caffeine for \($0) min" } ?? "caffeine on")
     }
 
+    /// macOS's own speed test, about 20 seconds of upload and download at once; the result
+    /// stays on screen a while, since it is read rather than glanced at.
+    func runSpeedtest() {
+        guard speedtest?.isRunning != true else { return toast("speed test already running") }
+        toast("speed test, about 20 s", seconds: 3)
+        speedtest = Proc.run("/usr/bin/networkQuality", ["-c"], timeout: 90, log: "networkQuality") { [weak self] out in
+            self?.speedtest = nil
+            self?.toast(out.flatMap(Parse.speedtest) ?? "speed test failed", seconds: 10)
+        }
+    }
+
     /// `shortcuts list`, in the background; the old list stays if it fails.
     func refreshShortcuts() {
         Proc.run("/usr/bin/shortcuts", ["list"], timeout: 10) { [weak self] out in

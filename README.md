@@ -15,6 +15,7 @@ brew tap jonaprieto/tap
 brew trust --formula jonaprieto/tap/tess
 brew install jonaprieto/tap/tess
 brew services start tess   # now and at login
+cp -R "$(brew --prefix tess)/tess.app" /Applications/   # optional: open it from Finder or Spotlight
 ```
 
 From source:

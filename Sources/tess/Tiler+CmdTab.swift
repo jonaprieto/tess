@@ -15,6 +15,7 @@ extension Tiler {
             guard !ids.isEmpty else { return }
             switcherLetters = stableLabels(switcherLetters, windows: ids, alphabet: labelAlphabet)
             let letters = switcherLetters
+            let memory = Usage.memory(Set(ids.compactMap { infos[$0]?.pid }))
             let cards = ids.map { id in
                 let worker = infos[id].flatMap { workers[$0.pid] }
                 let app = worker?.app.localizedName ?? ""
@@ -22,6 +23,10 @@ extension Tiler {
                 if world.monitors.count > 1, let m = world.locate(id)?.m ?? infos[id].flatMap({ world.monitorIndex(for: $0.frame) }) {
                     detail.append("Screen \(m + 1)")
                 }
+                if let bytes = infos[id].flatMap({ memory[$0.pid] }), bytes > 0 {
+                    detail.append(ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .memory))
+                }
+                if let launched = worker?.app.launchDate { detail.append("open \(Self.age(launched))") }
                 return Switcher.Card(id: id, icon: worker?.icon ?? worker?.app.icon, app: app,
                                      title: shortTitle(infos[id]?.title ?? "", app: app),
                                      detail: detail.joined(separator: " · "), label: letters[id])
@@ -74,6 +79,12 @@ extension Tiler {
             self.shortTitles.merge(picks) { $1 }
             self.switcher.retitle { id in self.infos[id].flatMap { self.shortTitles[$0.title] } }
         }
+    }
+
+    /// How long ago, at a glance: 12m, 3h, 2d.
+    static func age(_ since: Date) -> String {
+        let m = max(0, Int(-since.timeIntervalSinceNow / 60))
+        return m < 60 ? "\(m)m" : m < 1440 ? "\(m / 60)h" : "\(m / 1440)d"
     }
 
     /// Every window tess knows, most recently focused first, then the rest in screen order.

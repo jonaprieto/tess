@@ -87,7 +87,7 @@ final class Switcher {
         var icon: NSImage?
         var app: String
         var title: String
-        /// The screen it is on, when there is more than one.
+        /// Screen, the app's memory and how long it has been open.
         var detail: String
         var label: Character?
     }

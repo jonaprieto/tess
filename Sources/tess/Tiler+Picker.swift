@@ -91,9 +91,13 @@ extension Tiler {
             guard let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: browser) else { return }
             if case .place(let spot) = choice { pending = (browser, spot, Date().addingTimeInterval(10)) }
             NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
-            // A running browser opens a tab in its front window: place that window.
+            // A running browser opens a tab in its front window: place that window. Unless a new
+            // window opened and took the place already: placing it again would swap it back out.
+            // ponytail: a new window slower than 0.6 s loses the race; wait for a window event if that bites.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
-                guard let self, let pid = NSRunningApplication.runningApplications(withBundleIdentifier: browser).first?.processIdentifier
+                guard let self else { return }
+                if case .place = choice, self.pending?.bundle != browser { return }
+                guard let pid = NSRunningApplication.runningApplications(withBundleIdentifier: browser).first?.processIdentifier
                 else { return }
                 self.workers[pid]?.focusedWindow { id in
                     guard let id, self.world.contains(id) || self.infos[id] != nil else { return }

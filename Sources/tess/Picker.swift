@@ -28,6 +28,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         case command([Command])
         /// Text typed into an app after a shortcut, from a `keys:` verb (`slack michael`).
         case keys(KeysVerb, text: String)
+        /// A shell line run in the terminal app, from a `run:` verb (`brew install fzf`).
+        case run(String)
     }
 
     struct Tab {
@@ -256,7 +258,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
                               icon: Icons.symbol("command"), search: ""), at: 0)
         }
         // A link verb's link on top, the rest still searched (`claude code` finds Claude Code too).
-        if let l = link(q) ?? keys(q) { shown.insert(l, at: 0) }
+        if let l = link(q) ?? keys(q) ?? run(q) { shown.insert(l, at: 0) }
         // Arithmetic (not a lone number) is worked out on top.
         if Double(q) == nil, let v = Parse.arithmetic(q).map(Parse.number) {
             shown.insert(Item(kind: .copy(v), title: "= \(v)", detail: "Enter copies it",
@@ -331,7 +333,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     /// `verb text` for a link verb: the link with the text, opened by the app that handles it.
     private func link(_ text: String) -> Item? {
         let parts = text.split(separator: " ", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
-        guard parts.count == 2, let template = verbs[parts[0]], let url = Parse.link(template, parts[1]),
+        guard parts.count == 2, let template = verbs[parts[0]], !template.hasPrefix("run:"),
+              let url = Parse.link(template, parts[1]),
               let app = NSWorkspace.shared.urlForApplication(toOpen: url), let bundle = Bundle(url: app)?.bundleIdentifier
         else { return nil }
         return Item(kind: .url(url, browser: bundle), title: parts[1], detail: "\(parts[0]) · \(url.host ?? "")",
@@ -361,6 +364,14 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         list.empty = query.isEmpty ? "Type part of a page's title or address, or an address to open" : "Nothing matches"
         list.selected = 0
         list.needsDisplay = true
+    }
+
+    /// `verb text` for a `run:` verb: the command it makes, to run in a terminal.
+    private func run(_ text: String) -> Item? {
+        let parts = text.split(separator: " ", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count == 2, let line = verbs[parts[0]].flatMap({ Parse.run($0, parts[1]) }) else { return nil }
+        return Item(kind: .run(line), title: line, detail: "\(parts[0]) · runs in the terminal",
+                    icon: Icons.symbol("terminal"), search: "")
     }
 
     /// `verb text` for a `keys:` verb: that app, the shortcut, then the text.
@@ -515,7 +526,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             guard shown.indices.contains(list.selected) else { return nil }
             let item = shown[list.selected]
             switch (item.kind, fixed) {
-            case (.copy, _), (.system, _), (.command, _), (.keys, _):
+            case (.copy, _), (.system, _), (.command, _), (.keys, _), (.run, _):
                 close()
                 onDone(item, .place(.here))
             case (_, let fixed?):

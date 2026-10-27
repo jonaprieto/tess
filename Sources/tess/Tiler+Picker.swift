@@ -127,6 +127,8 @@ extension Tiler {
             if out.hasPrefix("error: ") { toast(String(out.dropFirst(7))) }
         case .keys(let k, let text):
             press(k, then: text)
+        case .run(let line):
+            runInTerminal(line)
         case .copy(let text):
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
@@ -222,6 +224,25 @@ extension Tiler {
         }
     }
 
+
+    /// A `run:` verb: `line` in the config's terminal, as a script it opens and runs (iTerm in a
+    /// new tab). The session stays on a login shell afterwards, so the output can be read and a
+    /// prompt answered; the script deletes itself first.
+    func runInTerminal(_ line: String) {
+        let script = FileManager.default.temporaryDirectory.appendingPathComponent("tess-\(UUID().uuidString).command")
+        let shown = line.replacingOccurrences(of: "'", with: "'\\''")
+        let body = "#!/bin/zsh -l\nrm -f \"$0\"\ncd ~\nprint -r -- '$ \(shown)'\n\(line)\nexec \"${SHELL:-/bin/zsh}\" -l\n"
+        do {
+            try body.write(to: script, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
+        } catch {
+            return toast("could not run it: \(error.localizedDescription)")
+        }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        p.arguments = ["-a", config.terminal, script.path]
+        do { try p.run() } catch { toast("could not open \(config.terminal)") }
+    }
 
     /// A `keys:` verb: its app in front (opened if need be), its shortcut, then `text`, as if
     /// typed. Events go to whatever is in front, so nothing is sent until the app is.

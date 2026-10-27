@@ -213,6 +213,13 @@ public enum Parse {
         return url
     }
 
+    /// A `run:` verb's shell line (`run:brew %s`) with `text` for `%s`, as typed: it is a
+    /// command the person wrote, so it is not quoted.
+    public static func run(_ value: String, _ text: String) -> String? {
+        guard value.hasPrefix("run:"), value.contains("%s"), !text.isEmpty else { return nil }
+        return String(value.dropFirst(4)).replacingOccurrences(of: "%s", with: text)
+    }
+
     /// A link verb's template (`https://chatgpt.com/?q=%s`) with `text`, encoded, for `%s`.
     public static func link(_ template: String, _ text: String) -> URL? {
         let safe = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")

@@ -150,12 +150,15 @@ The first word can also be a verb:
   (`github.com/anoma`) also shows on top to open.
 - `slack name`: Slack in front, its ⌘K switcher open with the name typed; Enter there goes
   to that channel or person.
+- `brew install fzf`: runs `brew install fzf` in the terminal (iTerm opens a new tab),
+  which stays on a shell to read the output or answer a prompt.
 
 Verbs are config, merged key by key: a value is an app (`cd`), a link with `%s` (`chat`),
 one of tess's searches (`search:files`, `search:text`, `search:books`, `search:papers`,
-`search:history`), or
-`keys:App:shortcut` (`slack`), which brings the app forward, presses the shortcut and types
-the text (`"vs": "keys:Visual Studio Code:cmd-p"` would open a file there by name).
+`search:history`), `keys:App:shortcut` (`slack`), which brings the app forward, presses the
+shortcut and types the text (`"vs": "keys:Visual Studio Code:cmd-p"` would open a file there
+by name), or `run:` and a command with `%s` (`brew`), run in the `terminal` app (`"sh":
+"run:%s"` runs whatever is typed).
 `{"verbs": {"f": null, "find": "search:files", "g": "https://www.google.com/search?q=%s"}}`
 renames the file search and adds a Google verb.
 

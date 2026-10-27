@@ -113,6 +113,9 @@ import Testing
     #expect(Parse.address("github.com/anoma")?.absoluteString == "https://github.com/anoma")
     #expect(Parse.address("http://x.org")?.absoluteString == "http://x.org")
     #expect(Parse.address("standup notes") == nil && Parse.address("localhost") == nil && Parse.address("") == nil)
+    #expect(Config.defaults.verbs["brew"].flatMap { Parse.run($0, "install fzf") } == "brew install fzf")
+    #expect(Parse.run("run:%s", "ls -la ~") == "ls -la ~" && Parse.run("brew %s", "x") == nil)
+    #expect(throws: ParseError.self) { try Config.load(Data(#"{"verbs": {"x": "run:brew"}}"#.utf8)) }
     let slack = Config.defaults.verbs["slack"].flatMap(KeysVerb.init(verb:))
     #expect(slack?.app == "Slack" && slack?.key == KeySpec(key: "k", mods: [.cmd]))
     #expect(KeysVerb(verb: "keys:Visual Studio Code:cmd-shift-p")?.app == "Visual Studio Code")

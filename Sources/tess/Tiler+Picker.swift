@@ -386,8 +386,11 @@ extension Tiler {
         let fm = FileManager.default
         let dirs = appFolders
         var out: [(url: URL, name: String, bundleID: String?, icon: NSImage)] = []
-        for dir in dirs {
-            for entry in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] where entry.hasSuffix(".app") {
+        // Finder is the one app people look for that lives outside those folders.
+        let finder = "/System/Library/CoreServices/Finder.app"
+        for dir in dirs + [finder] {
+            let entries = dir == finder ? [""] : (try? fm.contentsOfDirectory(atPath: dir)) ?? []
+            for entry in entries where dir == finder || entry.hasSuffix(".app") {
                 let url = URL(fileURLWithPath: dir).appendingPathComponent(entry)
                 let id = Bundle(url: url)?.bundleIdentifier
                 if let id, ignore.contains(id) { continue }

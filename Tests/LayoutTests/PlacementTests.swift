@@ -148,6 +148,16 @@ import Testing
     #expect(w.dropZone(2, at: CGPoint(x: 2500, y: 400), frames: f) == nil)
 }
 
+@Test func windowsSharingAPlaceDropOnTheFrontOne() {
+    // An accordion of 2 and 3 on A: they share one rect, and whichever is in front counts.
+    var w = world([[1], [2, 3]], [], focused: 1)
+    w.monitors[0].lanes[1].accordion = true
+    let f = w.frames(inner: 0, outer: 0)
+    let middle = CGPoint(x: 750, y: 400)
+    #expect(w.dropZone(1, at: middle, frames: f, front: [3, 2]) == .swap(3))
+    #expect(w.dropZone(1, at: middle, frames: f, front: [2, 3]) == .swap(2))
+}
+
 @Test func aRestartKeepsTessFullscreen() {
     // 2 fills monitor A edge to edge, in front of 1 and 3.
     var w = world([], [], focused: nil)

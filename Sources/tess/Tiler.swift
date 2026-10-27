@@ -404,7 +404,9 @@ final class Tiler {
     /// pull a window let go across two screens back onto the one holding most of it.
     func dragging(_ id: WindowID) {
         guard !paused, world.locate(id) != nil else { return }
-        let zone = world.dropZone(id, at: mousePoint, frames: world.frames(inner: config.inner, outer: config.outer))
+        // The dragged window is not in front of what it is dragged over.
+        let front = windowStack.map(\.id).filter { $0 != id }
+        let zone = world.dropZone(id, at: mousePoint, frames: world.frames(inner: config.inner, outer: config.outer), front: front)
         // The drop shown as it would come out: the window where it lands, after the others
         // make room, and in a swap the other one where it goes.
         var trial = world

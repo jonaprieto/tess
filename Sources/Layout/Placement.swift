@@ -80,17 +80,20 @@ extension World {
     }
 
     /// Where tiled window `id` dragged to `point` would land (`frames`: where the layout puts
-    /// each window); nil off every screen. Over another window, or
-    /// in the gap beside it: near an edge along the lanes, a lane of its own on that side; near
-    /// an edge across them, that window's lane on that side; the middle, they swap. Over its
-    /// own place, it stays. Over nothing on another screen, the right end of that screen.
-    public func dropZone(_ id: WindowID, at point: CGPoint, frames: [WindowID: CGRect]) -> DropZone? {
+    /// each window; `front`: windows front to back, so of windows sharing a place, as in an
+    /// accordion or under tess fullscreen, the one in front counts); nil off every screen. Over
+    /// another window, or in the gap beside it: near an edge along the lanes, a lane of its own
+    /// on that side; near an edge across them, that window's lane on that side; the middle,
+    /// they swap. Over its own place, it stays. Over nothing on another screen, the right end of
+    /// that screen.
+    public func dropZone(_ id: WindowID, at point: CGPoint, frames: [WindowID: CGRect], front: [WindowID] = []) -> DropZone? {
         guard let from = locate(id) else { return nil }
         let others = frames.filter { $0.key != id && locate($0.key) != nil }
-        let over = others.first { $0.value.contains(point) }
+        func rank(_ w: WindowID) -> Int { front.firstIndex(of: w) ?? front.count }
+        let over = others.filter { $0.value.contains(point) }.min { rank($0.key) < rank($1.key) }
         if over == nil, let own = frames[id], own.contains(point) { return .stay }
         func away(_ r: CGRect) -> Double { hypot(max(r.minX - point.x, 0, point.x - r.maxX), max(r.minY - point.y, 0, point.y - r.maxY)) }
-        let near = others.filter { away($0.value) <= 12 }.min { away($0.value) < away($1.value) }
+        let near = others.filter { away($0.value) <= 12 }.min { (away($0.value), rank($0.key)) < (away($1.value), rank($1.key)) }
         guard let (t, f) = over ?? near else {
             guard let m = monitors.firstIndex(where: { $0.frame.contains(point) }) else { return nil }
             return m == from.m ? .stay : .screen(m)

@@ -176,6 +176,18 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     #expect(w.parked.isEmpty)
 }
 
+@Test func unpluggedLanesTakeTheirNewScreensScale() {
+    // Re-tiled lanes weigh in points; a moved one weighs 1.
+    var w = world([[1], [2]], [[3]])
+    w.monitors[0].lanes[0].size = 600
+    w.monitors[0].lanes[1].size = 400
+    w.setMonitors([left])
+    let width = w.frames(inner: 0, outer: 0)[3]?.width ?? 0
+    #expect(abs(width - 1000.0 / 3) < 1)
+    w.setMonitors([left, right])
+    #expect(w.frames(inner: 0, outer: 0)[3]?.width == 1000)
+}
+
 @Test func noMonitorsKeepsTheLayout() {
     var w = world([[1]], [[2]])
     w.setMonitors([])

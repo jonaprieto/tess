@@ -209,7 +209,14 @@ extension World {
         let target = monitors.firstIndex { $0.id == main } ?? 0
         for gone in old where !monitors.contains(where: { $0.id == gone.id }) {
             parked[gone.id] = gone.lanes
-            monitors[target].lanes += gone.lanes
+            // Weights compare only within a screen: the lanes take this one's scale, or a lane
+            // weighed 1 beside lanes weighed in points would be a sliver.
+            let scale = (mean(monitors[target].lanes.map(\.size)) ?? 1) / (mean(gone.lanes.map(\.size)) ?? 1)
+            monitors[target].lanes += gone.lanes.map { lane in
+                var lane = lane
+                lane.size *= scale
+                return lane
+            }
         }
         for i in monitors.indices where !old.contains(where: { $0.id == monitors[i].id }) {
             for var lane in parked.removeValue(forKey: monitors[i].id) ?? [] {

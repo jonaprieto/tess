@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Linked into the binary (Package.swift), so macOS can ask once before tess talks to a browser. -->
+<!-- Linked into the binary (Package.swift), so macOS can ask once before tess talks to a browser,
+     and the Info.plist of tess.app (make install). -->
 <plist version="1.0">
 <dict>
+    <key>CFBundleExecutable</key>
+    <string>tess</string>
+    <key>CFBundleIconFile</key>
+    <string>tess</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSUIElement</key>
+    <true/>
     <key>CFBundleIdentifier</key>
     <string>com.jonaprieto.tess</string>
     <key>CFBundleName</key>

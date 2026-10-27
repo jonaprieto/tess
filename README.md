@@ -20,10 +20,11 @@ brew services start tess   # now and at login
 From source:
 
 ```sh
-make install   # build, sign, start at login and after a crash; links ~/.local/bin/tess
+make install   # build, sign, start at login and after a crash; links ~/.local/bin/tess, adds tess.app
 make test
 ```
 
+tess.app in Applications (Finder, Spotlight) opens Settings, or starts tess again after Quit.
 macOS asks once for Accessibility. To remove it: `brew services stop tess && brew uninstall tess`,
 or `make uninstall`.
 

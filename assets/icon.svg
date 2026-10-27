@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="tess">
+<title>tess</title>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A3042"/><stop offset="1" stop-color="#151925"/></linearGradient>
+<linearGradient id="acc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7B79FF"/><stop offset="1" stop-color="#3FD0E4"/></linearGradient>
+</defs>
+<rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+<rect x="100.5" y="100.5" width="823" height="823" rx="184.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.08"/>
+<g transform="translate(174 187) scale(6.5)">
+<rect fill="#8E99AE" x="12" y="14" width="24" height="24" rx="5"/>
+<rect x="40" y="14" width="24" height="24" rx="5" fill="url(#acc)"/>
+<rect fill="#8E99AE" x="68" y="14" width="24" height="24" rx="5"/>
+<rect fill="#8E99AE" x="40" y="42" width="24" height="20" rx="5"/>
+<rect fill="#8E99AE" x="40" y="66" width="24" height="20" rx="5"/>
+</g>
+</svg>

@@ -59,8 +59,25 @@ func serve() -> Never {
     exit(0)
 }
 
+/// Opened as an app (Finder, Spotlight): the running tess shows its Settings; else its
+/// LaunchAgent starts it, so a crash still restarts it; else this process becomes tess.
+func openApp() -> Never {
+    if Socket.send("settings") != nil { exit(0) }
+    for label in ["com.jonaprieto.tess", "homebrew.mxcl.tess"] {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        p.arguments = ["kickstart", "gui/\(getuid())/\(label)"]
+        guard (try? p.run()) != nil else { continue }
+        p.waitUntilExit()
+        if p.terminationStatus == 0 { exit(0) }
+    }
+    serve()
+}
+
 let args = Array(CommandLine.arguments.dropFirst())
 switch args.first {
+case nil where isatty(STDIN_FILENO) == 0 && Bundle.main.bundleURL.pathExtension == "app":
+    openApp()
 case nil, "-h", "--help", "help":
     print(usage, terminator: "")
 case "--version", "version":

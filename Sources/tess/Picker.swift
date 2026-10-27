@@ -260,11 +260,16 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     private func askJev(_ q: String) {
         searchGeneration += 1
         let generation = searchGeneration
-        // Not when the top row is already exact (a typed command, a sum).
+        // Not when the top row is already exact (a typed command, a sum), nor when the text
+        // plainly names it, every word starting a word of its title (`activity` for Activity
+        // Monitor): a guess must not bury what was typed.
+        let typed = q.lowercased().split(separator: " ")
         let exact = shown.first.map { i -> Bool in
             switch i.kind {
-            case .command, .copy: true
-            default: false
+            case .command, .copy: return true
+            default:
+                let words = i.title.lowercased().split { !$0.isLetter && !$0.isNumber }
+                return typed.allSatisfy { w in words.contains { $0.hasPrefix(w) } }
             }
         } ?? false
         guard let suggest, q.count >= 3, !exact else { return }

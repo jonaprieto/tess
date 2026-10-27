@@ -110,12 +110,17 @@ extension Tiler {
         case .window(let id):
             use(id, .jump)
         case .app(let pid):
-            guard let app = NSRunningApplication(processIdentifier: pid) else { return }
-            if let url = app.bundleURL {
-                NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
-            } else {
-                app.activate()
-            }
+            NSRunningApplication(processIdentifier: pid).map(reopen)
+        }
+    }
+
+    /// What clicking an app's Dock icon does: it comes forward, shown if it was hidden, and
+    /// most apps bring back a minimized window or open a closed one.
+    func reopen(_ app: NSRunningApplication) {
+        if let url = app.bundleURL {
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        } else {
+            app.activate()
         }
     }
 

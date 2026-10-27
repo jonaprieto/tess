@@ -70,6 +70,7 @@ extension Command {
         case .settings: "Settings"
         case .jump: "Jump to a window"
         case .click: "Click by label"
+        case .showAll: "Show all apps"
         case .undo: "Undo"
         case .redo: "Redo"
         case .zen: "Zen"
@@ -84,7 +85,7 @@ extension Command {
         switch self {
         case .focus, .focusMonitor, .cycleMonitor, .cycleWindow, .jump: .focus
         case .move, .moveToMonitor, .clearMonitor: .move
-        case .resize, .grow, .balance, .flip, .accordion, .arrange, .fullscreen, .float: .layout
+        case .resize, .grow, .balance, .flip, .accordion, .arrange, .fullscreen, .float, .showAll: .layout
         default: .more
         }
     }

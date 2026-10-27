@@ -47,6 +47,9 @@ Every default key is on any Mac keyboard; `alt` is ⌥ Option.
   and tab shows a letter, and the letter goes there. It lasts one command; `alt-t` again
   keeps it on until esc.
 - `alt-space` opens the picker, in tess mode too.
+- `alt-shift-a` (or `show all` in the picker) shows all apps: each running app with no window
+  in sight gets one back (as its Dock icon would) and every screen is laid out with them, as
+  columns or a grid.
 - `alt-f` is click mode, in tess mode too: everything clickable in the window in front gets a
   label (Slack's channels and DMs, a page's links and buttons); typing one clicks it, esc
   leaves.

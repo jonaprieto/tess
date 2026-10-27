@@ -59,6 +59,8 @@ public enum Command: Equatable, Sendable {
     case click
     /// A key typed in click mode: a label's letter, or esc to leave.
     case clickKey(String)
+    /// Every running app's window brought back and every screen laid out with them.
+    case showAll
     /// A window by its id (what jump mode binds to labels).
     case focusWindow(UInt32), swapWith(UInt32)
     /// A tab by its place among the tabs tess labeled (what tess mode and jump mode bind to
@@ -78,6 +80,7 @@ public enum Command: Equatable, Sendable {
         "float": .float, "close": .close, "reload": .reload,
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
         "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump, "click": .click,
+        "show-all": .showAll,
         "undo": .undo, "redo": .redo, "zen": .zen, "terminal": .terminal,
         "wifi": .wifi(nil), "caffeine": .caffeine(nil), "speedtest": .speedtest,
         "halves": .arrange(.halves), "columns": .arrange(.columns), "rows": .arrange(.rows), "grid": .arrange(.grid),

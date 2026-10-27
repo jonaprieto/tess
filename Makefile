@@ -2,11 +2,12 @@ LABEL := com.jonaprieto.tess
 AGENT := $(HOME)/Library/LaunchAgents/$(LABEL).plist
 BIN   := $(CURDIR)/build/tess
 APP   := /Applications/tess.app
+VERSION := $(shell sed -n 's/^let version = "\(.*\)"/\1/p' Sources/tess/main.swift)
 # Signed with a certificate so macOS keeps the Accessibility grant across rebuilds; the
 # ad-hoc fallback ("-") changes with every build and loses it.
 SIGN ?= $(or $(shell security find-identity -v -p codesigning | grep -v REVOKED | grep -m1 -o '[0-9A-F]\{40\}'),-)
 
-.PHONY: build test app install uninstall
+.PHONY: build test app dist install uninstall
 
 # Built next to the running copy and renamed over it: overwriting a running binary in place
 # invalidates its signature and macOS kills it.
@@ -28,6 +29,16 @@ app: build
 	cp build/tess "$(APP)/Contents/MacOS/tess"
 	cp assets/tess.icns "$(APP)/Contents/Resources/tess.icns"
 	codesign -f -s "$(SIGN)" -i $(LABEL) "$(APP)"
+
+# What a release carries and the Homebrew formula installs: the binary, tess.app and the
+# license, without the metadata files macOS's tar would add.
+dist:
+	rm -rf build/dist
+	mkdir -p build/dist
+	$(MAKE) app APP=$(CURDIR)/build/dist/tess.app
+	cp build/tess LICENSE build/dist/
+	COPYFILE_DISABLE=1 tar czf build/tess-$(VERSION)-macos-arm64.tar.gz -C build/dist tess tess.app LICENSE
+	shasum -a 256 build/tess-$(VERSION)-macos-arm64.tar.gz
 
 # Started at login and restarted after a crash or a watchdog exit, not after Quit.
 install: app

@@ -7,6 +7,8 @@ public struct ParseError: Error, CustomStringConvertible, Equatable {
 
 public enum Command: Equatable, Sendable {
     case focus(Direction), move(Direction), resize(Axis, Double)
+    /// Bigger or smaller along the lanes' axis: wider in columns, taller in rows (`grow +50`).
+    case grow(Double)
     case balance, flip, accordion, fullscreen, nativeFullscreen, float, close
     /// Every window on the active monitor in one shape (`halves`, `columns`, `rows`, `grid`).
     case arrange(Arrangement)
@@ -102,6 +104,9 @@ public enum Command: Equatable, Sendable {
         case ("resize", 3):
             guard let axis = Axis(rawValue: w[1]), let px = Double(w[2]), px.isFinite else { throw bad }
             return .resize(axis, min(max(px, -10_000), 10_000))
+        case ("grow", 2):
+            guard let px = Double(w[1]), px.isFinite else { throw bad }
+            return .grow(min(max(px, -10_000), 10_000))
         case ("focus-screen", 2):
             switch w[1] {
             case "next": return .cycleMonitor(1)
@@ -161,7 +166,7 @@ extension Command {
     /// Moves or resizes a tiled window.
     public var isMoveOrResize: Bool {
         switch self {
-        case .move, .resize: true
+        case .move, .resize, .grow: true
         default: false
         }
     }
@@ -174,6 +179,7 @@ extension Command: CustomStringConvertible {
         case .focus(let d): "focus \(d.rawValue)"
         case .move(let d): "move \(d.rawValue)"
         case .resize(let a, let px): "resize \(a.rawValue) \(px >= 0 ? "+" : "")\(px == px.rounded() ? String(Int(px)) : String(px))"
+        case .grow(let px): "grow \(px >= 0 ? "+" : "")\(px == px.rounded() ? String(Int(px)) : String(px))"
         case .focusMonitor(let n): "focus-screen \(n)"
         case .cycleMonitor(let s): "focus-screen \(s > 0 ? "next" : "prev")"
         case .cycleWindow(let s): "focus \(s > 0 ? "next" : "prev")"

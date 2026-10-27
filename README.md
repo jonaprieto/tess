@@ -35,7 +35,8 @@ Every default key is on any Mac keyboard; `alt` is ⌥ Option.
   floating ones), `alt-shift-h/j/k/l` move, `alt-1/2/3` go to a screen,
   `alt-shift-1/2/3` send the window there, `alt-tab` next screen.
 - `alt-enter` fullscreen within tess, `alt-slash` columns or rows, `alt-shift-slash`
-  accordion, `alt-shift-minus/equal` narrower or wider, `alt-shift-0` balance,
+  accordion, `alt-shift-minus/equal` (or `cmd-shift-minus/equal`) smaller or bigger, wider
+  in columns and taller in rows, `alt-shift-0` balance,
   `alt-shift-space` float, `alt-r` resize mode.
 - `alt-shift-backspace` sends every window on this screen to the next one.
 - `alt-shift-semicolon` re-tiles from where the windows are now.

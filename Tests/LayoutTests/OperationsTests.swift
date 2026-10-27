@@ -29,6 +29,17 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     #expect(w.focused == 3)
 }
 
+@Test func growFollowsTheLanesAxis() throws {
+    for rows in [false, true] {
+        var w = world([[1], [2]], focused: 1)
+        w.monitors[0].rows = rows
+        w.grow(by: 100)
+        #expect(w.monitors[0].lanes[0].size > w.monitors[0].lanes[1].size, "rows: \(rows)")
+    }
+    #expect(try Command.parse("grow -50") == [.grow(-50)])
+    #expect(Command.grow(50).description == "grow +50")
+}
+
 @Test func cycleWindowGoesRoundScreensThenFloating() throws {
     var w = world([[1, 2], [3]], [[5]], focused: 3)
     w.floating = [9]

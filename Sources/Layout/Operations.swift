@@ -143,6 +143,13 @@ extension World {
         }
     }
 
+    /// `px` along the lanes' axis, so the focused window's lane is bigger or smaller
+    /// whichever way the screen is laid out: wider in columns, taller in rows.
+    public mutating func grow(by px: Double) {
+        guard let p = focusedPosition else { return }
+        resize(monitors[p.m].rows ? .height : .width, by: px)
+    }
+
     public mutating func balance() {
         guard monitors.indices.contains(activeMonitor) else { return }
         for i in monitors[activeMonitor].lanes.indices {

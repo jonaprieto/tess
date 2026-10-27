@@ -37,6 +37,7 @@ extension Command {
         case .move(let d): "Move \(d.rawValue)"
         case .resize(let a, let px):
             a == .width ? (px < 0 ? "Narrower" : "Wider") : (px < 0 ? "Shorter" : "Taller")
+        case .grow(let px): px < 0 ? "Smaller" : "Bigger"
         case .balance: "Balance"
         case .flip: "Columns ↔ rows"
         case .accordion: "Accordion"
@@ -76,7 +77,7 @@ extension Command {
         switch self {
         case .focus, .focusMonitor, .cycleMonitor, .cycleWindow, .jump: .focus
         case .move, .moveToMonitor, .clearMonitor: .move
-        case .resize, .balance, .flip, .accordion, .arrange, .fullscreen, .nativeFullscreen, .float: .layout
+        case .resize, .grow, .balance, .flip, .accordion, .arrange, .fullscreen, .nativeFullscreen, .float: .layout
         default: .more
         }
     }

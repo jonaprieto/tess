@@ -41,6 +41,7 @@ extension Tiler {
         case .focus(let d): world.focus(d); flash = true
         case .move(let d): world.move(d); flash = true
         case .resize(let a, let px): world.resize(a, by: px)
+        case .grow(let px): world.grow(by: px)
         case .balance: world.balance()
         case .arrange(let a): world.arrange(a)
         case .flip:

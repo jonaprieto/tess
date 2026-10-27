@@ -12,6 +12,8 @@ public enum Command: Equatable, Sendable {
     case arrange(Arrangement)
     /// Monitor numbers as written, from 1.
     case focusMonitor(Int), cycleMonitor(Int), moveToMonitor(Int)
+    /// The next or previous window, across screens (`focus next`, `focus prev`).
+    case cycleWindow(Int)
     case exec(String), reload, mode(String), retile, rescue, pause, tree, nop
     /// A new window of the config's terminal, in the home folder.
     case terminal
@@ -90,7 +92,12 @@ public enum Command: Equatable, Sendable {
             return d
         }
         switch (head, w.count) {
-        case ("focus", 2): return .focus(try direction(w[1]))
+        case ("focus", 2):
+            switch w[1] {
+            case "next": return .cycleWindow(1)
+            case "prev": return .cycleWindow(-1)
+            default: return .focus(try direction(w[1]))
+            }
         case ("move", 2): return .move(try direction(w[1]))
         case ("resize", 3):
             guard let axis = Axis(rawValue: w[1]), let px = Double(w[2]), px.isFinite else { throw bad }
@@ -169,6 +176,7 @@ extension Command: CustomStringConvertible {
         case .resize(let a, let px): "resize \(a.rawValue) \(px >= 0 ? "+" : "")\(px == px.rounded() ? String(Int(px)) : String(px))"
         case .focusMonitor(let n): "focus-screen \(n)"
         case .cycleMonitor(let s): "focus-screen \(s > 0 ? "next" : "prev")"
+        case .cycleWindow(let s): "focus \(s > 0 ? "next" : "prev")"
         case .moveToMonitor(let n): "move-to-screen \(n)"
         case .clearMonitor: "clear-screen"
         case .exec(let s): "exec \(s)"

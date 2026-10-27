@@ -134,7 +134,7 @@ import Testing
     #expect(wm[KeySpec(key: "2", mods: [.shift])] == [.moveToMonitor(2)])
     #expect(wm[KeySpec(key: "c", mods: [.shift])] == [.close])
     #expect(wm[KeySpec(key: "c", mods: [])] == nil)
-    #expect(wm.count == 36)
+    #expect(wm.count == 38)
     #expect(wm[KeySpec(key: "z", mods: [])] == [.zen, .mode("main")])
     #expect(wm[KeySpec(key: "u", mods: [])] == [.undo])
     #expect(wm[KeySpec(key: "u", mods: [.shift])] == [.redo])

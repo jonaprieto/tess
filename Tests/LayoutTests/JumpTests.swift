@@ -48,7 +48,7 @@ import Testing
 
 @Test func lettersAreTheOnesTessModeLeavesFree() throws {
     let pool = labelLetters(free: Config.defaults.modes["tess"]!)
-    #expect(pool == "dqeyiopcnm")
+    #expect(pool == "dqeyiocm")
     // No letter the picker's map uses for itself either (g jumps, f floats).
     #expect(!pool.contains("g") && !pool.contains("f"))
     // A letter that leaves the pool leaves its window.

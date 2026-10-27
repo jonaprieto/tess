@@ -29,6 +29,21 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     #expect(w.focused == 3)
 }
 
+@Test func cycleWindowGoesRoundScreensThenFloating() throws {
+    var w = world([[1, 2], [3]], [[5]], focused: 3)
+    w.floating = [9]
+    w.cycleWindow(1)
+    #expect(w.focused == 5 && w.activeMonitor == 1)
+    w.cycleWindow(1)
+    #expect(w.focused == 9)
+    w.cycleWindow(1)
+    #expect(w.focused == 1)
+    w.cycleWindow(-1)
+    #expect(w.focused == 9)
+    #expect(try Command.parse("focus prev") == [.cycleWindow(-1)])
+    #expect(Command.cycleWindow(1).description == "focus next")
+}
+
 @Test func arrangePutsFocusedFirst() throws {
     var w = world([[1, 2], [3], [4]], focused: 3)
     w.monitors[0].lanes[0].accordion = true

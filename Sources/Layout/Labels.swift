@@ -47,6 +47,7 @@ extension Command {
         case .close: "Close window"
         case .focusMonitor(let n): "Screen \(n)"
         case .cycleMonitor(let s): s > 0 ? "Next screen" : "Previous screen"
+        case .cycleWindow(let s): s > 0 ? "Next window" : "Previous window"
         case .moveToMonitor(let n): "Move to screen \(n)"
         case .exec(let line):
             line.hasPrefix("open -a ") ? "Open \(line.dropFirst(8))" : "Run \(line)"
@@ -73,7 +74,7 @@ extension Command {
 
     public var group: Group {
         switch self {
-        case .focus, .focusMonitor, .cycleMonitor, .jump: .focus
+        case .focus, .focusMonitor, .cycleMonitor, .cycleWindow, .jump: .focus
         case .move, .moveToMonitor, .clearMonitor: .move
         case .resize, .balance, .flip, .accordion, .arrange, .fullscreen, .nativeFullscreen, .float: .layout
         default: .more

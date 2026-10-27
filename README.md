@@ -31,7 +31,8 @@ or `make uninstall`.
 
 Every default key is on any Mac keyboard; `alt` is ⌥ Option.
 
-- `alt-h/j/k/l` focus, `alt-shift-h/j/k/l` move, `alt-1/2/3` go to a screen,
+- `alt-h/j/k/l` focus, `alt-n/p` the next or previous window (every screen, then the
+  floating ones), `alt-shift-h/j/k/l` move, `alt-1/2/3` go to a screen,
   `alt-shift-1/2/3` send the window there, `alt-tab` next screen.
 - `alt-enter` fullscreen within tess, `alt-slash` columns or rows, `alt-shift-slash`
   accordion, `alt-shift-minus/equal` narrower or wider, `alt-shift-0` balance,

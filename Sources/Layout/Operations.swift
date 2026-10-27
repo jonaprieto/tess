@@ -78,6 +78,15 @@ extension World {
         focusMonitor(((activeMonitor + step) % c + c) % c)
     }
 
+    /// The next window (`step` 1) or the previous one (-1), going through every screen's
+    /// windows in order and then the floating ones, and round again.
+    public mutating func cycleWindow(_ step: Int) {
+        let all = tiled + floating.sorted()
+        guard !all.isEmpty else { return }
+        let i = focused.flatMap(all.firstIndex) ?? (step > 0 ? -1 : 0)
+        focused = all[((i + step) % all.count + all.count) % all.count]
+    }
+
     // MARK: Moving
 
     /// Along the lanes: pop out of a shared lane, else join the neighbor lane, else cross to

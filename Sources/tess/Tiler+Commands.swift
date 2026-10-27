@@ -67,6 +67,7 @@ extension Tiler {
             workers[info.pid]?.close(id)
         case .focusMonitor(let n): world.focusMonitor(n - 1); flash = true
         case .cycleMonitor(let s): world.cycleMonitor(s); flash = true
+        case .cycleWindow(let s): world.cycleWindow(s); flash = true
         case .moveToMonitor(let n):
             if let id = world.focused, world.floating.contains(id) {
                 moveFloating(id, to: n - 1)

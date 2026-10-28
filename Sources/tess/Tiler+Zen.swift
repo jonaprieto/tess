@@ -2,8 +2,8 @@ import AppKit
 import Layout
 
 /// Zen: for 25 minutes the focused window fills its screen and a veil darkens the others, then
-/// 5 minutes of break with the layout back and a lighter veil on every screen, until `zen` runs
-/// again.
+/// 5 minutes of break with every screen black and no key or click getting through, until `zen`
+/// runs again.
 extension Tiler {
     func toggleZen() {
         if zen == nil {
@@ -35,6 +35,7 @@ extension Tiler {
             Events.record("zen", ["working": working])
             scheduleApply()
         }
+        if !working { refreshVeil() }  // the time left on it
         onLayout()
     }
 
@@ -53,31 +54,46 @@ extension Tiler {
         return world.activeMonitor
     }
 
-    /// Working: the other screens, dark. Break: every screen, lighter, so it cannot go unnoticed
-    /// and what was left open still reads.
+    /// Working: the other screens, dark. Break: every screen whole (menu bar and Dock too) black
+    /// with the time left, and no key or click gets through until it ends.
     func refreshVeil() {
+        let resting = zen != nil && !zenWorking && !paused
+        CmdTab.blocking = resting
         guard zen != nil, !paused else { return veil.show([]) }
+        if resting { return veil.show(Screens.current().map(\.full), alpha: 1, level: .screenSaver, text: zenTitle) }
         let m = zenMonitor
-        veil.show(world.monitors.indices.filter { !zenWorking || $0 != m }.map { world.monitors[$0].frame },
-                  alpha: zenWorking ? 0.95 : 0.6)
+        veil.show(world.monitors.indices.filter { $0 != m }.map { world.monitors[$0].frame })
     }
 }
 
 /// Dark, click-through panels over the screens Zen is not using, just above normal windows and
 /// below tess's own labels and toasts. Clicking through one focuses what is under it, and Zen
-/// follows.
+/// follows. In the break, over everything, with the time left in the middle.
 final class Veil {
-    private var panels: [NSPanel] = []
+    private var panels: [(panel: NSPanel, text: NSTextField)] = []
 
-    func show(_ screens: [CGRect], alpha: CGFloat = 0.95) {
+    func show(_ screens: [CGRect], alpha: CGFloat = 0.95,
+              level: NSWindow.Level = NSWindow.Level(rawValue: NSWindow.Level.normal.rawValue + 1), text: String? = nil) {
         while panels.count < screens.count {
-            panels.append(Panels.overlay(level: NSWindow.Level(rawValue: NSWindow.Level.normal.rawValue + 1)))
+            let p = Panels.overlay(level: level)
+            let t = NSTextField(labelWithString: "")
+            t.font = .monospacedDigitSystemFont(ofSize: 72, weight: .light)
+            t.textColor = .white
+            t.translatesAutoresizingMaskIntoConstraints = false
+            p.contentView?.addSubview(t)
+            if let v = p.contentView {
+                NSLayoutConstraint.activate([t.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+                                             t.centerYAnchor.constraint(equalTo: v.centerYAnchor)])
+            }
+            panels.append((p, t))
         }
-        for (n, p) in panels.enumerated() {
+        for (n, (p, t)) in panels.enumerated() {
             guard let screen = screens[safe: n] else {
                 p.orderOut(nil)
                 continue
             }
+            p.level = level
+            t.stringValue = text ?? ""
             p.backgroundColor = NSColor.black.withAlphaComponent(alpha)
             let frame = Screens.flip(screen)
             if p.frame != frame { p.setFrame(frame, display: true) }

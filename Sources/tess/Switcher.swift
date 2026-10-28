@@ -4,13 +4,17 @@ import Layout
 /// cmd-tab through tess. An event tap on a thread of its own (a busy main thread must never
 /// hold up typing) takes cmd-tab before the Dock's switcher sees it. While cmd stays down, tab
 /// and shift-tab (or the arrows) step, a letter goes to its window, esc cancels, and letting go
-/// of cmd (or return) goes to the one picked. Every other key passes untouched.
+/// of cmd (or return) goes to the one picked. Every other key passes untouched, but in Zen's
+/// break no key or click gets through.
 final class CmdTab {
     enum Key { case open(back: Bool), step(back: Bool), letter(UInt16), cancel, release }
 
     /// Off while tess is paused: cmd-tab is macOS's again.
     // ponytail: a Bool written on main and read on the tap's thread; a lock if it grows.
     nonisolated(unsafe) static var enabled = true
+
+    /// Zen's break: every key and click stops here.
+    nonisolated(unsafe) static var blocking = false
 
     private let onKey: (Key) -> Void
     // The tap's thread only.
@@ -25,7 +29,8 @@ final class CmdTab {
     }
 
     private func run() {
-        let mask = [CGEventType.keyDown, .keyUp, .flagsChanged].reduce(CGEventMask(0)) { $0 | CGEventMask(1) << $1.rawValue }
+        let mask = [CGEventType.keyDown, .keyUp, .flagsChanged, .leftMouseDown, .leftMouseUp, .rightMouseDown,
+                    .rightMouseUp, .otherMouseDown, .otherMouseUp, .scrollWheel].reduce(CGEventMask(0)) { $0 | CGEventMask(1) << $1.rawValue }
         guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
                                           eventsOfInterest: mask, callback: { _, type, e, refcon in
             Unmanaged<CmdTab>.fromOpaque(refcon!).takeUnretainedValue().handle(type, e)
@@ -46,6 +51,8 @@ final class CmdTab {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
             return pass
         }
+        if Self.blocking { return nil }
+        guard type == .keyDown || type == .keyUp || type == .flagsChanged else { return pass }
         let flags = e.flags, code = e.getIntegerValueField(.keyboardEventKeycode), back = flags.contains(.maskShift)
         if type == .flagsChanged {
             if open, !flags.contains(.maskCommand) {

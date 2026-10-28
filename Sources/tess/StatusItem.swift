@@ -138,7 +138,8 @@ final class StatusItem: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(item("Open Picker…", "magnifyingglass", #selector(pick), for: .pick("")))
         let zen = item(tiler.zen == nil ? "Zen" : "Leave Zen", "moon", #selector(toggleZen), for: .zen)
-        zen.subtitle = tiler.zenTitle ?? "25 min focus, 5 min break"
+        let breaks = tiler.breaksToday
+        zen.subtitle = (tiler.zenTitle ?? "25 min focus, 5 min break") + (breaks == 0 ? "" : " · \(breaks) break\(breaks == 1 ? "" : "s") today")
         menu.addItem(zen)
         let cup = item(tiler.caffeine == nil ? "Caffeine" : "Caffeine Off", "cup.and.saucer", #selector(toggleCaffeine),
                        for: .caffeine(nil))

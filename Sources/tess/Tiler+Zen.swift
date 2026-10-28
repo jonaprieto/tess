@@ -37,13 +37,29 @@ extension Tiler {
         guard let working = zen?.phase(at: Date()).working else { return }
         if working != zenWorking {
             zenWorking = working
+            if !working { countBreak() }
             NSSound(named: "Tink")?.play()
-            toast(working ? "back to work" : "break, 5 min")
+            toast(working ? "back to work" : "break, 5 min · \(breaksToday) today")
             Events.record("zen", ["working": working])
             scheduleApply()
         }
         if !working { refreshVeil() }  // the time left on it
         onLayout()
+    }
+
+    /// Breaks begun today, kept by day across restarts.
+    var breaksToday: Int { (UserDefaults.standard.dictionary(forKey: "breaks") as? [String: Int])?[Self.today] ?? 0 }
+
+    func countBreak() {
+        var days = UserDefaults.standard.dictionary(forKey: "breaks") as? [String: Int] ?? [:]
+        days[Self.today, default: 0] += 1
+        UserDefaults.standard.set(days, forKey: "breaks")
+    }
+
+    /// The local date, 2026-10-27.
+    static var today: String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
 
     /// "zen 24:13" or "break 4:02"; nil when Zen is off.

@@ -119,7 +119,8 @@ Zen (`z` in tess mode, `tess zen`, or the menu) is a pomodoro: for 25 minutes th
 window fills its screen and the other screens go dark, then a 5 minute break: every screen
 goes black with the time left, and no key or click gets through until it is over. Then work
 again, until Zen is turned off. The menu bar counts down.
-`break` (in the picker too) starts the break now, turning Zen on if it is off.
+`break` (in the picker too) starts the break now, turning Zen on if it is off; the menu
+counts the breaks taken today.
 Clicking a dark screen focuses what is under it, and Zen follows.
 
 ## Picker

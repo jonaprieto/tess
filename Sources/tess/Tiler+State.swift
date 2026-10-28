@@ -38,6 +38,7 @@ extension Tiler {
         let frames = targets
         state["mode"] = mode
         state["zen"] = zenTitle ?? NSNull()
+        state["breaks_today"] = breaksToday
         state["paused"] = paused
         state["config_error"] = configError ?? NSNull()
         state["frontmost"] = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""

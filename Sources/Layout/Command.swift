@@ -71,6 +71,8 @@ public enum Command: Equatable, Sendable {
     case undo, redo
     /// The focused window alone in front, with a pomodoro timer, until run again.
     case zen
+    /// Zen's break now (`break`), Zen on if it was off.
+    case zenBreak
     /// Renders the picker's map to a PNG at this path (for debugging without a screen).
     case debugMap(String)
 
@@ -81,7 +83,7 @@ public enum Command: Equatable, Sendable {
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
         "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump, "click": .click,
         "show-all": .showAll,
-        "undo": .undo, "redo": .redo, "zen": .zen, "terminal": .terminal,
+        "undo": .undo, "redo": .redo, "zen": .zen, "break": .zenBreak, "terminal": .terminal,
         "wifi": .wifi(nil), "caffeine": .caffeine(nil), "speedtest": .speedtest,
         "halves": .arrange(.halves), "columns": .arrange(.columns), "rows": .arrange(.rows), "grid": .arrange(.grid),
     ]

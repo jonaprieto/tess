@@ -129,6 +129,7 @@ extension Tiler {
         case .undo: return undo()
         case .redo: return redo()
         case .zen: toggleZen()
+        case .zenBreak: takeBreak()
         case .focusWindow(let id):
             guard infos[id] != nil else { return "error: no window \(id)" }
             use(id, .jump)

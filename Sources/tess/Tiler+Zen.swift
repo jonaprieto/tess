@@ -5,6 +5,13 @@ import Layout
 /// 5 minutes of break with every screen black and no key or click getting through, until `zen`
 /// runs again.
 extension Tiler {
+    /// A break now: Zen (turned on if it is off) from the start of its break, then work as usual.
+    func takeBreak() {
+        if zen == nil { toggleZen() }
+        if let work = zen?.work { zen?.start = Date().addingTimeInterval(-work) }
+        zenTick()
+    }
+
     func toggleZen() {
         if zen == nil {
             zen = Pomodoro(start: Date())

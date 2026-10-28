@@ -74,6 +74,7 @@ extension Command {
         case .undo: "Undo"
         case .redo: "Redo"
         case .zen: "Zen"
+        case .zenBreak: "Break"
         case .focusWindow: "Go to a window"
         case .swapWith: "Swap windows"
         case .focusTab: "Go to a tab"

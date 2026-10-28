@@ -10,6 +10,7 @@ import Testing
     #expect(try Command.parse("focus-screen prev") == [.cycleMonitor(-1)])
     #expect(try Command.parse("move-to-screen 3") == [.moveToMonitor(3)])
     #expect(try Command.parse("clear-screen") == [.clearMonitor])
+    #expect(try Command.parse("break") == [.zenBreak])
     // One name per command.
     for old in ["focus-monitor 2", "move-to-monitor 3", "clear-monitor"] {
         #expect(throws: ParseError.self, "\(old)") { try Command.parse(old) }

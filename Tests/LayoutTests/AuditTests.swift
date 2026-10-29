@@ -67,10 +67,10 @@ import Testing
     #expect(Config.defaults.modes["service"] == nil)
     let wm = Config.defaults.modes["tess"]!
     let altSpace = KeySpec(key: "space", mods: [.alt])
-    // One key per command: alt-space picks, nothing else does; tess mode's letters jump, so
-    // no key is jump mode's by default.
+    let cmdSpace = KeySpec(key: "space", mods: [.cmd])
+    // The picker has a primary shortcut and a fallback; letters still go directly to windows.
     for (name, m) in Config.defaults.modes {
-        #expect(m.filter { $0.value == [.pick("")] }.map(\.key).allSatisfy { $0 == altSpace }, "\(name) pick")
+        #expect(m.filter { $0.value == [.pick("")] }.map(\.key).allSatisfy { $0 == altSpace || $0 == cmdSpace }, "\(name) pick")
         #expect(!m.values.contains([.jump]), "\(name) jump")
     }
     #expect(wm[altSpace] == [.pick("")])

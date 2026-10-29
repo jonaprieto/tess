@@ -27,6 +27,15 @@ import Testing
     #expect(Command.pick("code ~").description == "pick code ~")
 }
 
+@Test func pickerHasCommandSpaceAndAFallbackInEveryDefaultMode() throws {
+    for bindings in Config.defaults.modes.values {
+        #expect(bindings[KeySpec(key: "space", mods: [.cmd])] == [.pick("")])
+        #expect(bindings[KeySpec(key: "space", mods: [.alt])] == [.pick("")])
+    }
+    let old = try Config.load(Data(#"{"modes":{"main":{"alt-space":"pick"}}}"#.utf8))
+    #expect(old.modes["main"]?[KeySpec(key: "space", mods: [.cmd])] == [.pick("")])
+}
+
 @Test func execTakesTheRestOfTheLine() throws {
     #expect(try Command.parse("exec open -a kitty; echo hi") == [.exec("open -a kitty; echo hi")])
     #expect(try Command.parse("balance; exec open x") == [.balance, .exec("open x")])
@@ -136,7 +145,7 @@ import Testing
     #expect(wm[KeySpec(key: "c", mods: [.shift])] == [.close])
     #expect(wm[KeySpec(key: "c", mods: [])] == nil)
     #expect(wm[KeySpec(key: "f", mods: [.alt])] == [.click])
-    #expect(wm.count == 39)
+    #expect(wm.count == 40)
     #expect(wm[KeySpec(key: "z", mods: [])] == [.zen, .mode("main")])
     #expect(wm[KeySpec(key: "u", mods: [])] == [.undo])
     #expect(wm[KeySpec(key: "u", mods: [.shift])] == [.redo])
@@ -191,6 +200,26 @@ import Testing
     #expect(Config.defaults.terminal == "iTerm")
     #expect(try Config.load(Data(#"{"terminal": "Ghostty"}"#.utf8)).terminal == "Ghostty")
     #expect(Config.defaults.modes["tess"]?[KeySpec(key: "t", mods: [])] == [.terminal])
+}
+
+@Test func appearanceSettingsValidateAndRoundTrip() throws {
+    let data = Data(##"{"overlay":{"gray_amount":0.35,"inactive_border_color":"#112233","selection_color":"#ff8000"}}"##.utf8)
+    let c = try Config.load(data)
+    #expect(c.grayAmount == 0.35)
+    let inactive: [Double] = [17.0 / 255, 34.0 / 255, 51.0 / 255]
+    #expect(c.inactiveBorderColor == inactive)
+    #expect(c.selectionColor == [1, 128.0 / 255, 0])
+    let reloaded = try Config.load(Config.file(for: c.raw))
+    #expect(reloaded.raw == c.raw)
+    #expect(Config.defaults.grayAmount == 0.8)
+    for amount in [-0.1, 1.1] {
+        var r = Config.defaultRaw
+        r.overlay?.grayAmount = amount
+        #expect(throws: ParseError.self) { try Config.validate(r) }
+    }
+    for key in ["inactive_border_color", "selection_color"] {
+        #expect(throws: ParseError.self) { try Config.load(Data("{\"overlay\":{\"\(key)\":\"invalid\"}}".utf8)) }
+    }
 }
 
 @Test func borderColorIsAHexColor() throws {

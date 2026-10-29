@@ -49,7 +49,7 @@ public enum Command: Equatable, Sendable {
     /// Send every window on the active monitor to the next one.
     case clearMonitor
     /// The settings window.
-    case settings
+    case settings, tutorial
     /// tess's model and the machine, as JSON (also written to the event log).
     case state
     /// Jump mode: every window's label and screen number as a key.
@@ -83,6 +83,7 @@ public enum Command: Equatable, Sendable {
         "retile": .retile, "rescue": .rescue, "pause": .pause, "tree": .tree, "nop": .nop,
         "pick": .pick(""), "close-replace": .closeReplace, "clear-screen": .clearMonitor, "settings": .settings, "state": .state, "jump": .jump, "click": .click,
         "show-all": .showAll,
+        "tutorial": .tutorial,
         "undo": .undo, "redo": .redo, "zen": .zen, "break": .zenBreak, "terminal": .terminal,
         "wifi": .wifi(nil), "caffeine": .caffeine(nil), "speedtest": .speedtest,
         "halves": .arrange(.halves), "columns": .arrange(.columns), "rows": .arrange(.rows), "grid": .arrange(.grid),

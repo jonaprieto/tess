@@ -27,7 +27,7 @@ extension Tiler {
 
 
     func execute(_ c: Command) -> String {
-        if paused, ![.pause, .tree, .reload].contains(c) { return "error: paused" }
+        if paused, ![.pause, .tree, .reload, .tutorial].contains(c) { return "error: paused" }
         Log.write("command: \(c)")
         let before = world.focused
         let beforeMonitor = world.activeMonitor
@@ -61,6 +61,9 @@ extension Tiler {
         case .float:
             guard let id = world.focused ?? osFocused, world.contains(id) else { return "error: no tiled or floating window focused" }
             world.toggleFloating(id)
+            let floating = world.floating.contains(id)
+            let key = config.modes["main"]?.first { $0.value == [.float] }?.key.symbol
+            toast(floating ? "Floating\(key.map { " · \($0) returns to tiling" } ?? "")" : "Tiled")
         case .close:
             guard let id = world.focused ?? osFocused, let info = infos[id] else { return "error: no window focused" }
             workers[info.pid]?.close(id)
@@ -122,6 +125,7 @@ extension Tiler {
             do { try png?.write(to: URL(fileURLWithPath: path)) } catch { return "error: \(error)" }
             return path
         case .settings: openSettings()
+        case .tutorial: tutorial.show(config)
         case .jump: startJump()
         case .click: startClick()
         case .clickKey(let k): clickKey(k)
@@ -183,7 +187,8 @@ extension Tiler {
             guard let self else { return }
             // The focused window's border already says it.
             if self.config.windowLabels != .off, self.world.focused != nil { return }
-            self.overlay.flash(self.world.focused.flatMap { self.infos[$0]?.frame } ?? self.activeFrame)
+            let frame = self.world.focused.flatMap { id in self.windowStack.first(where: { $0.id == id })?.frame }
+            self.overlay.flash(frame ?? self.activeFrame)
         }
     }
 

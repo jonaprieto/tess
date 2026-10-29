@@ -30,8 +30,11 @@ public struct Config: Equatable, Sendable {
     /// Borders, outlines and highlights, red, green and blue from 0 to 1; nil is the macOS
     /// accent color.
     public var borderColor: [Double]?
+    public var inactiveBorderColor: [Double]?
+    public var selectionColor: [Double]?
     /// Every window but the focused one in black and white.
     public var grayOthers = true
+    public var grayAmount = 0.8
     /// Modes that go back to main after one command, unless entered again to lock them.
     public var oneShot: [String] = []
     /// New windows go to an empty screen when there is one, and the settings window and a
@@ -69,18 +72,28 @@ public struct Config: Equatable, Sendable {
             /// `#rrggbb`.
             public var borderColor: String?
             public var grayOthers: Bool?
+            public var grayAmount: Double?
+            public var inactiveBorderColor: String?
+            public var selectionColor: String?
             enum CodingKeys: String, CodingKey {
                 case allScreens = "all_screens"
                 case windowLabels = "window_labels"
                 case borderColor = "border_color"
                 case grayOthers = "gray_others"
+                case grayAmount = "gray_amount"
+                case inactiveBorderColor = "inactive_border_color"
+                case selectionColor = "selection_color"
             }
             public init(allScreens: Bool? = nil, windowLabels: LabelMode? = nil, borderColor: String? = nil,
-                        grayOthers: Bool? = nil) {
+                        grayOthers: Bool? = nil, grayAmount: Double? = nil,
+                        inactiveBorderColor: String? = nil, selectionColor: String? = nil) {
                 self.allScreens = allScreens
                 self.windowLabels = windowLabels
                 self.borderColor = borderColor
                 self.grayOthers = grayOthers
+                self.grayAmount = grayAmount
+                self.inactiveBorderColor = inactiveBorderColor
+                self.selectionColor = selectionColor
             }
             public init(from decoder: Decoder) throws {
                 let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -93,6 +106,9 @@ public struct Config: Equatable, Sendable {
                 }
                 borderColor = try c.decodeIfPresent(String.self, forKey: .borderColor)
                 grayOthers = try c.decodeIfPresent(Bool.self, forKey: .grayOthers)
+                grayAmount = try c.decodeIfPresent(Double.self, forKey: .grayAmount)
+                inactiveBorderColor = try c.decodeIfPresent(String.self, forKey: .inactiveBorderColor)
+                selectionColor = try c.decodeIfPresent(String.self, forKey: .selectionColor)
             }
         }
         public var gaps: Gaps?
@@ -154,7 +170,10 @@ public struct Config: Equatable, Sendable {
         r.overlay = Raw.Overlay(allScreens: top.overlay?.allScreens ?? base.overlay?.allScreens,
                                 windowLabels: top.overlay?.windowLabels ?? base.overlay?.windowLabels,
                                 borderColor: top.overlay?.borderColor ?? base.overlay?.borderColor,
-                                grayOthers: top.overlay?.grayOthers ?? base.overlay?.grayOthers)
+                                grayOthers: top.overlay?.grayOthers ?? base.overlay?.grayOthers,
+                                grayAmount: top.overlay?.grayAmount ?? base.overlay?.grayAmount,
+                                inactiveBorderColor: top.overlay?.inactiveBorderColor ?? base.overlay?.inactiveBorderColor,
+                                selectionColor: top.overlay?.selectionColor ?? base.overlay?.selectionColor)
         r.emptyScreens = top.emptyScreens ?? base.emptyScreens
         r.jev = top.jev ?? base.jev
         r.oneShot = top.oneShot ?? base.oneShot
@@ -218,6 +237,15 @@ public struct Config: Equatable, Sendable {
         c.overlayAllScreens = raw.overlay?.allScreens ?? true
         c.windowLabels = raw.overlay?.windowLabels ?? .jump
         c.grayOthers = raw.overlay?.grayOthers ?? true
+        c.grayAmount = raw.overlay?.grayAmount ?? 0.8
+        guard c.grayAmount.isFinite, (0...1).contains(c.grayAmount) else {
+            throw ParseError("config: overlay.gray_amount is between 0 and 1")
+        }
+        for (name, hex) in [("inactive_border_color", raw.overlay?.inactiveBorderColor), ("selection_color", raw.overlay?.selectionColor)] {
+            if let hex, Self.rgb(hex) == nil { throw ParseError("config: overlay.\(name) is #rrggbb, not \"\(hex)\"") }
+        }
+        c.inactiveBorderColor = raw.overlay?.inactiveBorderColor.flatMap(Self.rgb)
+        c.selectionColor = raw.overlay?.selectionColor.flatMap(Self.rgb)
         if let hex = raw.overlay?.borderColor {
             guard let rgb = Self.rgb(hex) else { throw ParseError("config: overlay.border_color is #rrggbb, not \"\(hex)\"") }
             c.borderColor = rgb
@@ -281,7 +309,7 @@ public struct Config: Equatable, Sendable {
     public static let defaultJSON = #"""
     {
       "gaps": {"inner": 10, "outer": 10},
-      "overlay": {"all_screens": true, "window_labels": "jump", "gray_others": true},
+      "overlay": {"all_screens": true, "window_labels": "jump", "gray_others": true, "gray_amount": 0.8},
       "empty_screens": true,
       "one_shot": ["tess"],
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
@@ -332,6 +360,7 @@ public struct Config: Equatable, Sendable {
           "alt-shift-a": "show-all",
           "alt-shift-semicolon": "retile",
           "alt-space": "pick",
+          "cmd-space": "pick",
           "alt-shift-backspace": "clear-screen"
         },
         "tess": {
@@ -368,6 +397,7 @@ public struct Config: Equatable, Sendable {
           "z": "zen; mode main",
           "backspace": "clear-screen",
           "alt-space": "pick",
+          "cmd-space": "pick",
           "w": "rescue",
           "s": "retile",
           "r": "mode resize",
@@ -376,6 +406,8 @@ public struct Config: Equatable, Sendable {
           "alt-t": "mode tess"
         },
         "resize": {
+          "cmd-space": "pick",
+          "alt-space": "pick",
           "h": "resize width -50",
           "l": "resize width +50",
           "j": "resize height +50",

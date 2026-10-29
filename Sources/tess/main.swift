@@ -2,12 +2,14 @@ import AppKit
 import ApplicationServices
 import Layout
 
-let version = "0.8.0"
+let version = "0.9.0"
 
 let usage = """
     tess: a tiling window manager for macOS
 
       tess serve            run it (the LaunchAgent does this)
+      tess doctor           check permissions, configuration and external binaries
+      tess tutorial         open the newcomer walkthrough
       tess <command>        send a command to the running tess, e.g. `tess focus left`
       tess tree             print screens, columns and windows
       tess state            print the model and the machine as JSON
@@ -84,6 +86,8 @@ case "--version", "version":
     print("tess \(version)")
 case "default-config":
     print(Config.defaultJSON)
+case "doctor":
+    exit(Doctor.run())
 case "serve":
     serve()
 default:

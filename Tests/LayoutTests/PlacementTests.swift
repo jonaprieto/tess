@@ -2,6 +2,25 @@ import CoreGraphics
 import Testing
 @testable import Layout
 
+@Test func pickerWarnsWhenPlacementSqueezesAKnownWindow() {
+    let w = world([[1], [2]], [], focused: 1)
+    let sizes: [WindowID: CGSize] = [2: CGSize(width: 450, height: 0)]
+    #expect(w.placementWarnings(9, at: .beside(1), sizes: sizes, inner: 0, outer: 0) == [2])
+    #expect(w.placementWarnings(9, at: .replace(1), sizes: sizes, inner: 0, outer: 0) == [2])
+    #expect(w.placementWarnings(9, at: .monitor(1), sizes: sizes, inner: 0, outer: 0).isEmpty)
+    #expect(w.placementWarnings(9, at: .float, sizes: sizes, inner: 0, outer: 0).isEmpty)
+    #expect(lanes(w) == [[1], [2]])
+}
+
+@Test func pickerChecksBothSidesOfASwapAndAllowsUnknownSizes() {
+    var w = world([[1], [2, 3]], [], focused: 1)
+    w.monitors[0].lanes[0].size = 2
+    let sizes: [WindowID: CGSize] = [1: CGSize(width: 600, height: 600), 2: CGSize(width: 0, height: 600)]
+    #expect(w.placementWarnings(1, at: .replace(2), sizes: sizes, inner: 0, outer: 0) == [1])
+    #expect(w.placementWarnings(1, at: .replace(2), sizes: [:], inner: 0, outer: 0).isEmpty)
+    #expect(w.placementWarnings(2, at: .replace(1), sizes: sizes, inner: 0, outer: 0) == [1])
+}
+
 @Test func replaceSwapsTwoTiledWindows() {
     var w = world([[1, 2], [3]], [[4]], focused: 1)
     w.place(4, .replace(2))

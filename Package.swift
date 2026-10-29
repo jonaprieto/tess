@@ -18,5 +18,6 @@ let package = Package(
             linkerSettings: [.unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist",
                                            "-Xlinker", "\(root)/Sources/tess/Info.plist"])]),
         .testTarget(name: "LayoutTests", dependencies: ["Layout"]),
+        .testTarget(name: "SettingsTests", dependencies: ["tess"]),
     ]
 )

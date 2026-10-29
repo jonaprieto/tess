@@ -7,7 +7,13 @@ VERSION := $(shell sed -n 's/^let version = "\(.*\)"/\1/p' Sources/tess/main.swi
 # ad-hoc fallback ("-") changes with every build and loses it.
 SIGN ?= $(or $(shell security find-identity -v -p codesigning | grep -v REVOKED | grep -m1 -o '[0-9A-F]\{40\}'),-)
 
-.PHONY: build test app dist install uninstall
+.PHONY: build test app dist deps install uninstall
+
+deps:
+	@if ! PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin command -v folio >/dev/null; then \
+	  command -v brew >/dev/null || { echo "Install Homebrew, then run brew install jonaprieto/tap/folio"; exit 1; }; \
+	  brew install jonaprieto/tap/folio; \
+	fi
 
 # Built next to the running copy and renamed over it: overwriting a running binary in place
 # invalidates its signature and macOS kills it.
@@ -41,7 +47,7 @@ dist:
 	shasum -a 256 build/tess-$(VERSION)-macos-arm64.tar.gz
 
 # Started at login and restarted after a crash or a watchdog exit, not after Quit.
-install: app
+install: deps app
 	mkdir -p $(HOME)/.local/bin
 	ln -sf $(BIN) $(HOME)/.local/bin/tess
 	sed -e 's|BIN|$(BIN)|g' -e 's|HOME|$(HOME)|g' $(LABEL).plist > "$(AGENT)"
@@ -49,6 +55,7 @@ install: app
 	@# bootout returns before the job is gone, and bootstrap fails with EIO until it is.
 	@for i in 1 2 3 4 5 6 7 8 9 10; do launchctl print gui/$$(id -u)/$(LABEL) >/dev/null 2>&1 || break; sleep 0.5; done
 	launchctl bootstrap gui/$$(id -u) "$(AGENT)"
+	@$(BIN) doctor || echo "Setup needs attention; rerun tess doctor after addressing the checks above."
 
 uninstall:
 	launchctl bootout gui/$$(id -u)/$(LABEL) 2>/dev/null || true

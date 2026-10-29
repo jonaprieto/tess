@@ -41,6 +41,10 @@ final class SettingsModel {
     var outer: Double
     var overlayAllScreens: Bool
     var grayOthers: Bool
+    var grayAmount: Double
+    var borderColor: Color
+    var inactiveBorderColor: Color
+    var selectionColor: Color
     var emptyScreens: Bool
     var windowLabels: Config.LabelMode
     var float: [String]
@@ -61,6 +65,14 @@ final class SettingsModel {
         outer = raw.gaps?.outer ?? 10
         overlayAllScreens = raw.overlay?.allScreens ?? true
         grayOthers = raw.overlay?.grayOthers ?? true
+        grayAmount = raw.overlay?.grayAmount ?? 0.8
+        let config = (try? Config.validate(raw)) ?? Config.defaults
+        func color(_ rgb: [Double]?, fallback: NSColor) -> Color {
+            Color(nsColor: rgb.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) } ?? fallback)
+        }
+        borderColor = color(config.borderColor, fallback: .controlAccentColor)
+        inactiveBorderColor = color(config.inactiveBorderColor, fallback: .labelColor)
+        selectionColor = color(config.selectionColor, fallback: .systemOrange)
         emptyScreens = raw.emptyScreens ?? true
         windowLabels = raw.overlay?.windowLabels ?? .jump
         float = raw.float ?? []
@@ -77,8 +89,22 @@ final class SettingsModel {
         // What the window does not edit (history) stays as it was.
         var r = original
         r.gaps = .init(inner: inner, outer: outer)
-        r.overlay = .init(allScreens: overlayAllScreens, windowLabels: windowLabels, borderColor: original.overlay?.borderColor,
-                          grayOthers: grayOthers)
+        var overlay = r.overlay ?? .init()
+        overlay.allScreens = overlayAllScreens
+        overlay.windowLabels = windowLabels
+        overlay.grayOthers = grayOthers
+        overlay.grayAmount = grayAmount
+        // Keep system colors dynamic until the user actually changes a color.
+        let saved = SettingsModel(raw: original, save: saveRaw)
+        func hex(_ color: Color) -> String {
+            let c = NSColor(color).usingColorSpace(.sRGB)!
+            return String(format: "#%02x%02x%02x", Int((c.redComponent * 255).rounded()),
+                          Int((c.greenComponent * 255).rounded()), Int((c.blueComponent * 255).rounded()))
+        }
+        if borderColor != saved.borderColor { overlay.borderColor = hex(borderColor) }
+        if inactiveBorderColor != saved.inactiveBorderColor { overlay.inactiveBorderColor = hex(inactiveBorderColor) }
+        if selectionColor != saved.selectionColor { overlay.selectionColor = hex(selectionColor) }
+        r.overlay = overlay
         r.emptyScreens = emptyScreens
         r.float = float
         r.tile = tile
@@ -111,6 +137,10 @@ final class SettingsModel {
         (inner, outer, overlayAllScreens, grayOthers, emptyScreens, windowLabels, float, tile, ignore, verbs, modes) =
             (fresh.inner, fresh.outer, fresh.overlayAllScreens, fresh.grayOthers, fresh.emptyScreens, fresh.windowLabels, fresh.float, fresh.tile,
              fresh.ignore, fresh.verbs, fresh.modes)
+        grayAmount = fresh.grayAmount
+        borderColor = fresh.borderColor
+        inactiveBorderColor = fresh.inactiveBorderColor
+        selectionColor = fresh.selectionColor
         message = nil
     }
 }
@@ -122,6 +152,7 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             TabView {
                 GeneralTab(model: model).tabItem { Label("General", systemImage: "gearshape") }
+                AppearanceTab(model: model).tabItem { Label("Appearance", systemImage: "paintpalette") }
                 AppsTab(model: model).tabItem { Label("Apps", systemImage: "square.grid.2x2") }
                 KeysTab(model: model).tabItem { Label("Keys", systemImage: "keyboard") }
             }
@@ -166,7 +197,6 @@ struct GeneralTab: View {
                     .foregroundStyle(.secondary)
             }
             Section("Overlays") {
-                Toggle("Other windows in black and white", isOn: $model.grayOthers)
                 Toggle("Show a mode's keys on every screen", isOn: $model.overlayAllScreens)
                     .disabled(model.emptyScreens)
                 SwiftUI.Picker("Borders and letters", selection: $model.windowLabels) {
@@ -192,6 +222,38 @@ struct GeneralTab: View {
             } footer: {
                 Text("Typing a verb and a folder in the picker opens the folder with that app, e.g. cd ~/anoma.")
                     .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+struct AppearanceTab: View {
+    @Bindable var model: SettingsModel
+
+    var body: some View {
+        Form {
+            Section {
+                ColorPicker("Focused border and highlights", selection: $model.borderColor, supportsOpacity: false)
+                ColorPicker("Inactive borders", selection: $model.inactiveBorderColor, supportsOpacity: false)
+                ColorPicker("Selection and drag outlines", selection: $model.selectionColor, supportsOpacity: false)
+            } header: {
+                Text("Colors")
+            } footer: {
+                Text("Inactive borders appear when borders and letters are set to Every window, or while jumping.")
+            }
+            Section {
+                Toggle("Gray out other windows", isOn: $model.grayOthers)
+                HStack {
+                    Slider(value: $model.grayAmount, in: 0...1, step: 0.05) { Text("Grayscale strength") }
+                    Text("\(Int((model.grayAmount * 100).rounded()))%")
+                        .monospacedDigit().frame(width: 44, alignment: .trailing)
+                }
+                .disabled(!model.grayOthers)
+            } header: {
+                Text("Grayscale")
+            } footer: {
+                Text("0% keeps full color; 100% makes other windows black and white. The focused window stays in color.")
             }
         }
         .formStyle(.grouped)

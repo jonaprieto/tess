@@ -9,6 +9,8 @@ so a crash, a hang or an unplugged screen cannot strand a window off-screen.
 ## Install
 
 macOS 27 on Apple Silicon.
+Any standard Mac keyboard works, including the laptop keyboard. No NuPhy keyboard,
+keyboard software or Hyper key is required. Homebrew installs Folio with Tess for book/paper searches.
 
 ```sh
 brew tap jonaprieto/tap
@@ -24,6 +26,20 @@ From source:
 make install   # build, sign, start at login and after a crash; links ~/.local/bin/tess, adds tess.app
 make test
 ```
+
+`make install` also installs Folio through Homebrew if it is missing. `rg` (ripgrep) and
+`fzf` are optional: `brew install ripgrep fzf` enables content search and better file ranking.
+Run `tess doctor` to see which binaries are found in the service's PATH, which are missing,
+their features and install commands. It also checks macOS, Accessibility, configuration and
+the configured terminal app. It changes no settings; missing required checks return exit code 1.
+The source installer runs this check after starting Tess; rerun it after granting Accessibility.
+
+Both **Doctor…** and **Tutorial…** are available from Tess's menu bar icon. Doctor opens a
+selectable, scrollable report with a **Run Again** button.
+
+New here? Run `tess tutorial`, choose **Tutorial…** in the menu bar, or type
+`tutorial` in the picker. The repeatable walkthrough explains the keys, window placement,
+search and query recall, with a button to try the picker. It does not rearrange windows for you.
 
 tess.app in Applications (Finder, Spotlight) opens Settings, or starts tess again after Quit.
 macOS asks once for Accessibility. To remove it: `brew services stop tess && brew uninstall tess`,
@@ -47,7 +63,9 @@ Every default key is on any Mac keyboard; `alt` is ⌥ Option.
   place, `w` to bring back lost windows, `s` to re-tile, `r` for resize mode. Every window
   and tab shows a letter, and the letter goes there. It lasts one command; `alt-t` again
   keeps it on until esc.
-- `alt-space` opens the picker, in tess mode too.
+- `cmd-space` opens the picker in any mode when available; `alt-space` is also available in
+  main, tess and resize modes. If Spotlight owns `cmd-space`, disable its shortcut in
+  System Settings → Keyboard → Keyboard Shortcuts → Spotlight to free it for tess.
 - `alt-shift-a` (or `show all` in the picker) shows all apps: each running app with no window
   in sight gets one back (as its Dock icon would) and every screen is laid out with them, as
   columns or a grid.
@@ -55,8 +73,8 @@ Every default key is on any Mac keyboard; `alt` is ⌥ Option.
   label (Slack's channels and DMs, a page's links and buttons); typing one clicks it, esc
   leaves.
 
-A keyboard with a spare key can send any binding. On a NuPhy Air96 set Nav+T, Nav+G and
-Nav+R to send Hyper (⌃⌥⇧⌘) +T, +G and +R, and bind those in the config:
+A keyboard with programmable keys can optionally send Hyper (⌃⌥⇧⌘) +T, +G and +R,
+and bind those in the config. These are optional aliases, not requirements:
 
 ```json
 {"modes": {"main": {"cmd-alt-ctrl-shift-t": "mode tess", "cmd-alt-ctrl-shift-g": "pick", "cmd-alt-ctrl-shift-r": "jump"},
@@ -106,10 +124,15 @@ Outside jump mode the focused window keeps its border and, with more than one sc
 active screen an outline. With `"overlay": {"window_labels": "always"}` every label stays on
 screen all the time; `"off"` shows none. `"overlay": {"border_color": "#ff8000"}` colors
 the borders and highlights instead of the macOS accent color.
+Settings → Appearance has color controls for focused borders and highlights, inactive borders,
+and selection/drag outlines (`overlay.border_color`, `inactive_border_color`, and `selection_color`,
+each a `#rrggbb` value).
 
 Every window but the focused one shows in black and white at 80%, so the eye goes to the one
 in use; `"overlay": {"gray_others": false}` (or Settings) turns it off. It is off while
 another app or Zen is in front.
+Settings → Appearance also adjusts grayscale strength from 0% to 100%
+(`"overlay": {"gray_amount": 0.8}` is the default).
 
 ## Zen
 
@@ -134,7 +157,14 @@ window, tab or app shows a map of every screen to choose where it goes:
 - letter or shift+letter: swap with that window; alt+letter: go beside it.
 - enter: next to the focused window; digit: that screen; `g`: just go there; `f`: float.
 
+Amber keys and “may not fit” warnings mark destinations that would squeeze a window below
+a size it kept after refusing a resize. Choices remain available; unknown size limits are
+not predicted.
+
 Words match in any order: `slack michael` finds "Michael - Heliax - Slack".
+The picker remembers the last 100 confirmed queries on this Mac, across restarts. A matching
+recent query appears below the results as you type; Tab fills it in (or recalls the latest
+query when the field is empty). Folder completion still takes priority. Escape saves nothing.
 
 Your Shortcuts are listed too, once you type, and Enter runs one. Focus has no API, so Do
 Not Disturb comes from a shortcut: one made in the Shortcuts app with its Set Focus action,
@@ -159,7 +189,8 @@ The first word can also be a verb:
 - `file name` (or `f name`): files by name only (Spotlight, ranked by fzf), no tabs or
   history; `rg text`: text in files.
 - `book title author`, `paper title author`: find with [folio](https://github.com/jonaprieto/folio)
-  (papers also on arXiv first), download to `~/Downloads` and open.
+  (papers also on arXiv first), download to `~/Downloads` and open. The selected title stays
+  visible with an activity bar while downloading, followed by “Opening” or an error.
 
 - `web text` (or `brave text`): only browser tabs, bookmarks and history; an address
   (`github.com/anoma`) also shows on top to open.

@@ -30,6 +30,20 @@ public enum DropZone: Equatable, Sendable {
 }
 
 extension World {
+    /// Windows a placement would make smaller than sizes they previously kept after a resize.
+    /// These are warnings, not minimum sizes promised by the app.
+    public func placementWarnings(_ id: WindowID, at spot: Spot, sizes: [WindowID: CGSize],
+                                  inner: Double, outer: Double) -> [WindowID] {
+        let before = frames(inner: inner, outer: outer)
+        var preview = self
+        preview.place(id, spot)
+        return preview.frames(inner: inner, outer: outer).compactMap { window, frame in
+            guard window == id || before[window] != frame, let size = sizes[window],
+                  frame.width + 1 < size.width || frame.height + 1 < size.height else { return nil }
+            return window
+        }.sorted()
+    }
+
     /// Puts `id` (tiled, floating or new) at `spot` and focuses it.
     public mutating func place(_ id: WindowID, _ spot: Spot) {
         switch spot {

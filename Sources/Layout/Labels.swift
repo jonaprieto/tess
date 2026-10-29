@@ -68,6 +68,7 @@ extension Command {
         case .closeReplace: "Close, pick a replacement"
         case .clearMonitor: "Clear this screen"
         case .settings: "Settings"
+        case .tutorial: "Getting Started"
         case .jump: "Jump to a window"
         case .click: "Click by label"
         case .showAll: "Show all apps"

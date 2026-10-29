@@ -7,6 +7,7 @@ class Tess < Formula
 
   depends_on arch: :arm64
   depends_on :macos
+  depends_on "jonaprieto/tap/folio"
 
   def install
     bin.install "tess"
@@ -19,6 +20,9 @@ class Tess < Formula
         brew services start tess
       macOS asks once for Accessibility access. Browser history in the picker
       also needs Full Disk Access for #{opt_bin}/tess.
+      Check setup and open the newcomer walkthrough:
+        tess doctor
+        tess tutorial
       To open it from Finder or Spotlight (Settings, or tess again after Quit):
         cp -R #{opt_prefix}/tess.app /Applications/
     EOS

@@ -73,7 +73,7 @@ final class DecorationView: NSView {
             let r = local(w.frame).insetBy(dx: -1, dy: -1)
             let path = NSBezierPath(roundedRect: r, xRadius: 12, yRadius: 12)
             path.lineWidth = w.focused ? 3 : 1.5
-            (w.focused ? Panels.accent : NSColor.labelColor.withAlphaComponent(0.22)).setStroke()
+            (w.focused ? Panels.accent : Panels.inactiveBorder).setStroke()
             path.stroke()
         }
         // Letters on each window: in its middle while they are keys (clear of a tab bar), else

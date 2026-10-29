@@ -89,7 +89,7 @@ final class Tiler {
     }
 
     lazy var picker: Picker = {
-        let p = Picker()
+        let p = Picker(defaults: .standard)
         p.onDone = { [weak self] item, choice in self?.picked(item, choice) }
         p.onCancel = { [weak self] in self?.pickerClosed(cancelled: true) }
         p.search = { [weak self] kind, query, done in self?.search(kind, query, done) }
@@ -98,6 +98,21 @@ final class Tiler {
 
     /// The picker is open (or about to open): no hotkeys, no focus changes.
     var picking = false
+    lazy var doctor = DoctorWindow()
+    var returnToTutorial = false
+    lazy var tutorial: Tutorial = {
+        let tutorial = Tutorial()
+        tutorial.onPicker = { [weak self] in
+            guard let self else { return }
+            self.returnToTutorial = true
+            let result = self.run([.pick("")], source: "tutorial")
+            if result.hasPrefix("error: ") {
+                self.returnToTutorial = false
+                self.toast(String(result.dropFirst(7)))
+            }
+        }
+        return tutorial
+    }()
 
     /// The tabs labeled while letters are keys, and their letters; `tabsAsked` drops answers
     /// to an earlier ask.
@@ -226,8 +241,7 @@ final class Tiler {
                 } else {
                     self?.workers[app.processIdentifier]?.scheduleRefresh()
                 }
-                self?.refreshDecorations()
-                self?.refreshGray()
+                self?.refreshOverlays()
             }
         }
         ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -267,7 +281,7 @@ final class Tiler {
         switcher.onPick = { [weak self] pick in
             guard let self else { return }
             var frame: CGRect?
-            if case .window(let id)? = pick, !self.offSpace.contains(id) { frame = self.infos[id]?.frame }
+            if case .window(let id)? = pick { frame = self.windowStack.first(where: { $0.id == id })?.frame }
             self.overlay.showDrop(frame)
         }
         Log.write("started")
@@ -547,9 +561,9 @@ final class Tiler {
     func sweep(all: Bool = false) {
         sweeps += 1
         let everything = all || sweeps % 6 == 0
-        NSWorkspace.shared.runningApplications.forEach(track)
         if let c = appCache, Date().timeIntervalSince(c.at) > 600 { refreshApps() }
         if everything {
+            NSWorkspace.shared.runningApplications.forEach(track)
             if !offSpace.isEmpty {
                 let live = Self.liveWindowIDs()
                 for id in offSpace where !live.contains(id) || spaceChanges - (unlistedSince[id] ?? spaceChanges) >= 4 {
@@ -607,9 +621,8 @@ final class Tiler {
     func apply() {
         defer {
             onLayout()
-            refreshDecorations()
+            refreshOverlays()
             refreshVeil()
-            refreshGray()
         }
         guard !starting, !paused else { return }
         // Nothing moves under the mouse, nor before a drag's drop is in the layout.
@@ -631,6 +644,7 @@ final class Tiler {
                 if refused.insert(id).inserted {
                     Log.write("window \(id) keeps its own size (\(info.frame), wanted \(target))")
                     Events.record("frame.refused", describe(id).merging(["wanted": target.json]) { $1 })
+                    toast("\(appName(id)) did not accept its tile. Try enlarging it or floating the window.", seconds: 5)
                 }
                 continue
             }
@@ -700,7 +714,7 @@ final class Tiler {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             guard let self, let screen = self.world.monitors[safe: m]?.frame else { return }
             self.overlay.toast("\(self.appName(id)) opened on screen \(m + 1)", on: screen)
-            if let f = self.world.frames(inner: self.config.inner, outer: self.config.outer)[id] { self.overlay.flash(f) }
+            if let f = self.windowStack.first(where: { $0.id == id })?.frame { self.overlay.flash(f) }
         }
     }
 
@@ -773,6 +787,10 @@ final class Tiler {
             configError = nil
             Panels.accent = config.borderColor.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) }
                 ?? .controlAccentColor
+            Panels.inactiveBorder = config.inactiveBorderColor.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) }
+                ?? NSColor.labelColor.withAlphaComponent(0.22)
+            Panels.selection = config.selectionColor.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) }
+                ?? .systemOrange
             drawn = []  // redrawn in the new color
             Events.record("config", ["ok": true])
             if announce { toast("config reloaded") }

@@ -14,6 +14,68 @@ final class Overlay {
     private var hintPanel: NSPanel?
     private var toastHide: DispatchWorkItem?
     private var flashHide: DispatchWorkItem?
+    struct Download {
+        let id: UUID
+        let title: String
+        var status: String?
+    }
+    private(set) var downloads: [Download] = []
+    private(set) var downloadPanel: NSPanel?
+    private var downloadScreen = CGRect.zero
+
+    func beginDownload(_ title: String, on screen: CGRect) -> UUID {
+        if downloads.isEmpty { downloadScreen = screen }
+        let id = UUID()
+        downloads.append(Download(id: id, title: title))
+        refreshDownloads()
+        return id
+    }
+
+    func finishDownload(_ id: UUID, status: String) {
+        guard let i = downloads.firstIndex(where: { $0.id == id }) else { return }
+        downloads[i].status = status
+        refreshDownloads()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+            self?.downloads.removeAll { $0.id == id }
+            self?.refreshDownloads()
+        }
+    }
+
+    private func refreshDownloads() {
+        (downloadPanel?.contentView as? NSGlassEffectView)?.contentView?.subviews
+            .compactMap { $0 as? NSProgressIndicator }.forEach { $0.stopAnimation(nil) }
+        guard !downloads.isEmpty else {
+            downloadPanel?.orderOut(nil)
+            downloadPanel = nil
+            return
+        }
+        let width = min(440, downloadScreen.width - 48)
+        let height = CGFloat(downloads.count) * 82 + 16
+        let content = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+        for (i, download) in downloads.enumerated() {
+            let y = height - CGFloat(i + 1) * 82
+            let label = NSTextField(labelWithString: "\(download.status ?? "Downloading…")\n\(download.title)")
+            label.font = .systemFont(ofSize: 14, weight: .medium)
+            label.maximumNumberOfLines = 2
+            label.lineBreakMode = .byTruncatingMiddle
+            label.frame = NSRect(x: 18, y: y + 26, width: width - 36, height: 40)
+            content.addSubview(label)
+            if download.status == nil {
+                let progress = NSProgressIndicator(frame: NSRect(x: 18, y: y + 10, width: width - 36, height: 12))
+                progress.style = .bar
+                progress.isIndeterminate = true
+                progress.setAccessibilityLabel("Downloading \(download.title)")
+                content.addSubview(progress)
+                progress.startAnimation(nil)
+            }
+        }
+        let panel = downloadPanel ?? Self.panel()
+        downloadPanel = panel
+        panel.contentView = Panels.glass(content, radius: 14)
+        panel.setFrame(Screens.flip(CGRect(x: downloadScreen.maxX - width - 24,
+                                          y: downloadScreen.maxY - height - 24, width: width, height: height)), display: true)
+        panel.orderFrontRegardless()
+    }
 
     /// The keys of a mode as a glass cheat sheet in the bottom-right corner of each of `screens`:
     /// grouped columns of keycaps and plain labels, so the windows being arranged stay visible.
@@ -108,22 +170,23 @@ final class Overlay {
             swapPanel?.orderOut(nil)
             return
         }
-        // Orange, apart from the focus border, so where a drop lands is never mistaken for focus.
-        let p = dropPanel ?? Self.outline(width: 3, color: .systemOrange, fill: NSColor.systemOrange.withAlphaComponent(0.22))
+        let p = dropPanel ?? Self.outline(width: 3, color: Panels.selection, fill: Panels.selection.withAlphaComponent(0.22))
         dropPanel = p
+        p.contentView?.layer?.borderColor = Panels.selection.cgColor
+        p.contentView?.layer?.backgroundColor = Panels.selection.withAlphaComponent(0.22).cgColor
         let pill = dropCaption ?? {
             let label = NSTextField(labelWithString: "")
             label.font = .systemFont(ofSize: 15, weight: .semibold)
             label.textColor = .white
             let pill = NSView()
             pill.wantsLayer = true
-            pill.layer?.backgroundColor = NSColor.systemOrange.cgColor
             pill.layer?.cornerRadius = 10
             pill.addSubview(label)
             p.contentView?.addSubview(pill)
             return pill
         }()
         dropCaption = pill
+        pill.layer?.backgroundColor = Panels.selection.cgColor
         Self.show(p, rect)
         if let label = pill.subviews.first as? NSTextField, let box = p.contentView?.bounds {
             label.stringValue = caption
@@ -134,8 +197,9 @@ final class Overlay {
             pill.isHidden = caption.isEmpty
         }
         if let also {
-            let s = swapPanel ?? Self.outline(width: 2, color: NSColor.systemOrange.withAlphaComponent(0.7), fill: .clear)
+            let s = swapPanel ?? Self.outline(width: 2, color: Panels.selection.withAlphaComponent(0.7), fill: .clear)
             swapPanel = s
+            s.contentView?.layer?.borderColor = Panels.selection.withAlphaComponent(0.7).cgColor
             Self.show(s, also)
         } else {
             swapPanel?.orderOut(nil)

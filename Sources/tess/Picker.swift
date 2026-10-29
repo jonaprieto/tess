@@ -72,6 +72,10 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         var monitors: [CGRect]
         var windows: [(id: WindowID, frame: CGRect, app: String, title: String, icon: NSImage?)]
         var labels: [WindowID: Character]
+        var replaceWarnings: [WindowID: String] = [:]
+        var besideWarnings: [WindowID: String] = [:]
+        var monitorWarnings: [Int: String] = [:]
+        var hereWarning: String?
     }
 
     static let alphabet = labelAlphabet
@@ -96,13 +100,27 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     private var items: [Item] = []
     private var shown: [Item] = []
     private var fixed: Spot?
-    private var mapModel: () -> Map = { Map(monitors: [], windows: [], labels: [:]) }
+    private var mapModel: (Item) -> Map = { _ in Map(monitors: [], windows: [], labels: [:]) }
     private var screen = CGRect.zero
     private var monitor: Any?
     private var picked: Item?
     private var verbs: [String: String] = [:]
+    private let defaults: UserDefaults?
+    private(set) var recentQueries: [String]
 
-    override init() {
+    func completion(for text: String) -> String? {
+        let prefix = text.lowercased()
+        return recentQueries.first { $0.lowercased().hasPrefix(prefix) && $0.lowercased() != prefix }
+    }
+    // nil means the picker consumed the key; only a released picker passes it through.
+    lazy var keyMonitor: (NSEvent) -> NSEvent? = { [weak self] event in
+        guard let self else { return event }
+        return self.key(event)
+    }
+
+    init(defaults: UserDefaults? = nil) {
+        self.defaults = defaults
+        recentQueries = Array((defaults?.stringArray(forKey: "pickerRecentQueries") ?? []).prefix(100))
         panel = KeyPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         super.init()
         panel.level = .modalPanel
@@ -115,6 +133,10 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         panel.delegate = self
         let glass = NSGlassEffectView()
         glass.cornerRadius = 20
+        glass.wantsLayer = true
+        glass.layer?.cornerRadius = 20
+        glass.layer?.cornerCurve = .continuous
+        glass.layer?.masksToBounds = true
         glass.contentView = content
         panel.contentView = glass
 
@@ -124,14 +146,16 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         field.isBordered = false
         field.drawsBackground = false
         field.focusRingType = .none
-        field.font = .systemFont(ofSize: 22, weight: .regular)
+        field.font = .systemFont(ofSize: 20, weight: .regular)
         field.placeholderString = "Window, tab or app"
+        field.setAccessibilityLabel("Search windows, tabs, apps or commands")
         field.delegate = self
         divider.wantsLayer = true
         divider.layer?.backgroundColor = NSColor.separatorColor.cgColor
-        footer.font = .systemFont(ofSize: 11, weight: .medium)
-        footer.textColor = .tertiaryLabelColor
+        footer.font = .systemFont(ofSize: 12)
+        footer.textColor = .secondaryLabelColor
         footer.alignment = .center
+        footer.lineBreakMode = .byTruncatingMiddle
         for v in [magnifier, field, divider, list, map, footer] as [NSView] { content.addSubview(v) }
     }
 
@@ -139,7 +163,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     /// Shows step 1 on `screen`. With `fixed`, a pick goes straight there (no step 2).
     func open(_ items: [Item], on screen: CGRect, fixed: Spot?, verbs: [String: String], text: String = "",
-              map: @escaping () -> Map) {
+              map: @escaping (Item) -> Map) {
         self.items = items
         self.verbs = verbs
         self.fixed = fixed
@@ -150,9 +174,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         jevAsked = nil
         filter()
         showList()
-        // A quick fade and a slight scale-in.
-        let final = panel.frame
-        panel.setFrame(final.insetBy(dx: final.width * 0.015, dy: final.height * 0.015), display: false)
+        // Resizing the glass during entry clips the fixed-size content and distorts its corners.
         panel.alphaValue = 0
         // tess becomes the active app while the picker is open: a background app (a terminal,
         // a notification) can then not take the keyboard from it and cancel it.
@@ -161,13 +183,12 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         panel.makeFirstResponder(field)
         field.currentEditor()?.moveToEndOfDocument(nil)
         NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.12
+            ctx.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.12
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1
-            panel.animator().setFrame(final, display: true)
         }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in self?.key(e) ?? e }
-        Log.write("picker: open on \(screen), panel \(final), key \(panel.isKeyWindow)")
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: keyMonitor)
+        Log.write("picker: open on \(screen), panel \(panel.frame), key \(panel.isKeyWindow)")
     }
 
     /// Tabs arrive after the panel is up; they go after the windows, before the apps.
@@ -186,12 +207,22 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             list.selected = i
             list.move(0)
         }
+        updateCompletion()
     }
 
     func close() {
+        searchGeneration += 1
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
         panel.orderOut(nil)
+        items = []
+        shown = []
+        list.items = []
+        picked = nil
+        map.model = Map(monitors: [], windows: [], labels: [:])
+        map.icon = nil
+        mapModel = { _ in Map(monitors: [], windows: [], labels: [:]) }
+        jevAsked = nil
     }
 
     func windowDidResignKey(_ notification: Notification) {
@@ -208,6 +239,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     // MARK: Step 1
 
     private func filter() {
+        defer { updateCompletion() }
         let q = field.stringValue.trimmingCharacters(in: .whitespaces)
         let words = field.stringValue.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
         if words.count == 2, verbs[words[0]].flatMap(PickerSearch.init(verb:)) == .history {
@@ -232,7 +264,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             guard !query.isEmpty else { return }
             // Wait for a pause in typing, and drop answers to older queries.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { [weak self] in
-                guard let self, generation == self.searchGeneration else { return }
+                guard let self, generation == self.searchGeneration, self.isOpen else { return }
                 self.search(kind, query) { [weak self] found in
                     guard let self, generation == self.searchGeneration, self.isOpen else { return }
                     self.shown = found
@@ -431,19 +463,44 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     private func showList() {
         let rows = CGFloat(ListView.visible)
-        let size = NSSize(width: 680, height: 66 + rows * ListView.row + 12 + 26)
+        let size = NSSize(width: 680, height: 64 + 12 + rows * ListView.row + 44)
         place(size)
-        magnifier.frame = NSRect(x: 22, y: size.height - 47, width: 22, height: 22)
-        field.frame = NSRect(x: 54, y: size.height - 50, width: size.width - 76, height: 30)
-        divider.frame = NSRect(x: 0, y: size.height - 66, width: size.width, height: 1)
-        list.frame = NSRect(x: 10, y: 34, width: size.width - 20, height: rows * ListView.row)
-        footer.frame = NSRect(x: 0, y: 9, width: size.width, height: 16)
-        footer.stringValue = fixed == nil
-            ? "↵ pick, then where     ⌘↵ in Finder     ⌃N ⌃P move     cd / code + folder (⇥ completes)     f name     rg text     book / paper title     esc close"
-            : "↵ fill the empty place      ⌃N ⌃P move      esc leave it empty"
+        magnifier.frame = NSRect(x: 24, y: size.height - 43, width: 22, height: 22)
+        field.frame = NSRect(x: 56, y: size.height - 46, width: size.width - 80, height: 28)
+        divider.frame = NSRect(x: 24, y: size.height - 64, width: size.width - 48, height: 1)
+        list.frame = NSRect(x: 12, y: 44, width: size.width - 24, height: rows * ListView.row)
+        footer.frame = NSRect(x: 24, y: 12, width: size.width - 48, height: 18)
+        updateCompletion()
         for v in [magnifier, field, divider, list] as [NSView] { v.isHidden = false }
         map.isHidden = true
         panel.makeFirstResponder(field)
+    }
+
+    private func updateCompletion() {
+        guard picked == nil else { return }
+        if shown.indices.contains(list.selected), case .open = shown[list.selected].kind {
+            footer.stringValue = "⇥ complete folder: \(shown[list.selected].title)"
+            return
+        }
+        if let query = completion(for: field.stringValue) {
+            footer.stringValue = "⇥ complete: \(query)"
+            return
+        }
+        footer.stringValue = fixed == nil
+            ? "↵ Choose     ⌘↵ Reveal in Finder     ↑↓ Navigate     ⇥ Complete     Esc Close"
+            : "↵ Fill this place     ↑↓ Navigate     ⇥ Complete     Esc Leave empty"
+    }
+
+    private func finish(_ item: Item, _ choice: Choice) {
+        let query = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !query.isEmpty {
+            recentQueries.removeAll { $0.caseInsensitiveCompare(query) == .orderedSame }
+            recentQueries.insert(query, at: 0)
+            recentQueries = Array(recentQueries.prefix(100))
+            defaults?.set(recentQueries, forKey: "pickerRecentQueries")
+        }
+        close()
+        onDone(item, choice)
     }
 
     // MARK: Step 2
@@ -467,16 +524,19 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
     private func showMap(for item: Item) {
         picked = item
-        let model = mapModel()
+        let model = mapModel(item)
         if case .window(let id) = item.kind { map.picked = id } else { map.picked = nil }
         map.model = model
         map.title = item.title
         map.icon = item.icon
         let size = NSSize(width: 1000, height: 580)
         place(size)
-        map.frame = NSRect(x: 0, y: 30, width: size.width, height: size.height - 30)
-        footer.frame = NSRect(x: 0, y: 9, width: size.width, height: 16)
-        footer.stringValue = "letter  swap with it      ⌥ letter  beside it      ↵ here      1–\(max(model.monitors.count, 1))  that screen      g  just go      f  float      esc  back"
+        map.frame = NSRect(x: 0, y: 44, width: size.width, height: size.height - 44)
+        footer.frame = NSRect(x: 24, y: 12, width: size.width - 48, height: 18)
+        footer.stringValue = "Letter Swap     ⌥ Letter Beside     ↵ Here     1–\(max(model.monitors.count, 1)) Screen     G Go     F Float     Esc Back"
+        if let warning = model.hereWarning {
+            footer.stringValue = "↵ here: ⚠ \(warning) may not fit      letter swap      ⌥ letter beside      number screen      g go      f float      esc back"
+        }
         for v in [magnifier, field, divider, list] as [NSView] { v.isHidden = true }
         map.isHidden = false
         map.needsDisplay = true
@@ -491,11 +551,13 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     // MARK: Keys
 
     private func key(_ e: NSEvent) -> NSEvent? {
+        defer { updateCompletion() }
         let ctrl = e.modifierFlags.contains(.control)
         let ch = e.charactersIgnoringModifiers?.lowercased() ?? ""
-        // esc, or the key that opened the picker (alt-space, or any Hyper key), closes it.
+        // Esc or a picker shortcut closes it.
+        let modifiers = e.modifierFlags.intersection([.command, .option, .control, .shift])
         let hyper = e.modifierFlags.isSuperset(of: [.command, .option, .control, .shift])
-            || (e.keyCode == 49 && e.modifierFlags.contains(.option))
+            || (e.keyCode == 49 && (modifiers == .option || modifiers == .command))
         if e.keyCode == 53 || hyper {
             if picked != nil, fixed == nil, !hyper {
                 picked = nil
@@ -509,8 +571,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         if let item = picked {
             let model = map.model
             func done(_ c: Choice) {
-                close()
-                onDone(item, c)
+                finish(item, c)
             }
             switch ch {
             case "\r": done(.place(.here))
@@ -527,10 +588,13 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             return nil
         }
         switch (e.keyCode, ctrl, ch) {
-        case (48, _, _):  // tab completes a folder
-            guard shown.indices.contains(list.selected), case .open = shown[list.selected].kind,
-                  let verb = field.stringValue.split(separator: " ").first else { return nil }
-            field.stringValue = "\(verb) \(shown[list.selected].title)/"
+        case (48, _, _):
+            if shown.indices.contains(list.selected), case .open = shown[list.selected].kind,
+               let verb = field.stringValue.split(separator: " ").first {
+                field.stringValue = "\(verb) \(shown[list.selected].title)/"
+            } else if let query = completion(for: field.stringValue) {
+                field.stringValue = query
+            } else { return nil }
             field.currentEditor()?.moveToEndOfDocument(nil)
             filter()
         case (125, _, _), (_, true, "n"), (_, true, "j"): list.move(1)
@@ -539,17 +603,14 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             guard shown.indices.contains(list.selected) else { return nil }
             let item = shown[list.selected]
             if e.modifierFlags.contains(.command), item.kind.path != nil {
-                close()
-                onDone(item, .reveal)
+                finish(item, .reveal)
                 return nil
             }
             switch (item.kind, fixed) {
             case (.copy, _), (.system, _), (.command, _), (.keys, _), (.run, _), (.shortcut, _):
-                close()
-                onDone(item, .place(.here))
+                finish(item, .place(.here))
             case (_, let fixed?):
-                close()
-                onDone(item, .place(fixed))
+                finish(item, .place(fixed))
             default:
                 showMap(for: item)
             }
@@ -561,12 +622,28 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
 final class KeyPanel: NSPanel {
     override var canBecomeKey: Bool { true }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        // This accessory app has no Edit menu to route the field editor's shortcuts.
+        if event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command,
+           let editor = firstResponder as? NSTextView, editor.isEditable {
+            switch event.charactersIgnoringModifiers?.lowercased() {
+            case "v": editor.paste(nil)
+            case "c": editor.copy(nil)
+            case "x": editor.cut(nil)
+            case "a": editor.selectAll(nil)
+            default: return super.performKeyEquivalent(with: event)
+            }
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
 }
 
 /// Step 1's rows: icon, title (matched letters in the accent color), and what it is.
 final class ListView: NSView {
-    static let visible = 10
-    static let row: CGFloat = 38
+    static let visible = 8
+    static let row: CGFloat = 44
     var items: [Picker.Item] = []
     var query = ""
     var empty = "Nothing matches"
@@ -597,22 +674,21 @@ final class ListView: NSView {
             if i == selected {
                 let bg = r.insetBy(dx: 2, dy: 2)
                 NSColor.labelColor.withAlphaComponent(0.12).setFill()
-                NSBezierPath(roundedRect: bg, xRadius: 9, yRadius: 9).fill()
+                NSBezierPath(roundedRect: bg, xRadius: 8, yRadius: 8).fill()
                 NSColor.controlAccentColor.setFill()
                 NSBezierPath(roundedRect: NSRect(x: bg.minX + 4, y: bg.minY + 8, width: 3, height: bg.height - 16),
                              xRadius: 1.5, yRadius: 1.5).fill()
             }
-            item.icon?.draw(in: NSRect(x: 16, y: r.minY + 7, width: 24, height: 24))
+            item.icon?.draw(in: NSRect(x: 12, y: r.midY - 12, width: 24, height: 24))
             let detailAttrs: [NSAttributedString.Key: Any] = [
                 .font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.secondaryLabelColor,
             ]
             let detail = item.detail as NSString
-            let dw = min(detail.size(withAttributes: detailAttrs).width, bounds.width * 0.42)
             let style = NSMutableParagraphStyle()
             style.lineBreakMode = .byTruncatingMiddle
-            detail.draw(in: NSRect(x: r.maxX - dw - 14, y: r.minY + 12, width: dw, height: 16),
+            detail.draw(in: NSRect(x: 44, y: r.minY + 24, width: r.width - 58, height: 16),
                         withAttributes: detailAttrs.merging([.paragraphStyle: style]) { $1 })
-            title(item.title).draw(in: NSRect(x: 50, y: r.minY + 10, width: r.width - 50 - dw - 30, height: 20))
+            title(item.title).draw(in: NSRect(x: 44, y: r.minY + (item.detail.isEmpty ? 12 : 5), width: r.width - 58, height: 20))
         }
     }
 
@@ -659,6 +735,7 @@ final class MapView: NSView {
         }
         let boxes = model.monitors.map { mini($0).insetBy(dx: 5, dy: 5) }
         for (n, box) in boxes.enumerated() {
+            let warning = model.monitorWarnings[n]
             let path = NSBezierPath(roundedRect: box, xRadius: 12, yRadius: 12)
             NSColor.labelColor.withAlphaComponent(0.05).setFill()
             path.fill()
@@ -667,9 +744,9 @@ final class MapView: NSView {
             path.stroke()
             // The screen's number key heads it, in the inverse of the window letters.
             if let digit = "\(n + 1)".first {
-                Self.keycap(digit, NSRect(x: box.minX + 8, y: box.minY + 7, width: 24, height: 24), fill: .labelColor, text: .textBackgroundColor)
+                Self.keycap(digit, NSRect(x: box.minX + 8, y: box.minY + 7, width: 24, height: 24), fill: warning == nil ? .labelColor : .systemOrange, text: .textBackgroundColor)
             }
-            ("Screen \(n + 1)" as NSString).draw(at: NSPoint(x: box.minX + 40, y: box.minY + 11), withAttributes: [
+            ((warning.map { "⚠ \($0) may not fit" } ?? "Screen \(n + 1)") as NSString).draw(in: NSRect(x: box.minX + 40, y: box.minY + 11, width: box.width - 48, height: 16), withAttributes: [
                 .font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.secondaryLabelColor,
             ])
         }
@@ -683,6 +760,11 @@ final class MapView: NSView {
                           width: r.width / m.width * inner.width, height: r.height / m.height * inner.height)
         }
         for w in model.windows {
+            let warnings = [model.replaceWarnings[w.id].map { "swap: \($0)" },
+                            model.besideWarnings[w.id].map { "beside: \($0)" }].compactMap { $0 }
+            let warning = warnings.isEmpty ? nil : "⚠ " + warnings.joined(separator: "; ") + " may not fit"
+            let caption = warning ?? w.title
+            let capColor: NSColor = warning == nil ? Panels.accent : .systemOrange
             let r = inScreen(w.frame).insetBy(dx: 4, dy: 4)
             guard r.width > 4, r.height > 4 else { continue }
             let isPicked = w.id == picked
@@ -702,7 +784,7 @@ final class MapView: NSView {
                 let side = min(24, r.height - 6)
                 var x = r.minX + 6
                 if let label {
-                    Self.keycap(label, NSRect(x: x, y: r.midY - side / 2, width: side, height: side))
+                    Self.keycap(label, NSRect(x: x, y: r.midY - side / 2, width: side, height: side), fill: capColor)
                     x += side + 6
                 }
                 let icon = min(18, r.height - 6)
@@ -711,9 +793,9 @@ final class MapView: NSView {
                 let line = NSMutableAttributedString(string: w.app, attributes: [
                     .font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: NSColor.labelColor,
                 ])
-                if !w.title.isEmpty {
-                    line.append(NSAttributedString(string: "  \(w.title)", attributes: [
-                        .font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor,
+                if !caption.isEmpty {
+                    line.append(NSAttributedString(string: "  \(caption)", attributes: [
+                        .font: NSFont.systemFont(ofSize: 11), .foregroundColor: warning == nil ? NSColor.secondaryLabelColor : .systemOrange,
                     ]))
                 }
                 line.addAttribute(.paragraphStyle, value: clip, range: NSRange(location: 0, length: line.length))
@@ -726,10 +808,10 @@ final class MapView: NSView {
                 (w.app as NSString).draw(in: NSRect(x: r.minX + 8, y: iconRect.maxY + 6, width: r.width - 16, height: 16), withAttributes: [
                     .font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: NSColor.labelColor, .paragraphStyle: clip,
                 ])
-                (w.title as NSString).draw(in: NSRect(x: r.minX + 8, y: iconRect.maxY + 22, width: r.width - 16, height: 15), withAttributes: [
-                    .font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: clip,
+                (caption as NSString).draw(in: NSRect(x: r.minX + 8, y: iconRect.maxY + 22, width: r.width - 16, height: 30), withAttributes: [
+                    .font: NSFont.systemFont(ofSize: 11), .foregroundColor: warning == nil ? NSColor.secondaryLabelColor : .systemOrange, .paragraphStyle: clip,
                 ])
-                if let label { Self.keycap(label, NSRect(x: r.minX + 9, y: r.minY + 9, width: 28, height: 28)) }
+                if let label { Self.keycap(label, NSRect(x: r.minX + 9, y: r.minY + 9, width: 28, height: 28), fill: capColor) }
             }
             NSGraphicsContext.restoreGraphicsState()
         }

@@ -18,6 +18,8 @@ extension Tiler {
 
 
     func beginPicking() {
+        if jumping { setMode(jumpReturn) }
+        if !clickTargets.isEmpty { endClick() }
         focusBeforePicker = osFocused ?? world.focused
         picking = true
         hotkeys.unregisterAll()
@@ -32,8 +34,8 @@ extension Tiler {
             Log.write("picker: ready in \(ms) ms")
             Events.record("picker", ["ready_ms": Int(ms)])
         }
-        picker.open(pickerItems(), on: lookedAtFrame, fixed: fixed, verbs: config.verbs, text: text) { [weak self] in
-            self?.pickerMap() ?? Picker.Map(monitors: [], windows: [], labels: [:])
+        picker.open(pickerItems(), on: lookedAtFrame, fixed: fixed, verbs: config.verbs, text: text) { [weak self] item in
+            self?.pickerMap(for: item) ?? Picker.Map(monitors: [], windows: [], labels: [:])
         }
         picker.suggest = !config.jev ? nil : { [weak self] typed, candidates, done in
             let focused = self?.focusBeforePicker.map { id in
@@ -53,7 +55,13 @@ extension Tiler {
     func pickerClosed(cancelled: Bool, refocus: Bool = true) {
         picking = false
         setMode(mode)
+        let showTutorial = returnToTutorial && cancelled
+        returnToTutorial = false
         if cancelled { Events.record("picker.close", ["why": "cancelled"]) }
+        if showTutorial {
+            tutorial.resume()
+            return
+        }
         // tess was the active app for the picker: hand the keyboard back, unless the pick
         // brings something forward itself.
         if cancelled && closeReplacing {
@@ -147,24 +155,27 @@ extension Tiler {
             NSPasteboard.general.setString(text, forType: .string)
             toast("copied \(text)")
         case .pdf(let url, let name):
-            toast("downloading \(item.title)")
+            let notice = overlay.beginDownload(item.title, on: lookedAtFrame)
             let dest = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads/\(name)")
             URLSession.shared.downloadTask(with: url) { [weak self] tmp, _, _ in
                 let ok = tmp.map { (try? FileManager.default.moveItem(at: $0, to: dest)) != nil
                     || FileManager.default.fileExists(atPath: dest.path) } ?? false
                 DispatchQueue.main.async {
-                    if ok { self?.openFile(dest.path, choice) } else { self?.toast("could not download it") }
+                    guard let self else { return }
+                    let status = ok ? (self.openFile(dest.path, choice) ? "Opening" : "Could not open") : "Download failed"
+                    self.overlay.finishDownload(notice, status: status)
                 }
             }.resume()
         case .book(let md5):
-            toast("downloading \(item.title)")
+            let notice = overlay.beginDownload(item.title, on: lookedAtFrame)
             Proc.run("/bin/sh", ["-c", "folio get \"$1\"", "sh", md5], env: Proc.env, timeout: 600, log: "folio") { [weak self] out in
+                guard let self else { return }
                 let path = out?.split(separator: "\n").last.map(String.init) ?? ""
                 guard FileManager.default.fileExists(atPath: path) else {
-                    self?.toast("folio could not download it")
+                    self.overlay.finishDownload(notice, status: "Download failed")
                     return
                 }
-                self?.openFile(path, choice)
+                self.overlay.finishDownload(notice, status: self.openFile(path, choice) ? "Opening" : "Could not open")
             }
         case .match(let path, let line):
             if case .place(let spot) = choice { pending = ("com.microsoft.VSCode", spot, Date().addingTimeInterval(10)) }
@@ -307,13 +318,14 @@ extension Tiler {
     }
 
     /// Opens a file with its default app; with a place, that app's next window goes there.
-    func openFile(_ path: String, _ choice: Picker.Choice) {
+    @discardableResult
+    func openFile(_ path: String, _ choice: Picker.Choice) -> Bool {
         let url = URL(fileURLWithPath: path)
         if case .place(let spot) = choice, let app = NSWorkspace.shared.urlForApplication(toOpen: url),
            let b = Bundle(url: app)?.bundleIdentifier {
             pending = (b, spot, Date().addingTimeInterval(10))
         }
-        NSWorkspace.shared.open(url)
+        return NSWorkspace.shared.open(url)
     }
 
 
@@ -502,7 +514,7 @@ extension Tiler {
     }
 
 
-    func pickerMap() -> Picker.Map {
+    func pickerMap(for item: Picker.Item? = nil) -> Picker.Map {
         // Without tess fullscreen, so no window is drawn over the others' letters.
         var flat = world
         for i in flat.monitors.indices { flat.monitors[i].fullscreen = nil }
@@ -525,6 +537,33 @@ extension Tiler {
         }
         // The same letters as on the windows themselves.
         let mapLabels = stableLabels(labels, windows: world.tiled, alphabet: labelAlphabet).filter { world.locate($0.key) != nil }
-        return Picker.Map(monitors: world.monitors.map(\.frame), windows: windows, labels: mapLabels)
+        var map = Picker.Map(monitors: world.monitors.map(\.frame), windows: windows, labels: mapLabels)
+        guard let item else { return map }
+        let picked: WindowID
+        switch item.kind {
+        case .window(let id): picked = id
+        case .app(let url):
+            let pid = NSWorkspace.shared.runningApplications.first { $0.bundleURL == url }?.processIdentifier
+            picked = world.pick(infos.values.filter { $0.pid == pid && $0.standard }.map(\.id)) ?? WindowID.max
+        default: picked = WindowID.max
+        }
+        // Only dimensions the app actually kept larger than requested are evidence of a limit.
+        var sizes: [WindowID: CGSize] = [:]
+        for id in refused {
+            guard let info = infos[id], let target = writes[id]?.target else { continue }
+            sizes[id] = CGSize(width: info.frame.width > target.width + 1 ? info.frame.width : 0,
+                               height: info.frame.height > target.height + 1 ? info.frame.height : 0)
+        }
+        func warning(_ spot: Spot) -> String? {
+            let names = Set(world.placementWarnings(picked, at: spot, sizes: sizes, inner: config.inner, outer: config.outer).map(appName)).sorted()
+            return names.isEmpty ? nil : names.joined(separator: ", ")
+        }
+        for id in world.tiled {
+            map.replaceWarnings[id] = warning(.replace(id))
+            map.besideWarnings[id] = warning(.beside(id))
+        }
+        for m in world.monitors.indices { map.monitorWarnings[m] = warning(.monitor(m)) }
+        map.hereWarning = warning(.here)
+        return map
     }
 }

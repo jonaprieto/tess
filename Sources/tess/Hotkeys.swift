@@ -1,11 +1,12 @@
 import Carbon
 import Layout
 
-/// Global hotkeys through Carbon's `RegisterEventHotKey`, as nuphy-watch does: no Input
+/// Global hotkeys through Carbon's `RegisterEventHotKey`: no Input
 /// Monitoring needed, and a registered key never reaches the focused app.
 final class Hotkeys {
     private var refs: [EventHotKeyRef] = []
     private var actions: [UInt32: [Command]] = [:]
+    private var eventHandler: EventHandlerRef?
     private let handler: ([Command]) -> Void
 
     init(handler: @escaping ([Command]) -> Void) {
@@ -18,12 +19,20 @@ final class Hotkeys {
             let me = Unmanaged<Hotkeys>.fromOpaque(refcon!).takeUnretainedValue()
             if let commands = me.actions[id.id] { me.handler(commands) }
             return noErr
-        }, 1, &spec, Unmanaged.passUnretained(self).toOpaque(), nil)
+        }, 1, &spec, Unmanaged.passUnretained(self).toOpaque(), &eventHandler)
+    }
+
+    deinit {
+        unregisterAll()
+        if let eventHandler { RemoveEventHandler(eventHandler) }
     }
 
     /// Replaces every registered key with `bindings`; returns the keys that could not be had.
     func register(_ bindings: [KeySpec: [Command]]) -> [String] {
         unregisterAll()
+        var bindings = bindings
+        let pickerKey = KeySpec(key: "space", mods: [.cmd])
+        if bindings[pickerKey] == nil { bindings[pickerKey] = [.pick("")] }
         var failed: [String] = []
         for (n, (spec, commands)) in bindings.sorted(by: { $0.key.description < $1.key.description }).enumerated() {
             guard let code = Self.codes[spec.key] else { failed.append(spec.description); continue }
@@ -38,7 +47,10 @@ final class Hotkeys {
                 refs.append(ref)
                 actions[id.id] = commands
             } else {
-                failed.append(spec.description)
+                // Spotlight may own Cmd-Space; the picker still has Alt-Space.
+                if spec != KeySpec(key: "space", mods: [.cmd]) || commands != [.pick("")] {
+                    failed.append(spec.description)
+                }
             }
         }
         return failed

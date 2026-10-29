@@ -146,6 +146,7 @@ final class Switcher {
 
     func close() {
         cards = []
+        view.cards = []
         panel?.orderOut(nil)
         onPick(nil)
     }

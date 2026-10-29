@@ -3,6 +3,8 @@ import AppKit
 enum Panels {
     /// Borders and highlights: the config's overlay.border_color, else the macOS accent color.
     nonisolated(unsafe) static var accent = NSColor.controlAccentColor
+    nonisolated(unsafe) static var inactiveBorder = NSColor.labelColor.withAlphaComponent(0.22)
+    nonisolated(unsafe) static var selection = NSColor.systemOrange
 
     /// A borderless, click-through panel on every Space that never takes focus.
     static func overlay(level: NSWindow.Level) -> NSPanel {

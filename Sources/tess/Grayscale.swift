@@ -1,25 +1,26 @@
 import AppKit
+import Layout
 
-/// What is on screen in black and white at 80%, but for a hole where the focused window is:
+/// What is on screen in black and white at the configured strength, but for the focused window:
 /// one click-through panel per screen, just above normal windows and below tess's labels.
 final class Grayscale {
     private var panels: [(panel: NSPanel, hole: CGRect?)] = []
     private let available = Grayscale.backdrop() != nil
 
     /// Each screen's frame and the focused window's frame when it is on that screen.
-    func show(_ screens: [(frame: CGRect, hole: CGRect?)]) {
+    func show(_ screens: [(frame: CGRect, hole: CGRect?)], amount: Double) {
         guard available else { return }
         while panels.count < screens.count, let backdrop = Self.backdrop() {
             let p = Panels.overlay(level: NSWindow.Level(rawValue: NSWindow.Level.normal.rawValue + 1))
             let host = NSView()
             host.wantsLayer = true
-            backdrop.opacity = 0.8
             host.layer?.addSublayer(backdrop)
             p.contentView = host
             panels.append((p, nil))
         }
         for n in panels.indices {
             let p = panels[n].panel
+            p.contentView?.layer?.sublayers?.forEach { $0.opacity = Float(amount) }
             guard let screen = screens[safe: n] else {
                 p.orderOut(nil)
                 continue
@@ -73,10 +74,15 @@ final class Grayscale {
 /// front; not in Zen (its veil has the other screens), nor paused, nor with another app or one
 /// of tess's own windows in front.
 extension Tiler {
-    func refreshGray() {
-        guard config.grayOthers, !paused, !starting, zen == nil, let f = world.focused, let info = infos[f],
+    func grayScreens(focused: WindowID, in stack: [(id: WindowID, frame: CGRect)]) -> [(frame: CGRect, hole: CGRect?)] {
+        guard let frame = stack.first(where: { $0.id == focused })?.frame else { return [] }
+        return world.monitors.map { ($0.frame, $0.frame.intersects(frame) ? frame : nil) }
+    }
+
+    func refreshGray(in stack: [(id: WindowID, frame: CGRect)]) {
+        guard config.grayOthers, config.grayAmount > 0, !paused, !starting, zen == nil, let f = world.focused, let info = infos[f],
               NSWorkspace.shared.frontmostApplication?.processIdentifier == info.pid
         else { return grayscale.hide() }
-        grayscale.show(world.monitors.map { m in (m.frame, m.frame.intersects(info.frame) ? info.frame : nil) })
+        grayscale.show(grayScreens(focused: f, in: stack), amount: config.grayAmount)
     }
 }

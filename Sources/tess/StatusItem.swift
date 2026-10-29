@@ -148,6 +148,8 @@ final class StatusItem: NSObject, NSMenuDelegate {
         } ?? "keep the Mac awake"
         menu.addItem(cup)
         menu.addItem(item("Settings…", "gearshape", #selector(openSettings), key: ",", mods: [.command]))
+        menu.addItem(item("Tutorial…", "questionmark.circle", #selector(openTutorial)))
+        menu.addItem(item("Doctor…", "stethoscope", #selector(openDoctor)))
         menu.addItem(.separator())
         menu.addItem(item("Rescue Windows", "lifepreserver", #selector(rescue), for: .rescue))
         menu.addItem(item("Re-tile", "rectangle.3.group", #selector(retile), for: .retile))
@@ -291,6 +293,8 @@ final class StatusItem: NSObject, NSMenuDelegate {
     @objc private func clear() { _ = tiler.run([.clearMonitor], source: "menu") }
     @objc private func openLog() { NSWorkspace.shared.open(Log.url) }
     @objc private func openSettings() { tiler.openSettings() }
+    @objc private func openTutorial() { _ = tiler.run([.tutorial], source: "menu") }
+    @objc private func openDoctor() { tiler.doctor.show() }
     @objc private func rescue() { tiler.menuRescue() }
     @objc private func retile() { tiler.menuRetile() }
     @objc private func pause() { tiler.menuPause() }

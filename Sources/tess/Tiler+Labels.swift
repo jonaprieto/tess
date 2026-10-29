@@ -38,16 +38,33 @@ extension Tiler {
 
     /// The shown windows whose middle is not under another window.
     func visibleWindows(_ stack: [(id: WindowID, frame: CGRect)]) -> [WindowID] {
-        shownWindows.filter { id in infos[id].map { onTop(CGPoint(x: $0.frame.midX, y: $0.frame.midY), id, stack) } ?? false }
+        shownWindows.filter { id in stack.first(where: { $0.id == id }).map {
+            onTop(CGPoint(x: $0.frame.midX, y: $0.frame.midY), id, stack)
+        } ?? false }
     }
 
+    /// Outlines use the window server's bounds, never an optimistic resize or a clipped tile.
+    func decorationWindows(in stack: [(id: WindowID, frame: CGRect)], focused: WindowID?, all: Bool) -> [Decorations.Window] {
+        (all ? visibleWindows(stack) : shownWindows).compactMap { id in
+            guard all || id == focused, let frame = stack.first(where: { $0.id == id })?.frame else { return nil }
+            return Decorations.Window(frame: frame, label: all ? labels[id] : nil, focused: id == focused)
+        }
+    }
+
+    /// Borders and grayscale share one fresh window-server snapshot, without caching across events.
+    func refreshOverlays() {
+        let stack = windowStack
+        refreshDecorations(in: stack)
+        refreshGray(in: stack)
+    }
 
     /// Borders and letters on every visible window, tab letters and numbers on every screen
     /// when letters are keys or labels are always on; otherwise the focused window's border
     /// and, with more than one screen, the active screen's outline (overlay.window_labels).
     /// Only what can be seen gets a letter. None during a drag, whose windows they would not follow.
-    func refreshDecorations() {
-        let visible = visibleWindows(windowStack)
+    func refreshDecorations(in snapshot: [(id: WindowID, frame: CGRect)]? = nil) {
+        let stack = snapshot ?? windowStack
+        let visible = visibleWindows(stack)
         labels = stableLabels(labels, windows: visible, alphabet: labelPool)
         let all = config.windowLabels == .always || labelsAreKeys
         guard config.windowLabels != .off, !paused, !starting, drag == nil else {
@@ -59,16 +76,7 @@ extension Tiler {
         // tess does not track in front, a border on the window behind it would cross that one.
         let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
         let focused = world.focused.flatMap { id in infos[id]?.pid == front ? id : nil }
-        let windows = (all ? visible : shownWindows).compactMap { id -> Decorations.Window? in
-            guard all || id == focused, var f = infos[id]?.frame else { return nil }
-            // Only on its own screen: a window wider than its place (one that keeps its own
-            // size) would carry its border onto the next screen.
-            if let m = world.locate(id)?.m ?? world.monitorIndex(for: f), let screen = world.monitors[safe: m]?.frame {
-                f = f.intersection(screen)
-            }
-            guard !f.isNull else { return nil }
-            return Decorations.Window(frame: f, label: all ? labels[id] : nil, focused: id == focused)
-        }
+        let windows = decorationWindows(in: stack, focused: focused, all: all)
         let tabs = zip(tabList, tabLetters).map { (frame: $0.frame, label: $1) }
         let screens = world.monitors.map(\.frame)
         let active = screens.count > 1 ? world.activeMonitor : nil

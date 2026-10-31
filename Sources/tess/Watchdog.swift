@@ -14,19 +14,19 @@ enum Watchdog {
 
   static func start() {
     last = DispatchTime.now().uptimeNanoseconds
-    let beat = Timer(timeInterval: 1, repeats: true) { _ in
+    let beat = Timer(timeInterval: 2, repeats: true) { _ in
       lock.lock()
       last = DispatchTime.now().uptimeNanoseconds
       lock.unlock()
     }
     // Tolerance lets macOS batch the wakeup with others.
-    beat.tolerance = 0.5
+    beat.tolerance = 1
     // Common modes: the heartbeat keeps going while the status menu
     // is open.
     RunLoop.main.add(beat, forMode: .common)
     let thread = Thread {
       while true {
-        Thread.sleep(forTimeInterval: 2)
+        Thread.sleep(forTimeInterval: 3)
         lock.lock()
         let now = DispatchTime.now().uptimeNanoseconds
         let stalled = now > last && now - last > 5_000_000_000

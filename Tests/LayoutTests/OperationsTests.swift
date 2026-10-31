@@ -161,32 +161,46 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] {
   #expect(try Command.parse("grid") == [.arrange(.grid)])
 }
 
-@Test func moveFromSharedLanePopsOut() {
+@Test func moveSwapsPlacesAndLeavesTheTilingAsItWas() {
+  func shape(_ w: World) -> [[Int]] {
+    w.monitors[0].lanes.map { [$0.windows.count] }
+  }
   var w = world([[1, 2], [3]], focused: 2)
+  w.monitors[0].lanes[0].size = 3
+  w.monitors[0].lanes[0].sizes = [2, 1]
+  let places = Set(
+    w.frames(inner: 0, outer: 0).values.map { "\($0)" })
   w.move(.right)
-  #expect(lanes(w) == [[1], [2], [3]])
-  w = world([[1], [2, 3]], focused: 3)
-  w.move(.left)
-  #expect(lanes(w) == [[1], [3], [2]])
+  #expect(lanes(w) == [[1, 3], [2]])
+  #expect(w.focused == 2)
+  #expect(
+    Set(w.frames(inner: 0, outer: 0).values.map { "\($0)" }) == places
+  )
+
+  var alone = world([[1], [2, 3]], focused: 1)
+  let before = shape(alone)
+  alone.move(.right)
+  #expect(shape(alone) == before)
+  #expect(alone.focused == 1)
+  #expect(lanes(alone)[0] != [1])
 }
 
-@Test func moveAloneJoinsNeighbor() {
-  var w = world([[1], [2, 3]], focused: 1)
-  w.move(.right)
-  #expect(lanes(w) == [[2, 3, 1]])
-  #expect(w.focused == 1)
-}
-
-@Test func moveAloneAtEdgeCrossesMonitor() {
+@Test func moveAtTheEdgeSwapsAcrossScreensOrGoesToAnEmptyOne() {
   var w = world([[1], [2]], [[5]], focused: 2)
   w.move(.right)
-  #expect(lanes(w) == [[1]])
-  #expect(lanes(w, 1) == [[2], [5]])
+  #expect(lanes(w) == [[1], [5]])
+  #expect(lanes(w, 1) == [[2]])
   #expect(w.focused == 2)
   #expect(w.activeMonitor == 1)
   w.move(.left)
   #expect(lanes(w) == [[1], [2]])
   #expect(lanes(w, 1) == [[5]])
+
+  var empty = world([[1], [2]], [], focused: 2)
+  empty.move(.right)
+  #expect(lanes(empty) == [[1]])
+  #expect(lanes(empty, 1) == [[2]])
+  #expect(empty.focused == 2)
 }
 
 @Test func moveAtEdgeWithoutMonitorDoesNothing() {
@@ -305,8 +319,9 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] {
   w.focus(.up)
   #expect(w.focused == 1)
   w.move(.down)
-  #expect(lanes(w) == [[2, 1]])
-  w.focus(.left)
+  #expect(lanes(w) == [[2], [1]])
+  #expect(w.focused == 1)
+  w.focus(.up)
   #expect(w.focused == 2)
 }
 

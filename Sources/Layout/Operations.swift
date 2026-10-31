@@ -100,34 +100,19 @@ extension World {
 
   // MARK: Moving
 
-  /// Along the lanes: pop out of a shared lane, else join the
-  /// neighbor lane, else cross to the neighbor monitor. Along the
-  /// stack: swap, else cross to the neighbor monitor.
+  /// The focused window swaps places with the one `focus(d)` would go
+  /// to, here or on the next screen, so the tiling keeps its shape;
+  /// an empty screen that way takes it.
   public mutating func move(_ d: Direction) {
     guard let id = focused, let p = locate(id) else { return }
-    let mon = monitors[p.m]
-    let lane = mon.lanes[p.l]
-    if mon.isMajor(d) {
-      if lane.windows.count > 1 {
-        detach(id)
-        monitors[p.m].lanes.insert(
-          newLane(id, on: p.m), at: d.sign > 0 ? p.l + 1 : p.l)
-      } else if mon.lanes.indices.contains(p.l + d.sign) {
-        detach(id)
-        append(id, toLane: d.sign > 0 ? p.l : p.l - 1, on: p.m)
-      } else if let n = neighbor(of: p.m, d) {
-        detach(id)
-        place(id, on: n, from: d)
-      }
-    } else {
-      let t = p.w + d.sign
-      if lane.windows.indices.contains(t) {
-        monitors[p.m].lanes[p.l].windows.swapAt(p.w, t)
-        monitors[p.m].lanes[p.l].sizes.swapAt(p.w, t)
-      } else if let n = neighbor(of: p.m, d) {
-        detach(id)
-        place(id, on: n, from: d)
-      }
+    var ahead = self
+    ahead.focus(d)
+    if let t = ahead.focused, t != id, locate(t) != nil {
+      swap(id, t)
+    } else if let n = neighbor(of: p.m, d), monitors[n].lanes.isEmpty
+    {
+      detach(id)
+      place(id, on: n, from: d)
     }
     focused = id
   }
@@ -388,12 +373,6 @@ extension World {
     } else {
       monitors[n].lanes.append(lane)
     }
-  }
-
-  mutating func append(_ id: WindowID, toLane l: Int, on m: Int) {
-    monitors[m].lanes[l].sizes.append(
-      mean(monitors[m].lanes[l].sizes) ?? 1)
-    monitors[m].lanes[l].windows.append(id)
   }
 
   /// A lane as big as the average lane on monitor `m`.

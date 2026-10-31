@@ -337,6 +337,8 @@ at any time. With Homebrew that is one click: `brew upgrade` runs and tess resta
 version, which also ends Keep Awake and Zen. A build from source opens the release instead,
 since `git pull && make install` is yours to run.
 
+What changed in each version is in the [releases](https://github.com/jonaprieto/tess/releases).
+
 ## Make it yours
 
 Settings in the menu bar, or `tess settings`, edits gaps, colors, labels, language, picker

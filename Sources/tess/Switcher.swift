@@ -178,6 +178,7 @@ final class Switcher {
 
   private(set) var cards: [Card] = []
   private(set) var selected = 0
+  private var strips: [Strip] = []
   private var panel: NSPanel?
   private let view = SwitcherView()
   /// The pick while the panel shows, nil once it closes: tess
@@ -188,9 +189,13 @@ final class Switcher {
     cards.indices.contains(selected) ? cards[selected].target : nil
   }
 
-  func open(_ cards: [Card], selected: Int, on screen: CGRect) {
+  func open(
+    _ cards: [Card], selected: Int, strips: [Strip] = [],
+    on screen: CGRect
+  ) {
     self.cards = cards
     self.selected = selected
+    self.strips = strips
     // A quick cmd-tab goes without the panel flashing up.
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
       [weak self] in
@@ -227,6 +232,7 @@ final class Switcher {
   private func show(on screen: CGRect) {
     view.cards = cards
     view.selected = selected
+    view.strips = strips
     let p =
       panel
       ?? {
@@ -238,7 +244,8 @@ final class Switcher {
       }()
     panel = p
     let size = SwitcherView.size(
-      for: cards.count, within: screen.width - 80)
+      for: cards.count, strips: strips.count,
+      within: screen.width - 80)
     let r = CGRect(
       x: screen.midX - size.width / 2,
       y: screen.midY - size.height / 2, width: size.width,
@@ -253,8 +260,9 @@ final class Switcher {
 final class SwitcherView: NSView {
   var cards: [Switcher.Card] = []
   var selected = 0
+  var strips: [Strip] = []
   static let card = NSSize(width: 168, height: 132)
-  static let gap: CGFloat = 10, pad: CGFloat = 14
+  static let gap: CGFloat = 10, pad: CGFloat = 14, strip: CGFloat = 34
 
   override var isFlipped: Bool { true }
 
@@ -262,17 +270,91 @@ final class SwitcherView: NSView {
     max(1, min(n, Int((width - 2 * pad + gap) / (card.width + gap))))
   }
 
-  static func size(for n: Int, within width: CGFloat) -> NSSize {
+  static func size(for n: Int, strips: Int = 0, within width: CGFloat)
+    -> NSSize
+  {
     let cols = columns(for: n, within: width),
       rows = (n + cols - 1) / cols
     return NSSize(
       width: 2 * pad + CGFloat(cols) * card.width + CGFloat(cols - 1)
         * gap,
       height: 2 * pad + CGFloat(rows) * card.height + CGFloat(
-        rows - 1) * gap)
+        rows - 1) * gap + CGFloat(strips) * (strip + gap))
+  }
+
+  /// A ribbon above the cards: its columns to scale, an outline
+  /// around those on screen, the picked window lit, so it is clear
+  /// how far along it is before going there.
+  private func draw(
+    _ ribbon: Strip, in r: NSRect, numbered: Bool, picked: WindowID?
+  ) {
+    var r = r
+    if numbered {
+      let number = "\(ribbon.monitor + 1)" as NSString
+      let attrs: [NSAttributedString.Key: Any] = [
+        .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
+        .foregroundColor: Panels.quiet
+      ]
+      number.draw(
+        at: NSPoint(
+          x: r.minX,
+          y: r.midY - number.size(withAttributes: attrs).height / 2),
+        withAttributes: attrs)
+      r = r.insetBy(dx: 7, dy: 0).offsetBy(dx: 7, dy: 0)
+    }
+    let apart: CGFloat = 3
+    let unit =
+      (r.width - 8 - apart * CGFloat(ribbon.lanes.count - 1))
+      / max(ribbon.lengths.reduce(0, +), 1)
+    var x = r.minX + 4
+    var inView: NSRect?
+    for (lane, (length, shown)) in zip(
+      ribbon.lanes, zip(ribbon.lengths, ribbon.shown))
+    {
+      let box = NSRect(
+        x: x, y: r.minY + 4, width: unit * length,
+        height: r.height - 8)
+      x += box.width + apart
+      if shown { inView = inView?.union(box) ?? box }
+      for (i, id) in lane.enumerated() {
+        let height =
+          (box.height - CGFloat(lane.count - 1)) / CGFloat(lane.count)
+        let cell = NSRect(
+          x: box.minX, y: box.minY + CGFloat(i) * (height + 1),
+          width: box.width, height: height)
+        (id == picked
+          ? Panels.accent : Panels.label(shown ? 0.32 : 0.14))
+          .setFill()
+        NSBezierPath(roundedRect: cell, xRadius: 2, yRadius: 2).fill()
+      }
+    }
+    guard let inView else { return }
+    let outline = NSBezierPath(
+      roundedRect: inView.insetBy(dx: -3, dy: -3), xRadius: 4,
+      yRadius: 4)
+    outline.lineWidth = 1
+    Panels.label(0.55).setStroke()
+    outline.stroke()
   }
 
   override func draw(_ dirtyRect: NSRect) {
+    var picked: WindowID?
+    if cards.indices.contains(selected),
+      case .window(let id) = cards[selected].target
+    {
+      picked = id
+    }
+    for (i, s) in strips.enumerated() {
+      draw(
+        s,
+        in: NSRect(
+          x: Self.pad,
+          y: Self.pad + CGFloat(i) * (Self.strip + Self.gap),
+          width: bounds.width - 2 * Self.pad, height: Self.strip),
+        numbered: strips.count > 1, picked: picked)
+    }
+    let top =
+      Self.pad + CGFloat(strips.count) * (Self.strip + Self.gap)
     let cols = Self.columns(for: cards.count, within: bounds.width)
     let center = NSMutableParagraphStyle()
     center.alignment = .center
@@ -281,8 +363,7 @@ final class SwitcherView: NSView {
       let r = NSRect(
         x: Self.pad + CGFloat(i % cols)
           * (Self.card.width + Self.gap),
-        y: Self.pad + CGFloat(i / cols)
-          * (Self.card.height + Self.gap),
+        y: top + CGFloat(i / cols) * (Self.card.height + Self.gap),
         width: Self.card.width, height: Self.card.height)
       let path = NSBezierPath(
         roundedRect: r, xRadius: 12, yRadius: 12)

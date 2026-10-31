@@ -84,7 +84,8 @@ extension Tiler {
         cards,
         selected: back
           ? cards.count - 1 : inFront ? min(1, cards.count - 1) : 0,
-        on: lookedAtFrame)
+        strips: world.strips(inner: config.inner, outer: config.outer)
+          .filter { !$0.lanes.isEmpty }, on: lookedAtFrame)
       askShortTitles(ids)
     case .step(let back):
       switcher.step(back ? -1 : 1)

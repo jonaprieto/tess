@@ -128,7 +128,10 @@ final class StatusItem: NSObject, NSMenuDelegate {
         accessibilityDescription: "tess")!
     }
     let scale = min(16 / bounds.height, 64 / bounds.width)
-    let frames = world.frames(inner: 0, outer: 0)
+    let frames = world.frames(
+      inner: tiler.config.inner, outer: tiler.config.outer)
+    let strips = world.strips(
+      inner: tiler.config.inner, outer: tiler.config.outer)
     func mini(_ r: CGRect) -> CGRect {
       CGRect(
         x: 1 + (r.minX - bounds.minX) * scale,
@@ -159,6 +162,18 @@ final class StatusItem: NSObject, NSMenuDelegate {
           guard r.width > 0.5, r.height > 0.5 else { continue }
           (id == world.focused ? color : dim).setFill()
           NSBezierPath(roundedRect: r, xRadius: 1, yRadius: 1).fill()
+        }
+        // What a ribbon has out of view: a tick per column along the
+        // bottom.
+        guard let strip = strips.first(where: { $0.monitor == m })
+        else { continue }
+        let out = strip.shown.filter { !$0 }.count
+        for i in 0..<min(out, Int(box.width - 4) / 3) {
+          dim.setFill()
+          NSRect(
+            x: box.minX + 2 + CGFloat(i) * 3, y: box.maxY - 2,
+            width: 2, height: 1
+          ).fill()
         }
       }
       return true

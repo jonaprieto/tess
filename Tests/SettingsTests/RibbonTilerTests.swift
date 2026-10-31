@@ -169,6 +169,47 @@ func
 }
 
 @MainActor
+@Test func theSwitcherMakesRoomForEachRibbon() {
+  let plain = SwitcherView.size(for: 3, within: 1000)
+  let one = SwitcherView.size(for: 3, strips: 1, within: 1000)
+  let two = SwitcherView.size(for: 3, strips: 2, within: 1000)
+  #expect(one.width == plain.width)
+  #expect(
+    one.height == plain.height + SwitcherView.strip + SwitcherView.gap
+  )
+  #expect(
+    two.height == one.height + SwitcherView.strip + SwitcherView.gap)
+}
+
+@MainActor
+@Test func theSwitcherDrawsARibbonWithoutCardsGettingLost() throws {
+  _ = NSApplication.shared
+  let view = SwitcherView()
+  view.cards = [
+    Switcher.Card(
+      target: .window(3), icon: nil, app: "App", title: "",
+      detail: "", label: "a")
+  ]
+  view.strips = ribbon([1, 2, 3, 4], focused: 3).world.strips(
+    inner: 10, outer: 10)
+  #expect(view.strips.count == 1)
+  view.frame = NSRect(
+    origin: .zero,
+    size: SwitcherView.size(for: 1, strips: 1, within: 1000))
+  let rep = try #require(
+    view.bitmapImageRepForCachingDisplay(in: view.bounds))
+  view.cacheDisplay(in: view.bounds, to: rep)
+  var painted = 0
+  for x in stride(from: 0, to: rep.pixelsWide, by: 8) {
+    for y in stride(from: 0, to: rep.pixelsHigh, by: 4)
+    where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.05 {
+      painted += 1
+    }
+  }
+  #expect(painted > 0)
+}
+
+@MainActor
 @Test func nothingWaitsForASlideWhenThereIsNoWindowToMove() {
   let tiler = ribbon([1, 2, 3, 4], focused: 1)
   #expect(!tiler.glide())

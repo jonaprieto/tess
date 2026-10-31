@@ -62,17 +62,7 @@ extension Tiler {
     let before = world.focused
     let beforeMonitor = world.activeMonitor
     var flash = false
-    // Commands on a tiled window say so when the focused one floats,
-    // instead of doing nothing.
-    if let f = world.focused, world.floating.contains(f),
-      c == .accordion || c.isMoveOrResize
-    {
-      let key = config.modes["main"]?.first { $0.value == [.float] }?
-        .key.symbol
-      return "error: "
-        + (key.map { L("\(appName(f)) floats; \($0) tiles it") }
-          ?? L("\(appName(f)) floats"))
-    }
+    if let error = floatingRefusal(of: c) { return error }
     switch c {
     case .focus(let d): world.focus(d); flash = true
     case .move(let d): world.move(d); flash = true
@@ -84,15 +74,7 @@ extension Tiler {
       let was = world
       world.grow(by: px)
       holdMinimums(was)
-    case .balance:
-      let was = world.frames(inner: config.inner, outer: config.outer)
-      world.balance()
-      world.respect(
-        windowMinimums, inner: config.inner, outer: config.outer)
-      if world.frames(inner: config.inner, outer: config.outer) == was
-      {
-        toast(L("already even"))
-      }
+    case .balance: balanceLanes()
     case .arrange(let a): world.arrange(a)
     case .flip:
       world.flip()
@@ -102,32 +84,9 @@ extension Tiler {
         world.monitors[safe: world.activeMonitor]?.rows == true
           ? L("rows") : L("columns"))
     case .accordion: world.toggleAccordion()
-    case .fullscreen:
-      // A floating window joins the tiling to go fullscreen.
-      if let f = world.focused, world.floating.contains(f) {
-        world.toggleFloating(f)
-      }
-      world.toggleFullscreen()
-      if let f = world.focused, world.locate(f) != nil {
-        focus(f)
-        let on =
-          world.locate(f).map { world.monitors[$0.m].fullscreen == f }
-          ?? false
-        toast(on ? L("fullscreen") : L("fullscreen off"))
-      }
+    case .fullscreen: toggleFullscreenTiled()
     case .float:
-      guard let id = world.focused ?? osFocused, world.contains(id)
-      else {
-        return "error: \(L("no tiled or floating window focused"))"
-      }
-      world.toggleFloating(id)
-      let floating = world.floating.contains(id)
-      let key = config.modes["main"]?.first { $0.value == [.float] }?
-        .key.symbol
-      toast(
-        floating
-          ? key.map { L("Floating · \($0) returns to tiling") }
-            ?? L("Floating") : L("Tiled"))
+      if let error = toggleFloatingFocused() { return error }
     case .close:
       guard let id = world.focused ?? osFocused, let info = infos[id]
       else { return "error: \(L("no window focused"))" }
@@ -153,56 +112,25 @@ extension Tiler {
       }
       flash = true
     case .exec(let line):
-      let p = Process()
-      p.executableURL = URL(fileURLWithPath: "/bin/sh")
-      p.arguments = ["-c", line]
-      do { try p.run() } catch { return "error: \(error)" }
+      if let error = launch("/bin/sh", ["-c", line]) { return error }
     case .terminal:
       // Opening a folder with a terminal app gives a new window
       // there, as the `cd` verb does.
-      let p = Process()
-      p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-      p.arguments = [
-        "-a", config.terminal,
-        FileManager.default.homeDirectoryForCurrentUser.path
-      ]
-      do { try p.run() } catch { return "error: \(error)" }
+      let home = FileManager.default.homeDirectoryForCurrentUser.path
+      if let error = launch(
+        "/usr/bin/open", ["-a", config.terminal, home])
+      {
+        return error
+      }
     case .reload: loadConfig(announce: true)
-    case .mode(let m):
-      // Entering a one-shot mode again keeps it on until esc.
-      if m == mode, oneShotNow {
-        locked = true
-        toast(L("\(Command.modeName(m)) mode locked"))
-      }
-      setMode(m)
-    case .retile:
-      sweep(all: true)
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-        [weak self] in
-        guard let self else { return }
-        let before = self.world
-        self.rebuild()
-        self.remember(L("Re-tile"), "", from: before)
-        self.toast(L("re-tiled"))
-      }
+    case .mode(let m): enterMode(m)
+    case .retile: retile()
     case .rescue: toast(L("rescued \(rescue()) windows"))
     case .pause: setPaused(!paused)
     case .tree: return tree()
     case .nop: break
-    case .pick(let text):
-      if picker.isOpen {
-        picker.close()
-        pickerClosed(cancelled: true)
-      } else {
-        openPicker(fixed: nil, text: text)
-      }
-    case .debugMap(let path):
-      let png = Picker.render(
-        pickerMap(), size: NSSize(width: 1000, height: 550))
-      do { try png?.write(to: URL(fileURLWithPath: path)) } catch {
-        return "error: \(error)"
-      }
-      return path
+    case .pick(let text): togglePicker(text)
+    case .debugMap(let path): return writeDebugMap(path)
     case .settings: openSettings()
     case .tutorial: tutorial.show(config)
     case .jump: startJump()
@@ -219,60 +147,201 @@ extension Tiler {
       }
       use(id, .jump)
     case .focusTab(let n):
-      guard tabList.indices.contains(n),
-        infos[tabList[n].window] != nil
-      else { return "error: \(L("no tab \(n)"))" }
-      let t = tabList[n]
-      workers[t.pid]?.press(t.element)
-      use(t.window, .jump)
+      if let error = focusTab(n) { return error }
     case .swapWith(let id):
-      guard let f = world.focused, f != id, world.locate(f) != nil,
-        world.locate(id) != nil
-      else {
-        return
-          "error: \(L("swap needs a focused tiled window and another tiled window"))"
-      }
-      world.swap(f, id)
-      world.focused = f
+      if let error = swapFocused(with: id) { return error }
       flash = true
-    case .state:
-      let data =
-        (try? JSONSerialization.data(
-          withJSONObject: stateJSON(),
-          options: [.prettyPrinted, .sortedKeys])) ?? Data()
-      return String(decoding: data, as: UTF8.self)
+    case .state: return stateText()
     case .clearMonitor:
       world.clearMonitor()
       flash = true
     case .closeReplace:
-      guard let id = world.focused, let s = world.slot(of: id),
-        let info = infos[id]
-      else {
-        return "error: \(L("no tiled window focused"))"
-      }
-      beginPicking()
-      closeReplacing = true
-      world.remove(id)
-      workers[info.pid]?.close(id)
-      // Let macOS settle on whatever it focuses next, then take the
-      // keyboard.
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-        [weak self] in
-        self?.showPicker(fixed: .slot(s.position, alone: s.alone))
-      }
+      if let error = closeAndReplace() { return error }
     }
     if world.focused != before, let f = world.focused { focus(f) }
     if flash { flashFocus() }
-    // A single cheat sheet follows to the screen being worked on.
-    if mode != "main", !config.emptyScreens,
-      !config.overlayAllScreens, world.activeMonitor != beforeMonitor,
-      let m = world.monitors[safe: world.activeMonitor]
-    {
-      overlay.showMode(
-        mode, modeBindings, on: [m.frame], letters: labelsAreKeys)
-    }
+    if world.activeMonitor != beforeMonitor { sheetFollowsScreen() }
     scheduleApply()
     return ""
+  }
+
+
+  /// Commands on a tiled window say so when the focused one floats,
+  /// instead of doing nothing.
+  private func floatingRefusal(of c: Command) -> String? {
+    guard let f = world.focused, world.floating.contains(f),
+      c == .accordion || c.isMoveOrResize
+    else { return nil }
+    let key = config.modes["main"]?.first { $0.value == [.float] }?
+      .key.symbol
+    return "error: "
+      + (key.map { L("\(appName(f)) floats; \($0) tiles it") }
+        ?? L("\(appName(f)) floats"))
+  }
+
+
+  private func enterMode(_ m: String) {
+    // Entering a one-shot mode again keeps it on until esc.
+    if m == mode, oneShotNow {
+      locked = true
+      toast(L("\(Command.modeName(m)) mode locked"))
+    }
+    setMode(m)
+  }
+
+
+  /// A single cheat sheet follows to the screen being worked on.
+  private func sheetFollowsScreen() {
+    guard mode != "main", !config.emptyScreens,
+      !config.overlayAllScreens,
+      let m = world.monitors[safe: world.activeMonitor]
+    else { return }
+    overlay.showMode(
+      mode, modeBindings, on: [m.frame], letters: labelsAreKeys)
+  }
+
+
+  private func balanceLanes() {
+    let was = world.frames(inner: config.inner, outer: config.outer)
+    world.balance()
+    world.respect(
+      windowMinimums, inner: config.inner, outer: config.outer)
+    if world.frames(inner: config.inner, outer: config.outer) == was {
+      toast(L("already even"))
+    }
+  }
+
+
+  private func toggleFullscreenTiled() {
+    // A floating window joins the tiling to go fullscreen.
+    if let f = world.focused, world.floating.contains(f) {
+      world.toggleFloating(f)
+    }
+    world.toggleFullscreen()
+    if let f = world.focused, world.locate(f) != nil {
+      focus(f)
+      let on =
+        world.locate(f).map { world.monitors[$0.m].fullscreen == f }
+        ?? false
+      toast(on ? L("fullscreen") : L("fullscreen off"))
+    }
+  }
+
+
+  /// The error, if any, as with the ones below.
+  private func toggleFloatingFocused() -> String? {
+    guard let id = world.focused ?? osFocused, world.contains(id)
+    else {
+      return "error: \(L("no tiled or floating window focused"))"
+    }
+    world.toggleFloating(id)
+    let floating = world.floating.contains(id)
+    let key = config.modes["main"]?.first { $0.value == [.float] }?
+      .key.symbol
+    toast(
+      floating
+        ? key.map { L("Floating · \($0) returns to tiling") }
+          ?? L("Floating") : L("Tiled"))
+    return nil
+  }
+
+
+  private func launch(_ path: String, _ arguments: [String])
+    -> String?
+  {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: path)
+    p.arguments = arguments
+    do {
+      try p.run()
+      return nil
+    } catch { return "error: \(error)" }
+  }
+
+
+  private func retile() {
+    sweep(all: true)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      [weak self] in
+      guard let self else { return }
+      let before = self.world
+      self.rebuild()
+      self.remember(L("Re-tile"), "", from: before)
+      self.toast(L("re-tiled"))
+    }
+  }
+
+
+  private func togglePicker(_ text: String) {
+    if picker.isOpen {
+      picker.close()
+      pickerClosed(cancelled: true)
+    } else {
+      openPicker(fixed: nil, text: text)
+    }
+  }
+
+
+  private func writeDebugMap(_ path: String) -> String {
+    let png = Picker.render(
+      pickerMap(), size: NSSize(width: 1000, height: 550))
+    do { try png?.write(to: URL(fileURLWithPath: path)) } catch {
+      return "error: \(error)"
+    }
+    return path
+  }
+
+
+  private func focusTab(_ n: Int) -> String? {
+    guard tabList.indices.contains(n),
+      infos[tabList[n].window] != nil
+    else { return "error: \(L("no tab \(n)"))" }
+    let t = tabList[n]
+    workers[t.pid]?.press(t.element)
+    use(t.window, .jump)
+    return nil
+  }
+
+
+  private func swapFocused(with id: WindowID) -> String? {
+    guard let f = world.focused, f != id, world.locate(f) != nil,
+      world.locate(id) != nil
+    else {
+      return
+        "error: \(L("swap needs a focused tiled window and another tiled window"))"
+    }
+    world.swap(f, id)
+    world.focused = f
+    return nil
+  }
+
+
+  private func stateText() -> String {
+    let data =
+      (try? JSONSerialization.data(
+        withJSONObject: stateJSON(),
+        options: [.prettyPrinted, .sortedKeys])) ?? Data()
+    return String(decoding: data, as: UTF8.self)
+  }
+
+
+  private func closeAndReplace() -> String? {
+    guard let id = world.focused, let s = world.slot(of: id),
+      let info = infos[id]
+    else {
+      return "error: \(L("no tiled window focused"))"
+    }
+    beginPicking()
+    closeReplacing = true
+    world.remove(id)
+    workers[info.pid]?.close(id)
+    // Let macOS settle on whatever it focuses next, then take the
+    // keyboard.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+      [weak self] in
+      self?.showPicker(fixed: .slot(s.position, alone: s.alone))
+    }
+    return nil
   }
 
 

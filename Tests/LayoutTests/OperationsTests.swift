@@ -40,6 +40,16 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     #expect(Command.grow(50).description == "grow +50")
 }
 
+@Test func growGoesAlongTheSplitThereIs() {
+    for rows in [false, true] {
+        var w = world([[1, 2]], focused: 1)
+        w.monitors[0].rows = rows
+        w.grow(by: 100)
+        let sizes = w.monitors[0].lanes[0].sizes
+        #expect(sizes[0] > sizes[1], "rows: \(rows)")
+    }
+}
+
 @Test func cycleWindowGoesRoundScreensThenFloating() throws {
     var w = world([[1, 2], [3]], [[5]], focused: 3)
     w.floating = [9]

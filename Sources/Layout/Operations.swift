@@ -143,11 +143,11 @@ extension World {
         }
     }
 
-    /// `px` along the lanes' axis, so the focused window's lane is bigger or smaller
-    /// whichever way the screen is laid out: wider in columns, taller in rows.
+    /// `px` along the split there is: wider in columns and taller in rows, or the other way
+    /// for the windows stacked in a lone lane, which have no other lane to take room from.
     public mutating func grow(by px: Double) {
         guard let p = focusedPosition else { return }
-        resize(monitors[p.m].rows ? .height : .width, by: px)
+        resize(monitors[p.m].rows != (monitors[p.m].lanes.count == 1) ? .height : .width, by: px)
     }
 
     public mutating func balance() {

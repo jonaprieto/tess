@@ -6,8 +6,8 @@ class Tess < Formula
   license "MIT"
 
   depends_on arch: :arm64
-  depends_on :macos
   depends_on "jonaprieto/tap/folio"
+  depends_on :macos
 
   def install
     bin.install "tess"

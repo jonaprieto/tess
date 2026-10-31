@@ -32,6 +32,14 @@ test:
 	@set -o pipefail; swift test 2>&1 | tee .build/test.log
 	@[ "$$(grep -cE 'Test run with [0-9]+ tests? .*passed' .build/test.log)" = 2 ] || { echo "make test: a test target did not finish"; exit 1; }
 
+# SwiftPM's own report leaves the app out: this reads the app's test
+# binary. Lines covered per file, TOTAL last.
+coverage:
+	find .build/out/Products/Debug/codecov -name '*.profraw' -delete 2>/dev/null || true
+	swift test --enable-code-coverage
+	find .build/out/Products/Debug/codecov -name '*.profraw' -print0 | xargs -0 xcrun llvm-profdata merge -sparse -o .build/coverage.profdata
+	xcrun llvm-cov report .build/out/Products/Debug/SettingsTests.xctest/Contents/MacOS/SettingsTests -instr-profile=.build/coverage.profdata Sources/tess
+
 # Every mutant takes about 40 minutes; N=40 is a sample.
 mutants:
 	python3 -I Tests/mutants.py $(N)

@@ -63,17 +63,17 @@ final class DecorationView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         func local(_ r: CGRect) -> CGRect { r.offsetBy(dx: -screen.minX, dy: -screen.minY) }
         if active {
-            let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 10, yRadius: 10)
-            path.lineWidth = 2
-            Panels.accent.withAlphaComponent(0.45).setStroke()
+            let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 10, yRadius: 10)
+            path.lineWidth = 1
+            Panels.accent.withAlphaComponent(0.3).setStroke()
             path.stroke()
         }
         // Borders first, the focused one last so it is on top.
         for w in windows.sorted(by: { !$0.focused && $1.focused }) {
             let r = local(w.frame).insetBy(dx: -1, dy: -1)
             let path = NSBezierPath(roundedRect: r, xRadius: 12, yRadius: 12)
-            path.lineWidth = w.focused ? 3 : 1.5
-            (w.focused ? Panels.accent : Panels.inactiveBorder).setStroke()
+            path.lineWidth = w.focused ? 1.5 : 1
+            (w.focused ? Panels.accent.withAlphaComponent(0.75) : Panels.inactiveBorder).setStroke()
             path.stroke()
         }
         // Letters on each window: in its middle while they are keys (clear of a tab bar), else

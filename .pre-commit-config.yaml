@@ -1,0 +1,23 @@
+# `make hooks` installs these. Nothing to fetch: pre-commit runs what comes with Xcode.
+repos:
+  - repo: local
+    hooks:
+      - id: swift-format
+        name: swift-format
+        entry: swift format lint --strict --recursive --parallel Sources Tests Package.swift
+        language: system
+        pass_filenames: false
+        files: \.swift$
+      - id: comment-width
+        name: comments within 70 columns
+        # swift-format wraps code and leaves comments as they are.
+        entry: perl -CSD -ne 'if (m{^\s*//} && length > 71) { print "$ARGV $_"; $bad = 1 } END { exit $bad }'
+        language: system
+        files: \.swift$
+      - id: no-compiler-warnings
+        name: no compiler warnings
+        # A build directory of its own: the flag would rebuild everything in the usual one.
+        entry: swift build --build-tests --scratch-path .build/strict -Xswiftc -warnings-as-errors
+        language: system
+        pass_filenames: false
+        files: \.swift$

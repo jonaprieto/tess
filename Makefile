@@ -7,7 +7,7 @@ VERSION := $(shell sed -n 's/^let version = "\(.*\)"/\1/p' Sources/tess/main.swi
 # ad-hoc fallback ("-") changes with every build and loses it.
 SIGN ?= $(or $(shell security find-identity -v -p codesigning | grep -v REVOKED | grep -m1 -o '[0-9A-F]\{40\}'),-)
 
-.PHONY: build test app dist deps install uninstall
+.PHONY: build test format lint hooks app dist deps install uninstall
 
 deps:
 	@if ! PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin command -v folio >/dev/null; then \
@@ -26,6 +26,16 @@ build:
 
 test:
 	swift test
+
+format:
+	swift format --in-place --recursive --parallel Sources Tests Package.swift
+
+# What the pre-commit hook checks, on everything: format and no compiler warnings.
+lint:
+	pre-commit run --all-files
+
+hooks:
+	pre-commit install
 
 # Opened from Finder or Spotlight it shows Settings, or starts tess again after a Quit.
 app: build

@@ -2,12 +2,13 @@ import CoreGraphics
 
 /// Where the picker puts a window.
 public enum Spot: Equatable, Sendable {
-    /// Take that window's place; it moves to the picked window's old place, or to a new lane
-    /// right after when the picked window was not tiled.
+    /// Take that window's place; it moves to the picked window's old place, or when the picked
+    /// window was not tiled it keeps half of its own and no other window gives up room (see
+    /// `share` and `divide`), or alone on its screen it goes to a new lane right after.
     case replace(WindowID)
-    /// A new lane right of that window.
+    /// A new lane right of that window, or beside it in a place they then share (see `share`).
     case beside(WindowID)
-    /// A new lane right of the focused window.
+    /// As `beside`, of the focused window.
     case here
     /// A new lane at the right end of that monitor (index from 0).
     case monitor(Int)
@@ -53,17 +54,20 @@ extension World {
                 swap(id, t)
             } else {
                 floating.remove(id)
-                monitors[pt.m].lanes[pt.l].windows[pt.w] = id
-                monitors[pt.m].lanes.insert(newLane(t, on: pt.m), at: pt.l + 1)
+                if !share(t, with: id, before: true), !divide(t, with: id) {
+                    monitors[pt.m].lanes[pt.l].windows[pt.w] = id
+                    monitors[pt.m].lanes.insert(newLane(t, on: pt.m), at: pt.l + 1)
+                }
             }
         case .beside(let t):
             guard t != id, locate(t) != nil else { return }
             unplace(id)
             guard let pt = locate(t) else { return }
-            monitors[pt.m].lanes.insert(newLane(id, on: pt.m), at: pt.l + 1)
+            if !share(t, with: id, before: false) { monitors[pt.m].lanes.insert(newLane(id, on: pt.m), at: pt.l + 1) }
         case .here:
             guard id != focused else { return }
             unplace(id)
+            if let f = focused, share(f, with: id, before: false) { break }
             insert(id)
         case .monitor(let m):
             guard monitors.indices.contains(m) else { return }
@@ -84,6 +88,30 @@ extension World {
             floating.insert(id)
         }
         focused = id
+    }
+
+    /// `id` goes beside `t` in `t`'s place, when `t` is stacked in its monitor's only lane: that
+    /// lane is written the other way round, the same picture with each window a lane of its own,
+    /// so only `t` gives up room. With other lanes on the monitor there is no way to write that.
+    private mutating func share(_ t: WindowID, with id: WindowID, before: Bool) -> Bool {
+        guard let p = locate(t), monitors[p.m].lanes.count == 1 else { return false }
+        let lane = monitors[p.m].lanes[0]
+        guard lane.windows.count > 1, !lane.accordion else { return false }
+        monitors[p.m].rows.toggle()
+        monitors[p.m].lanes = zip(lane.windows, lane.sizes).map { Lane([$0], size: $1) }
+        monitors[p.m].lanes[p.w] = Lane(before ? [id, t] : [t, id], size: lane.sizes[p.w])
+        return true
+    }
+
+    /// `id` goes before `t` in `t`'s lane with half of its room, so the windows around keep theirs.
+    /// Not with `t`'s lane alone on the monitor: halving a whole screen goes along the lanes.
+    private mutating func divide(_ t: WindowID, with id: WindowID) -> Bool {
+        guard let p = locate(t), monitors[p.m].lanes.count > 1, !monitors[p.m].lanes[p.l].accordion else { return false }
+        let half = monitors[p.m].lanes[p.l].sizes[p.w] / 2
+        monitors[p.m].lanes[p.l].sizes[p.w] = half
+        monitors[p.m].lanes[p.l].sizes.insert(half, at: p.w)
+        monitors[p.m].lanes[p.l].windows.insert(id, at: p.w)
+        return true
     }
 
     /// Exchanges the places of two tiled windows, on any monitors.

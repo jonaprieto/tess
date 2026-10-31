@@ -6,7 +6,7 @@ import Testing
     let w = world([[1], [2]], [], focused: 1)
     let sizes: [WindowID: CGSize] = [2: CGSize(width: 450, height: 0)]
     #expect(w.placementWarnings(9, at: .beside(1), sizes: sizes, inner: 0, outer: 0) == [2])
-    #expect(w.placementWarnings(9, at: .replace(1), sizes: sizes, inner: 0, outer: 0) == [2])
+    #expect(w.placementWarnings(9, at: .replace(1), sizes: sizes, inner: 0, outer: 0).isEmpty)
     #expect(w.placementWarnings(9, at: .monitor(1), sizes: sizes, inner: 0, outer: 0).isEmpty)
     #expect(w.placementWarnings(9, at: .float, sizes: sizes, inner: 0, outer: 0).isEmpty)
     #expect(lanes(w) == [[1], [2]])
@@ -29,15 +29,51 @@ import Testing
     #expect(w.focused == 4)
 }
 
-@Test func replaceWithANewWindowPushesTheOtherRight() {
+@Test func replaceWithANewWindowSharesThePlaceOfTheOtherAndNoOneElseGivesUpRoom() {
     var w = world([[1, 2], [3]], focused: 1)
+    let before = w.frames(inner: 0, outer: 0)
     w.place(9, .replace(2))
-    #expect(lanes(w) == [[1, 9], [2], [3]])
+    #expect(lanes(w) == [[1, 9, 2], [3]])
     #expect(w.focused == 9)
+    let after = w.frames(inner: 0, outer: 0)
+    #expect(after[1] == before[1])
+    #expect(after[3] == before[3])
+    #expect(after[2]?.height == before[2].map { $0.height / 2 })
     w.floating.insert(8)
     w.place(8, .replace(3))
-    #expect(lanes(w) == [[1, 9], [2], [8], [3]])
+    #expect(lanes(w) == [[1, 9, 2], [8, 3]])
     #expect(w.floating.isEmpty)
+
+    // A window alone on its screen has only the other way to go.
+    var alone = world([[1]], focused: 1)
+    alone.place(9, .replace(1))
+    #expect(lanes(alone) == [[9], [1]])
+}
+
+@Test func aNewWindowSplitsOnlyThePlaceOfAWindowStackedInTheOnlyLane() {
+    for spot in [Spot.replace(1), .beside(1), .here] {
+        var w = world([[1, 2]], focused: 1)
+        let below = w.frames(inner: 10, outer: 10)[2]
+        w.place(9, spot)
+        let f = w.frames(inner: 10, outer: 10)
+        #expect(f[2] == below, "\(spot)")
+        #expect(f[9]?.height == f[1]?.height, "\(spot)")
+        #expect(f[1]?.width == f[9]?.width, "\(spot)")
+        #expect(w.focused == 9, "\(spot)")
+    }
+    var taking = world([[1, 2]], focused: 1)
+    taking.place(9, .replace(1))
+    #expect(lanes(taking) == [[9, 1], [2]])
+    var beside = world([[1, 2]], focused: 2)
+    beside.place(9, .beside(2))
+    #expect(lanes(beside) == [[1], [2, 9]])
+
+    // How tall each window was stays with it.
+    var sized = world([[1, 2]], focused: 1)
+    sized.monitors[0].lanes[0].sizes = [3, 1]
+    let tall = sized.frames(inner: 0, outer: 0)[1]?.height
+    sized.place(9, .beside(1))
+    #expect(sized.frames(inner: 0, outer: 0)[1]?.height == tall)
 }
 
 @Test func besideMakesANewLaneRightOfTheTarget() {

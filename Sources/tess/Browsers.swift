@@ -35,7 +35,7 @@ enum Browsers {
                 let items = (output ?? "").split(separator: "\n").compactMap(Parse.tab).map { t in
                     let host = URL(string: t.url)?.host ?? t.url
                     return Picker.Item(kind: .tab(.init(bundleID: bundleID, window: t.window, index: t.index)),
-                                       title: t.title, detail: "\(name) tab · \(host)", icon: icon, search: "\(t.title) \(t.url)")
+                                       title: t.title, detail: L("\(name) tab · \(host)"), icon: icon, search: "\(t.title) \(t.url)")
                 }
                 DispatchQueue.main.async { done(items) }
             }
@@ -108,7 +108,7 @@ enum Browsers {
                     .map { NSWorkspace.shared.icon(forFile: $0.path) })
                 let items = (text ?? "").split(separator: "\n").compactMap(Parse.page).map { p in
                     Picker.Item(kind: .url(p.url, browser: source.browser), title: p.title,
-                                detail: "\(name) \(source.kind) · \(p.host)", icon: icon,
+                                detail: source.kind == "bookmark" ? L("\(name) bookmark · \(p.host)") : L("\(name) history · \(p.host)"), icon: icon,
                                 search: "\(p.title) \(p.host) \(p.url.path)", quiet: true)
                 }
                 // Each source once the ones before it have answered, so ties and repeats go to

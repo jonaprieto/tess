@@ -153,7 +153,7 @@ extension Tiler {
         case .copy(let text):
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
-            toast("copied \(text)")
+            toast(L("copied \(text)"))
         case .pdf(let url, let name):
             let notice = overlay.beginDownload(item.title, on: lookedAtFrame)
             let dest = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads/\(name)")
@@ -162,7 +162,7 @@ extension Tiler {
                     || FileManager.default.fileExists(atPath: dest.path) } ?? false
                 DispatchQueue.main.async {
                     guard let self else { return }
-                    let status = ok ? (self.openFile(dest.path, choice) ? "Opening" : "Could not open") : "Download failed"
+                    let status = ok ? (self.openFile(dest.path, choice) ? L("Opening") : L("Could not open")) : L("Download failed")
                     self.overlay.finishDownload(notice, status: status)
                 }
             }.resume()
@@ -172,10 +172,10 @@ extension Tiler {
                 guard let self else { return }
                 let path = out?.split(separator: "\n").last.map(String.init) ?? ""
                 guard FileManager.default.fileExists(atPath: path) else {
-                    self.overlay.finishDownload(notice, status: "Download failed")
+                    self.overlay.finishDownload(notice, status: L("Download failed"))
                     return
                 }
-                self.overlay.finishDownload(notice, status: self.openFile(path, choice) ? "Opening" : "Could not open")
+                self.overlay.finishDownload(notice, status: self.openFile(path, choice) ? L("Opening") : L("Could not open"))
             }
         case .match(let path, let line):
             if case .place(let spot) = choice { pending = ("com.microsoft.VSCode", spot, Date().addingTimeInterval(10)) }
@@ -186,7 +186,7 @@ extension Tiler {
             try? p.run()
         case .open(let name, let path):
             guard let app = apps().first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) else {
-                toast("no app named \(name)")
+                toast(L("no app named \(name)"))
                 return
             }
             if case .place(let spot) = choice, let b = app.bundleID { pending = (b, spot, Date().addingTimeInterval(10)) }
@@ -222,7 +222,7 @@ extension Tiler {
         if case .place(let spot) = choice {
             let before = world
             world.place(id, spot)
-            remember("Put \(appName(id)) \(describe(spot))", windowName(id), from: before)
+            remember(L("Put \(appName(id)) \(describe(spot))"), windowName(id), from: before)
         } else if world.contains(id) {
             world.focused = id
         }
@@ -239,12 +239,12 @@ extension Tiler {
     /// Where a pick went, in words.
     func describe(_ spot: Spot) -> String {
         switch spot {
-        case .replace(let t): "in place of \(appName(t))"
-        case .beside(let t): "beside \(appName(t))"
-        case .here: "here"
-        case .monitor(let m): "on screen \(m + 1)"
-        case .slot: "in the empty place"
-        case .float: "floating"
+        case .replace(let t): L("in place of \(appName(t))")
+        case .beside(let t): L("beside \(appName(t))")
+        case .here: L("here")
+        case .monitor(let m): L("on screen \(m + 1)")
+        case .slot: L("in the empty place")
+        case .float: L("floating")
         }
     }
 
@@ -260,26 +260,26 @@ extension Tiler {
             try body.write(to: script, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
         } catch {
-            return toast("could not run it: \(error.localizedDescription)")
+            return toast(L("could not run it: \(error.localizedDescription)"))
         }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
         p.arguments = ["-a", config.terminal, script.path]
-        do { try p.run() } catch { toast("could not open \(config.terminal)") }
+        do { try p.run() } catch { toast(L("could not open \(config.terminal)")) }
     }
 
     /// A `keys:` verb: its app in front (opened if need be), its shortcut, then `text`, as if
     /// typed. Events go to whatever is in front, so nothing is sent until the app is.
     func press(_ k: KeysVerb, then text: String) {
         guard let url = apps().first(where: { $0.name.caseInsensitiveCompare(k.app) == .orderedSame })?.url,
-              let code = Hotkeys.codes[k.key.key] else { return toast("no app named \(k.app)") }
+              let code = Hotkeys.codes[k.key.key] else { return toast(L("no app named \(k.app)")) }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { [weak self] app, _ in
             DispatchQueue.main.async {
                 guard let pid = app?.processIdentifier else { return }
                 func send(tries: Int) {
                     guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else {
                         if tries > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { send(tries: tries - 1) } }
-                        else { self?.toast("\(k.app) did not come to the front") }
+                        else { self?.toast(L("\(k.app) did not come to the front")) }
                         return
                     }
                     var flags: CGEventFlags = []
@@ -406,8 +406,8 @@ extension Tiler {
         for id in world.mru + infos.keys.sorted() where listed.insert(id).inserted {
             guard let info = infos[id], info.standard || info.nativeFullscreen, let app = workers[info.pid]?.app else { continue }
             let name = app.localizedName ?? "?"
-            let place = offSpace.contains(id) ? "other Space"
-                : "screen \((world.locate(id)?.m ?? world.monitorIndex(for: info.frame) ?? 0) + 1)"
+            let place = offSpace.contains(id) ? L("other Space")
+                : L("screen \((world.locate(id)?.m ?? world.monitorIndex(for: info.frame) ?? 0) + 1)")
             items.append(Picker.Item(kind: .window(id), title: info.title.isEmpty ? name : info.title,
                                      detail: "\(name) · \(place)", icon: workers[info.pid]?.icon ?? app.icon,
                                      search: "\(name) \(info.title)"))
@@ -430,20 +430,20 @@ extension Tiler {
             unseen[id] = pid
             let name = app.localizedName ?? "?"
             items.append(Picker.Item(kind: .window(id), title: title.isEmpty ? name : title,
-                                     detail: "\(name) · other Space", icon: workers[pid]?.icon ?? app.icon,
+                                     detail: "\(name) · \(L("other Space"))", icon: workers[pid]?.icon ?? app.icon,
                                      search: "\(name) \(title)"))
         }
         let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         for a in apps() {
             let open = a.bundleID.map(running.contains) ?? false
-            items.append(Picker.Item(kind: .app(a.url), title: a.name, detail: open ? "app (open)" : "app",
+            items.append(Picker.Item(kind: .app(a.url), title: a.name, detail: open ? L("app (open)") : L("app"),
                                      icon: a.icon, search: a.name))
         }
         // The person's Shortcuts, once something is typed (a Do Not Disturb toggle made there
         // is how the picker reaches Focus, which has no API).
         let shortcutIcon = NSWorkspace.shared.icon(forFile: "/System/Applications/Shortcuts.app")
         for name in shortcuts {
-            items.append(Picker.Item(kind: .shortcut(name), title: name, detail: "shortcut", icon: shortcutIcon,
+            items.append(Picker.Item(kind: .shortcut(name), title: name, detail: L("shortcut"), icon: shortcutIcon,
                                      search: name, quiet: true))
         }
         // tess's own commands by name, once something is typed, and those for each screen.
@@ -455,9 +455,9 @@ extension Tiler {
                                      search: "\(c.description) \(label)", quiet: true))
         }
         let settings = NSWorkspace.shared.icon(forFile: "/System/Applications/System Settings.app")
-        for (title, action) in [("Sleep", "sleep"), ("Lock Screen", "lock"), ("Log Out…", "logo"),
-                                ("Restart…", "rrst"), ("Shut Down…", "rsdn")] {
-            items.append(Picker.Item(kind: .system(action), title: title, detail: "system", icon: settings,
+        for (title, action) in [(L("Sleep"), "sleep"), (L("Lock Screen"), "lock"), (L("Log Out…"), "logo"),
+                                (L("Restart…"), "rrst"), (L("Shut Down…"), "rsdn")] {
+            items.append(Picker.Item(kind: .system(action), title: title, detail: L("system"), icon: settings,
                                      search: title, quiet: true))
         }
         return items

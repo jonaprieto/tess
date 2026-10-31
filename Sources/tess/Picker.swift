@@ -147,8 +147,6 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         field.drawsBackground = false
         field.focusRingType = .none
         field.font = .systemFont(ofSize: 20, weight: .regular)
-        field.placeholderString = "Window, tab or app"
-        field.setAccessibilityLabel("Search windows, tabs, apps or commands")
         field.delegate = self
         divider.wantsLayer = true
         divider.layer?.backgroundColor = NSColor.separatorColor.cgColor
@@ -167,6 +165,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         self.items = items
         self.verbs = verbs
         self.fixed = fixed
+        field.placeholderString = L("Window, tab or app")
+        field.setAccessibilityLabel(L("Search windows, tabs, apps or commands"))
         self.screen = screen
         mapModel = map
         field.stringValue = text
@@ -253,13 +253,13 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             shown = []
             list.items = []
             let hint = switch kind {
-            case .files: "Type part of a file name"
-            case .text: "Type text to find in files"
-            case .books: "Type a title and an author's surname"
-            case .papers: "Type a title and an author's surname (arXiv first)"
+            case .files: L("Type part of a file name")
+            case .text: L("Type text to find in files")
+            case .books: L("Type a title and an author's surname")
+            case .papers: L("Type a title and an author's surname (arXiv first)")
             case .history: ""
             }
-            list.empty = query.isEmpty ? hint : "Searching…"
+            list.empty = query.isEmpty ? hint : L("Searching…")
             list.needsDisplay = true
             guard !query.isEmpty else { return }
             // Wait for a pause in typing, and drop answers to older queries.
@@ -269,14 +269,14 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
                     guard let self, generation == self.searchGeneration, self.isOpen else { return }
                     self.shown = found
                     self.list.items = found
-                    self.list.empty = "Nothing found"
+                    self.list.empty = L("Nothing found")
                     self.list.selected = 0
                     self.list.needsDisplay = true
                 }
             }
             return
         }
-        list.empty = "Nothing matches"
+        list.empty = L("Nothing matches")
         if let folders = folders(field.stringValue) {
             shown = folders
             list.items = shown
@@ -306,7 +306,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         if let l = link(q) ?? keys(q) ?? run(q) { shown.insert(l, at: 0) }
         // Arithmetic (not a lone number) is worked out on top.
         if Double(q) == nil, let v = Parse.arithmetic(q).map(Parse.number) {
-            shown.insert(Item(kind: .copy(v), title: "= \(v)", detail: "Enter copies it",
+            shown.insert(Item(kind: .copy(v), title: "= \(v)", detail: L("Enter copies it"),
                               icon: NSWorkspace.shared.icon(forFile: "/System/Applications/Calculator.app"), search: ""), at: 0)
         }
         list.items = shown
@@ -401,12 +401,12 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
             .map(\.item)
         if let url = Parse.address(query), let app = NSWorkspace.shared.urlForApplication(toOpen: url),
            let browser = Bundle(url: app)?.bundleIdentifier {
-            shown.insert(Item(kind: .url(url, browser: browser), title: url.absoluteString, detail: "open",
+            shown.insert(Item(kind: .url(url, browser: browser), title: url.absoluteString, detail: L("open"),
                               icon: NSWorkspace.shared.icon(forFile: app.path), search: ""), at: 0)
         }
         list.items = shown
         list.query = query
-        list.empty = query.isEmpty ? "Type part of a page's title or address, or an address to open" : "Nothing matches"
+        list.empty = query.isEmpty ? L("Type part of a page's title or address, or an address to open") : L("Nothing matches")
         list.selected = 0
         list.needsDisplay = true
     }
@@ -415,7 +415,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     private func run(_ text: String) -> Item? {
         let parts = text.split(separator: " ", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
         guard parts.count == 2, let line = verbs[parts[0]].flatMap({ Parse.run($0, parts[1]) }) else { return nil }
-        return Item(kind: .run(line), title: line, detail: "\(parts[0]) · runs in the terminal",
+        return Item(kind: .run(line), title: line, detail: L("\(parts[0]) · runs in the terminal"),
                     icon: Icons.symbol("terminal"), search: "")
     }
 
@@ -444,7 +444,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         }
         func item(_ p: String) -> Item {
             let shown = p.hasPrefix(home) ? "~" + p.dropFirst(home.count) : p
-            return Item(kind: .open(app: app, path: p), title: shown.isEmpty ? "~" : shown, detail: "open in \(app)",
+            return Item(kind: .open(app: app, path: p), title: shown.isEmpty ? "~" : shown, detail: L("open in \(app)"),
                         icon: NSWorkspace.shared.icon(forFile: p), search: "")
         }
         var out: [Item] = []
@@ -479,16 +479,16 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     private func updateCompletion() {
         guard picked == nil else { return }
         if shown.indices.contains(list.selected), case .open = shown[list.selected].kind {
-            footer.stringValue = "⇥ complete folder: \(shown[list.selected].title)"
+            footer.stringValue = L("⇥ complete folder: \(shown[list.selected].title)")
             return
         }
         if let query = completion(for: field.stringValue) {
-            footer.stringValue = "⇥ complete: \(query)"
+            footer.stringValue = L("⇥ complete: \(query)")
             return
         }
         footer.stringValue = fixed == nil
-            ? "↵ Choose     ⌘↵ Reveal in Finder     ↑↓ Navigate     ⇥ Complete     Esc Close"
-            : "↵ Fill this place     ↑↓ Navigate     ⇥ Complete     Esc Leave empty"
+            ? L("↵ Choose     ⌘↵ Reveal in Finder     ↑↓ Navigate     ⇥ Complete     Esc Close")
+            : L("↵ Fill this place     ↑↓ Navigate     ⇥ Complete     Esc Leave empty")
     }
 
     private func finish(_ item: Item, _ choice: Choice) {
@@ -535,9 +535,11 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         footer.frame = NSRect(x: 24, y: 12, width: size.width - 48, height: 18)
         // A screen to choose only when there is a choice.
         let screens = model.monitors.count
-        footer.stringValue = "Letter Swap     ⌥ Letter Beside     ↵ Here\(screens > 1 ? "     1–\(screens) Screen" : "")     G Go     F Float     Esc Back"
+        footer.stringValue = ([L("Letter Swap"), L("⌥ Letter Beside"), L("↵ Here")] + (screens > 1 ? [L("1–\(screens) Screen")] : [])
+            + [L("G Go"), L("F Float"), L("Esc Back")]).joined(separator: "     ")
         if let warning = model.hereWarning {
-            footer.stringValue = "↵ here: ⚠ \(warning) may not fit      letter swap      ⌥ letter beside\(screens > 1 ? "      number screen" : "")      g go      f float      esc back"
+            footer.stringValue = ([L("↵ here: ⚠ \(warning) may not fit"), L("letter swap"), L("⌥ letter beside")] + (screens > 1 ? [L("number screen")] : [])
+                + [L("g go"), L("f float"), L("esc back")]).joined(separator: "      ")
         }
         for v in [magnifier, field, divider, list] as [NSView] { v.isHidden = true }
         map.isHidden = false
@@ -648,7 +650,7 @@ final class ListView: NSView {
     static let row: CGFloat = 44
     var items: [Picker.Item] = []
     var query = ""
-    var empty = "Nothing matches"
+    var empty = L("Nothing matches")
     var selected = 0
     private var top = 0
 
@@ -724,7 +726,7 @@ final class MapView: NSView {
         icon?.draw(in: NSRect(x: 22, y: 18, width: 26, height: 26))
         let style = NSMutableParagraphStyle()
         style.lineBreakMode = .byTruncatingMiddle
-        ("Where should “\(title)” go?" as NSString).draw(in: NSRect(x: 56, y: 20, width: bounds.width - 80, height: 24), withAttributes: [
+        (L("Where should “\(title)” go?") as NSString).draw(in: NSRect(x: 56, y: 20, width: bounds.width - 80, height: 24), withAttributes: [
             .font: NSFont.systemFont(ofSize: 17, weight: .semibold), .foregroundColor: NSColor.labelColor, .paragraphStyle: style,
         ])
         guard let all = model.monitors.reduce(nil, { (u: CGRect?, r) in u?.union(r) ?? r }), all.width > 0 else { return }
@@ -748,7 +750,7 @@ final class MapView: NSView {
             if let digit = "\(n + 1)".first {
                 Self.keycap(digit, NSRect(x: box.minX + 8, y: box.minY + 7, width: 24, height: 24), fill: warning == nil ? .labelColor : .systemOrange, text: .textBackgroundColor)
             }
-            ((warning.map { "⚠ \($0) may not fit" } ?? "Screen \(n + 1)") as NSString).draw(in: NSRect(x: box.minX + 40, y: box.minY + 11, width: box.width - 48, height: 16), withAttributes: [
+            ((warning.map { L("⚠ \($0) may not fit") } ?? L("Screen \(n + 1)")) as NSString).draw(in: NSRect(x: box.minX + 40, y: box.minY + 11, width: box.width - 48, height: 16), withAttributes: [
                 .font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.secondaryLabelColor,
             ])
         }
@@ -762,9 +764,9 @@ final class MapView: NSView {
                           width: r.width / m.width * inner.width, height: r.height / m.height * inner.height)
         }
         for w in model.windows {
-            let warnings = [model.replaceWarnings[w.id].map { "swap: \($0)" },
-                            model.besideWarnings[w.id].map { "beside: \($0)" }].compactMap { $0 }
-            let warning = warnings.isEmpty ? nil : "⚠ " + warnings.joined(separator: "; ") + " may not fit"
+            let warnings = [model.replaceWarnings[w.id].map { L("swap: \($0)") },
+                            model.besideWarnings[w.id].map { L("beside: \($0)") }].compactMap { $0 }
+            let warning = warnings.isEmpty ? nil : L("⚠ \(warnings.joined(separator: "; ")) may not fit")
             let caption = warning ?? w.title
             let capColor: NSColor = warning == nil ? Panels.accent : .systemOrange
             let r = inScreen(w.frame).insetBy(dx: 4, dy: 4)

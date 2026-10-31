@@ -54,7 +54,7 @@ enum Doctor {
             let config = try Config.load(data)
             check(true, L("Configuration parses"))
             check(NSWorkspace.shared.urlForApplication(withBundleIdentifier: config.terminal) != nil
-                  || NSWorkspace.shared.fullPath(forApplication: config.terminal) != nil,
+                  || Tiler.appFolders.contains { FileManager.default.fileExists(atPath: "\($0)/\(config.terminal).app") },
                   L("Terminal app: \(config.terminal) — install it or set terminal in ~/.config/tess/config.json"), required: false)
         } catch { check(false, L("Configuration: \(error)")) }
         lines.append(L("\nAny standard Mac keyboard works; no NuPhy software or Hyper key is required."))

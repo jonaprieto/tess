@@ -133,65 +133,71 @@ private func install(
   return (tiler, restarted)
 }
 
-@MainActor
-@Test
-func homebrewUpdatesAndTessRestartsOnlyOnceTheNewVersionIsThere()
-  async throws
-{
-  UserDefaults.standard.removeObject(forKey: "updatedTo")
-  defer { UserDefaults.standard.removeObject(forKey: "updatedTo") }
-  let root = try fakeHomebrew(installs: "99.0.0")
-  defer { try? FileManager.default.removeItem(at: root) }
-  let (_, restarted) = await install("99.0.0", from: root)
-  #expect(restarted == 1)
-  #expect(
-    UserDefaults.standard.string(forKey: "updatedTo") == "99.0.0")
-  let calls = try String(
-    contentsOf: root.appendingPathComponent("calls"), encoding: .utf8)
-  #expect(
-    calls == "update --quiet []\nupgrade jonaprieto/tap/tess [1]\n")
-}
-
-@MainActor
-@Test func aReleaseHomebrewDoesNotHaveYetLeavesTessRunning()
-  async throws
-{
-  UserDefaults.standard.removeObject(forKey: "updatedTo")
-  let root = try fakeHomebrew(installs: "0.11.0")
-  defer { try? FileManager.default.removeItem(at: root) }
-  let (_, restarted) = await install("99.0.0", from: root)
-  #expect(restarted == 0)
-  #expect(UserDefaults.standard.string(forKey: "updatedTo") == nil)
-}
-
-@MainActor
-@Test func aFailingBrewChangesNothingUnlessTheNewVersionGotInstalled()
-  async throws
-{
-  UserDefaults.standard.removeObject(forKey: "updatedTo")
-  defer { UserDefaults.standard.removeObject(forKey: "updatedTo") }
-  let old = try fakeHomebrew(installs: "0.11.0", brewFails: true)
-  defer { try? FileManager.default.removeItem(at: old) }
-  #expect(await install("99.0.0", from: old).restarted == 0)
-  // `brew update` failing offline must not stop a tap that already
-  // has it.
-  let fine = try fakeHomebrew(installs: "99.0.0", brewFails: true)
-  defer { try? FileManager.default.removeItem(at: fine) }
-  #expect(await install("99.0.0", from: fine).restarted == 1)
-}
-
-@MainActor
-@Test func notUnderLaunchdItSaysToRestartInsteadOfExiting()
-  async throws
-{
-  let root = try fakeHomebrew(installs: "99.0.0")
-  defer {
-    try? FileManager.default.removeItem(at: root)
+// They share the `updatedTo` default: one at a time.
+@Suite(.serialized) struct HomebrewInstall {
+  @MainActor
+  @Test
+  func homebrewUpdatesAndTessRestartsOnlyOnceTheNewVersionIsThere()
+    async throws
+  {
     UserDefaults.standard.removeObject(forKey: "updatedTo")
+    defer { UserDefaults.standard.removeObject(forKey: "updatedTo") }
+    let root = try fakeHomebrew(installs: "99.0.0")
+    defer { try? FileManager.default.removeItem(at: root) }
+    let (_, restarted) = await install("99.0.0", from: root)
+    #expect(restarted == 1)
+    #expect(
+      UserDefaults.standard.string(forKey: "updatedTo") == "99.0.0")
+    let calls = try String(
+      contentsOf: root.appendingPathComponent("calls"),
+      encoding: .utf8)
+    #expect(
+      calls == "update --quiet []\nupgrade jonaprieto/tap/tess [1]\n")
   }
-  let (tiler, restarted) = await install(
-    "99.0.0", from: root, restarts: false)
-  #expect(restarted == 1)
-  #expect(
-    tiler.overlay.downloads.first?.status == "Restart tess to finish")
+
+  @MainActor
+  @Test func aReleaseHomebrewDoesNotHaveYetLeavesTessRunning()
+    async throws
+  {
+    UserDefaults.standard.removeObject(forKey: "updatedTo")
+    let root = try fakeHomebrew(installs: "0.11.0")
+    defer { try? FileManager.default.removeItem(at: root) }
+    let (_, restarted) = await install("99.0.0", from: root)
+    #expect(restarted == 0)
+    #expect(UserDefaults.standard.string(forKey: "updatedTo") == nil)
+  }
+
+  @MainActor
+  @Test
+  func aFailingBrewChangesNothingUnlessTheNewVersionGotInstalled()
+    async throws
+  {
+    UserDefaults.standard.removeObject(forKey: "updatedTo")
+    defer { UserDefaults.standard.removeObject(forKey: "updatedTo") }
+    let old = try fakeHomebrew(installs: "0.11.0", brewFails: true)
+    defer { try? FileManager.default.removeItem(at: old) }
+    #expect(await install("99.0.0", from: old).restarted == 0)
+    // `brew update` failing offline must not stop a tap that already
+    // has it.
+    let fine = try fakeHomebrew(installs: "99.0.0", brewFails: true)
+    defer { try? FileManager.default.removeItem(at: fine) }
+    #expect(await install("99.0.0", from: fine).restarted == 1)
+  }
+
+  @MainActor
+  @Test func notUnderLaunchdItSaysToRestartInsteadOfExiting()
+    async throws
+  {
+    let root = try fakeHomebrew(installs: "99.0.0")
+    defer {
+      try? FileManager.default.removeItem(at: root)
+      UserDefaults.standard.removeObject(forKey: "updatedTo")
+    }
+    let (tiler, restarted) = await install(
+      "99.0.0", from: root, restarts: false)
+    #expect(restarted == 1)
+    #expect(
+      tiler.overlay.downloads.first?.status
+        == "Restart tess to finish")
+  }
 }

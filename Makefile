@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 LABEL := com.jonaprieto.tess
 AGENT := $(HOME)/Library/LaunchAgents/$(LABEL).plist
 BIN   := $(CURDIR)/build/tess
@@ -24,8 +25,12 @@ build:
 	codesign -f -s "$(SIGN)" -i $(LABEL) build/tess.new
 	mv -f build/tess.new build/tess
 
+# `swift test` exits 0 even when a test process ended early: each
+# target's summary is the proof that it ran to the end.
 test:
-	swift test
+	@mkdir -p .build
+	@set -o pipefail; swift test 2>&1 | tee .build/test.log
+	@[ "$$(grep -cE 'Test run with [0-9]+ tests? .*passed' .build/test.log)" = 2 ] || { echo "make test: a test target did not finish"; exit 1; }
 
 format:
 	swift format --in-place --recursive --parallel Sources Tests Package.swift

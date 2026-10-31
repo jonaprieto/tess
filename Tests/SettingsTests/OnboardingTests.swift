@@ -3,6 +3,14 @@ import Layout
 import Testing
 @testable import tess
 
+/// `performClick` runs AppKit's event loop, and what it leaves there
+/// can stop the main run loop of the test process: `exit(0)`, with
+/// no summary and the remaining tests never run.
+@MainActor
+private func click(_ button: NSButton) {
+  NSApp.sendAction(button.action!, to: button.target, from: button)
+}
+
 @Test func doctorFindsOnlyExecutableFilesInTheServicePath() throws {
   let root = FileManager.default.temporaryDirectory
     .appendingPathComponent("tess-doctor-\(UUID())")
@@ -65,7 +73,7 @@ import Testing
       $0 as? NSButton
     }
     .first { $0.title == "Try the Picker" })
-  practice.performClick(nil)
+  click(practice)
   #expect(practices == 1)
   tutorial.goBack()
   for _ in 1..<steps.count { tutorial.goNext() }
@@ -102,7 +110,7 @@ import Testing
   #expect(report.frame.width > 400)
   let refresh = try #require(
     window.contentView?.subviews.compactMap { $0 as? NSButton }.first)
-  refresh.performClick(nil)
+  click(refresh)
   #expect(report.string.contains("Configuration"))
   #expect(
     NSApp.sendAction(

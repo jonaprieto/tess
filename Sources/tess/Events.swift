@@ -46,6 +46,10 @@ enum Events {
     }
   }
 
+  /// Everything recorded so far is on disk, for a process about to
+  /// exit.
+  static func flush() { queue.sync {} }
+
   private static func reopen(rotate: Bool) {
     let fm = FileManager.default
     try? handle?.close()

@@ -33,9 +33,10 @@ extension Tiler {
         }
         // Each app that came forward took focus; it goes back to where it was.
         if let f = before.focused, world.contains(f) { world.focused = f }
-        remember("Show all apps", windowName(world.focused), from: before)
+        remember(L("Show all apps"), windowName(world.focused), from: before)
         let n = world.tiled.count
-        toast(waiting.isEmpty ? "\(n) windows" : "\(n) windows, none from \(waiting.compactMap { NSRunningApplication(processIdentifier: $0)?.localizedName }.joined(separator: ", "))")
+        let apps = waiting.compactMap { NSRunningApplication(processIdentifier: $0)?.localizedName }.joined(separator: ", ")
+        toast(waiting.isEmpty ? L("\(n) windows") : L("\(n) windows, none from \(apps)"))
         if let f = world.focused { focus(f) }
         scheduleApply()
     }

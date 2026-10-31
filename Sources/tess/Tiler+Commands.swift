@@ -27,7 +27,7 @@ extension Tiler {
 
 
     func execute(_ c: Command) -> String {
-        if paused, ![.pause, .tree, .reload, .tutorial].contains(c) { return "error: paused" }
+        if paused, ![.pause, .tree, .reload, .tutorial].contains(c) { return "error: \(L("paused"))" }
         Log.write("command: \(c)")
         let before = world.focused
         let beforeMonitor = world.activeMonitor
@@ -35,7 +35,7 @@ extension Tiler {
         // Commands on a tiled window say so when the focused one floats, instead of doing nothing.
         if let f = world.focused, world.floating.contains(f), c == .accordion || c.isMoveOrResize {
             let key = config.modes["main"]?.first { $0.value == [.float] }?.key.symbol
-            return "error: \(appName(f)) floats\(key.map { "; \($0) tiles it" } ?? "")"
+            return "error: " + (key.map { L("\(appName(f)) floats; \($0) tiles it") } ?? L("\(appName(f)) floats"))
         }
         switch c {
         case .focus(let d): world.focus(d); flash = true
@@ -47,7 +47,7 @@ extension Tiler {
         case .flip:
             world.flip()
             // Said also when a lone window shows no difference: the next one goes beside or below it.
-            toast(world.monitors[safe: world.activeMonitor]?.rows == true ? "rows" : "columns")
+            toast(world.monitors[safe: world.activeMonitor]?.rows == true ? L("rows") : L("columns"))
         case .accordion: world.toggleAccordion()
         case .fullscreen:
             // A floating window joins the tiling to go fullscreen.
@@ -56,16 +56,16 @@ extension Tiler {
             if let f = world.focused, world.locate(f) != nil {
                 focus(f)
                 let on = world.locate(f).map { world.monitors[$0.m].fullscreen == f } ?? false
-                toast(on ? "fullscreen" : "fullscreen off")
+                toast(on ? L("fullscreen") : L("fullscreen off"))
             }
         case .float:
-            guard let id = world.focused ?? osFocused, world.contains(id) else { return "error: no tiled or floating window focused" }
+            guard let id = world.focused ?? osFocused, world.contains(id) else { return "error: \(L("no tiled or floating window focused"))" }
             world.toggleFloating(id)
             let floating = world.floating.contains(id)
             let key = config.modes["main"]?.first { $0.value == [.float] }?.key.symbol
-            toast(floating ? "Floating\(key.map { " · \($0) returns to tiling" } ?? "")" : "Tiled")
+            toast(floating ? key.map { L("Floating · \($0) returns to tiling") } ?? L("Floating") : L("Tiled"))
         case .close:
-            guard let id = world.focused ?? osFocused, let info = infos[id] else { return "error: no window focused" }
+            guard let id = world.focused ?? osFocused, let info = infos[id] else { return "error: \(L("no window focused"))" }
             workers[info.pid]?.close(id)
         case .focusMonitor(let n): world.focusMonitor(n - 1); flash = true
         case .cycleMonitor(let s): world.cycleMonitor(s); flash = true
@@ -97,7 +97,7 @@ extension Tiler {
             // Entering a one-shot mode again keeps it on until esc.
             if m == mode, oneShotNow {
                 locked = true
-                toast("\(m) mode locked")
+                toast(L("\(Command.modeName(m)) mode locked"))
             }
             setMode(m)
         case .retile:
@@ -106,10 +106,10 @@ extension Tiler {
                 guard let self else { return }
                 let before = self.world
                 self.rebuild()
-                self.remember("Re-tile", "", from: before)
-                self.toast("re-tiled")
+                self.remember(L("Re-tile"), "", from: before)
+                self.toast(L("re-tiled"))
             }
-        case .rescue: toast("rescued \(rescue()) windows")
+        case .rescue: toast(L("rescued \(rescue()) windows"))
         case .pause: setPaused(!paused)
         case .tree: return tree()
         case .nop: break
@@ -135,16 +135,16 @@ extension Tiler {
         case .zen: toggleZen()
         case .zenBreak: takeBreak()
         case .focusWindow(let id):
-            guard infos[id] != nil else { return "error: no window \(id)" }
+            guard infos[id] != nil else { return "error: \(L("no window \(id)"))" }
             use(id, .jump)
         case .focusTab(let n):
-            guard tabList.indices.contains(n), infos[tabList[n].window] != nil else { return "error: no tab \(n)" }
+            guard tabList.indices.contains(n), infos[tabList[n].window] != nil else { return "error: \(L("no tab \(n)"))" }
             let t = tabList[n]
             workers[t.pid]?.press(t.element)
             use(t.window, .jump)
         case .swapWith(let id):
             guard let f = world.focused, f != id, world.locate(f) != nil, world.locate(id) != nil else {
-                return "error: swap needs a focused tiled window and another tiled window"
+                return "error: \(L("swap needs a focused tiled window and another tiled window"))"
             }
             world.swap(f, id)
             world.focused = f
@@ -157,7 +157,7 @@ extension Tiler {
             flash = true
         case .closeReplace:
             guard let id = world.focused, let s = world.slot(of: id), let info = infos[id] else {
-                return "error: no tiled window focused"
+                return "error: \(L("no tiled window focused"))"
             }
             beginPicking()
             closeReplacing = true
@@ -237,7 +237,7 @@ extension Tiler {
             registerMode()
             rebuild()
         }
-        toast(p ? "paused" : "resumed")
+        toast(p ? L("paused") : L("resumed"))
         onChange()
     }
 
@@ -246,13 +246,15 @@ extension Tiler {
 
     // MARK: Rescue from the menu
 
-    func menuRescue() { toast("rescued \(rescue()) windows") }
+    func menuRescue() { toast(L("rescued \(rescue()) windows")) }
 
 
     /// For the menu header: mode, windows, screens.
     var summary: String {
         let n = world.tiled.count + world.floating.count
-        return "\(paused ? "paused" : "\(mode) mode") · \(n) window\(n == 1 ? "" : "s") · \(world.monitors.count) screen\(world.monitors.count == 1 ? "" : "s")"
+        let screens = world.monitors.count
+        return [paused ? L("paused") : L("\(Command.modeName(mode)) mode"), n == 1 ? L("1 window") : L("\(n) windows"),
+                screens == 1 ? L("1 screen") : L("\(screens) screens")].joined(separator: " · ")
     }
 
 
@@ -266,7 +268,7 @@ extension Tiler {
     /// Validates and writes what the settings window changed, then reloads; the error if not.
     func saveSettings(_ raw: Config.Raw) -> String? {
         // Saving now would replace the hand-edited file with these settings.
-        if let e = configError { return "config.json has an error, fix it or delete it first: \(e)" }
+        if let e = configError { return L("config.json has an error, fix it or delete it first: \(e)") }
         do {
             _ = try Config.validate(raw)
             try FileManager.default.createDirectory(at: Self.configURL.deletingLastPathComponent(), withIntermediateDirectories: true)

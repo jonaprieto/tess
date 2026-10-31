@@ -38,7 +38,7 @@ extension Tiler {
         undone = undoing ? history.count - i : history.count - i - 1
         writes = [:]
         Events.record(undoing ? "undo" : "redo", ["step": step.title, "layout": layoutJSON()])
-        toast("\(undoing ? "Undid" : "Redid"): \(step.title)")
+        toast(undoing ? L("Undid: \(step.title)") : L("Redid: \(step.title)"))
         if let f = world.focused { focus(f) }
         scheduleApply()
         flashFocus()
@@ -46,19 +46,19 @@ extension Tiler {
 
     func undo() -> String {
         let i = history.count - undone - 1
-        guard i >= 0 else { return "error: nothing to undo" }
+        guard i >= 0 else { return "error: \(L("nothing to undo"))" }
         revisit(i)
         return ""
     }
 
     func redo() -> String {
-        guard undone > 0 else { return "error: nothing to redo" }
+        guard undone > 0 else { return "error: \(L("nothing to redo"))" }
         revisit(history.count - undone)
         return ""
     }
 
     func appName(_ id: WindowID) -> String {
-        infos[id].flatMap { workers[$0.pid]?.app.localizedName } ?? "a window"
+        infos[id].flatMap { workers[$0.pid]?.app.localizedName } ?? L("a window")
     }
 
     /// "Safari: GitHub" for a step's detail.

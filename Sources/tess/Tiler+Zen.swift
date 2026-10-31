@@ -25,7 +25,7 @@ extension Tiler {
             zenWorking = false
             zenTimer?.invalidate()
             zenTimer = nil
-            toast("zen off")
+            toast(L("zen off"))
         }
         Events.record("zen", ["on": zen != nil])
         scheduleApply()
@@ -39,7 +39,7 @@ extension Tiler {
             zenWorking = working
             if !working { countBreak() }
             NSSound(named: "Tink")?.play()
-            toast(working ? "back to work" : "break, 5 min · \(breaksToday) today")
+            toast(working ? L("back to work") : L("break, 5 min · \(breaksToday) today"))
             Events.record("zen", ["working": working])
             scheduleApply()
         }
@@ -66,7 +66,7 @@ extension Tiler {
     var zenTitle: String? {
         guard let phase = zen?.phase(at: Date()) else { return nil }
         let left = Int(phase.left.rounded(.up))
-        return String(format: "%@ %d:%02d", phase.working ? "zen" : "break", left / 60, left % 60)
+        return String(format: "%@ %d:%02d", phase.working ? "zen" : L("break"), left / 60, left % 60)
     }
 
     /// The screen Zen keeps: the focused window's (tiled or floating), else the active one, so

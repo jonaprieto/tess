@@ -21,11 +21,11 @@ extension Tiler {
             // The screen if there are several, the app's memory and how long it has been open.
             func detail(_ app: NSRunningApplication?, screen: Int?) -> String {
                 var d: [String] = []
-                if world.monitors.count > 1, let screen { d.append("Screen \(screen + 1)") }
+                if world.monitors.count > 1, let screen { d.append(L("Screen \(screen + 1)")) }
                 if let pid = app?.processIdentifier, let bytes = memory[pid], bytes > 0 {
                     d.append(ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .memory))
                 }
-                if let launched = app?.launchDate { d.append("open \(Self.age(launched))") }
+                if let launched = app?.launchDate { d.append(L("open \(Self.age(launched))")) }
                 return d.joined(separator: " · ")
             }
             let cards = ids.map { id in
@@ -37,7 +37,7 @@ extension Tiler {
                                      detail: detail(worker?.app, screen: m), label: letters[.window(id)])
             } + apps.map { app in
                 Switcher.Card(target: .app(app.processIdentifier), icon: workers[app.processIdentifier]?.icon ?? app.icon,
-                              app: app.localizedName ?? "", title: app.isHidden ? "Hidden" : "No window on screen",
+                              app: app.localizedName ?? "", title: app.isHidden ? L("Hidden") : L("No window on screen"),
                               detail: detail(app, screen: nil), label: letters[.app(app.processIdentifier)])
             }
             // The one before what is in front, as macOS's goes to the app before; the first when

@@ -6,11 +6,11 @@ import Layout
 extension Tiler {
     func startClick() {
         guard let id = osFocused ?? world.focused, let info = infos[id], let worker = workers[info.pid] else {
-            return toast("no window to click in")
+            return toast(L("no window to click in"))
         }
         worker.clickables(in: id) { [weak self] found in
             guard let self else { return }
-            guard !found.isEmpty else { return self.toast("nothing to click") }
+            guard !found.isEmpty else { return self.toast(L("nothing to click")) }
             let labels = hintLabels(found.count, alphabet: labelAlphabet)
             self.clickTargets = zip(labels, found).map { ClickTarget(label: $0, frame: $1.frame, element: $1.element, pid: info.pid) }
             self.clickTyped = ""

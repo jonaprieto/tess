@@ -13,20 +13,22 @@ extension Tiler {
         case .mute: "set volume with output muted"
         case .unmute: "set volume without output muted"
         }
-        let report = "set s to get volume settings\nif output muted of s then return \"muted\"\nreturn \"volume \" & (output volume of s) & \"%\""
+        let report = "set s to get volume settings\nif output muted of s then return \"muted\"\nreturn (output volume of s) as text"
         var error: NSDictionary?
         let now = NSAppleScript(source: change + "\n" + report)?.executeAndReturnError(&error)
-        toast(error == nil ? now?.stringValue ?? "volume changed" : "volume did not change")
+        guard error == nil else { return toast(L("volume did not change")) }
+        let level = now?.stringValue
+        toast(level == "muted" ? L("muted") : level.map { L("volume \($0)%") } ?? L("volume changed"))
     }
 
     /// Through `networksetup` on the Wi-Fi device; nil turns it the other way round.
     func setWifi(_ on: Bool?) {
         let tool = "/usr/sbin/networksetup"
         Proc.run(tool, ["-listallhardwareports"], timeout: 5) { [weak self] out in
-            guard let self, let device = out.flatMap(Parse.wifiDevice) else { return self?.toast("no Wi-Fi here") ?? () }
+            guard let self, let device = out.flatMap(Parse.wifiDevice) else { return self?.toast(L("no Wi-Fi here")) ?? () }
             func set(_ on: Bool) {
                 Proc.run(tool, ["-setairportpower", device, on ? "on" : "off"], timeout: 10, log: "networksetup") { [weak self] r in
-                    self?.toast(r == nil ? "Wi-Fi did not change" : "Wi-Fi \(on ? "on" : "off")")
+                    self?.toast(r == nil ? L("Wi-Fi did not change") : on ? L("Wi-Fi on") : L("Wi-Fi off"))
                 }
             }
             if let on { return set(on) }
@@ -45,12 +47,12 @@ extension Tiler {
         caffeineTimer?.invalidate()
         caffeineTimer = nil
         defer { onChange() }
-        if minutes == 0 || (minutes == nil && wasOn) { return toast("the Mac can sleep") }
+        if minutes == 0 || (minutes == nil && wasOn) { return toast(L("the Mac can sleep")) }
         var id: IOPMAssertionID = 0
         guard IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
                                           IOPMAssertionLevel(kIOPMAssertionLevelOn), "tess caffeine" as CFString,
                                           &id) == kIOReturnSuccess
-        else { return toast("could not keep the Mac awake") }
+        else { return toast(L("could not keep the Mac awake")) }
         let until = minutes.map { Date().addingTimeInterval(Double($0) * 60) }
         caffeine = (id, until)
         if let until {
@@ -58,17 +60,17 @@ extension Tiler {
                 self?.setCaffeine(0)
             }
         }
-        toast(minutes.map { "awake for \($0) min" } ?? "keeping the Mac awake")
+        toast(minutes.map { L("awake for \($0) min") } ?? L("keeping the Mac awake"))
     }
 
     /// macOS's own speed test, about 20 seconds of upload and download at once; the result
     /// stays on screen a while, since it is read rather than glanced at.
     func runSpeedtest() {
-        guard speedtest?.isRunning != true else { return toast("speed test already running") }
-        toast("speed test, about 20 s", seconds: 3)
+        guard speedtest?.isRunning != true else { return toast(L("speed test already running")) }
+        toast(L("speed test, about 20 s"), seconds: 3)
         speedtest = Proc.run("/usr/bin/networkQuality", ["-c"], timeout: 90, log: "networkQuality") { [weak self] out in
             self?.speedtest = nil
-            self?.toast(out.flatMap(Parse.speedtest) ?? "speed test failed", seconds: 10)
+            self?.toast(out.flatMap(Parse.speedtest) ?? L("speed test failed"), seconds: 10)
         }
     }
 
@@ -83,7 +85,7 @@ extension Tiler {
     /// Runs one as Shortcuts would; its own dialogs show if it has any.
     func runShortcut(_ name: String) {
         Proc.run("/usr/bin/shortcuts", ["run", name], timeout: 3600, log: "shortcuts") { [weak self] out in
-            if out == nil { self?.toast("\(name) did not run") }
+            if out == nil { self?.toast(L("\(name) did not run")) }
         }
     }
 }

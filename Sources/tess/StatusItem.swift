@@ -22,7 +22,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) { fill(menu) }
 
     /// Cheap enough to run on every layout or focus change.
-    private var drawn: (world: World, mode: String, paused: Bool, waiting: Bool, zen: String?, awake: Bool)?
+    private var drawn: (world: World, mode: String, paused: Bool, waiting: Bool, zen: String?, awake: Bool, language: Language)?
 
     /// Yellow: the menu bar's orange, green and purple dots are macOS's own, for the microphone,
     /// the camera and the screen. Edged to show on a light menu bar too.
@@ -36,21 +36,21 @@ final class StatusItem: NSObject, NSMenuDelegate {
             dot.stroke()
             return true
         }
-        image.accessibilityDescription = "keeping the Mac awake"
+        image.accessibilityDescription = L("keeping the Mac awake")
         return image
     }()
 
     /// Skipped when nothing the icon shows changed (most snapshots change nothing visible).
     func refreshIcon() {
         guard let button = item.button else { return }
-        let now = (tiler.world, tiler.mode, tiler.paused, waitingForAccess, tiler.zenTitle, tiler.caffeine != nil)
+        let now = (tiler.world, tiler.mode, tiler.paused, waitingForAccess, tiler.zenTitle, tiler.caffeine != nil, Strings.language)
         if let d = drawn, d.world == now.0, d.mode == now.1, d.paused == now.2, d.waiting == now.3, d.zen == now.4,
-           d.awake == now.5 { return }
+           d.awake == now.5, d.language == now.6 { return }
         drawn = now
         button.image = minimap()
         button.imagePosition = .imageLeft
         // The mode by name next to the miniature; in main, Zen's countdown if it is on.
-        let word = waitingForAccess ? "" : tiler.paused ? "paused" : tiler.mode == "main" ? now.4 ?? "" : tiler.mode
+        let word = waitingForAccess ? "" : tiler.paused ? L("paused") : tiler.mode == "main" ? now.4 ?? "" : Command.modeName(tiler.mode)
         let title = NSMutableAttributedString(string: word.isEmpty ? "" : " " + word.uppercased(), attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .bold), .foregroundColor: color,
         ])
@@ -63,7 +63,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
             title.insert(NSAttributedString(string: " "), at: 0)
         }
         button.attributedTitle = title
-        button.toolTip = "tess: \(tiler.paused ? "paused" : tiler.mode)" + (now.5 ? ", keeping the Mac awake" : "")
+        button.toolTip = "tess: \(tiler.paused ? L("paused") : Command.modeName(tiler.mode))" + (now.5 ? L(", keeping the Mac awake") : "")
     }
 
     private var color: NSColor {
@@ -126,10 +126,10 @@ final class StatusItem: NSObject, NSMenuDelegate {
         header.isEnabled = false
         menu.addItem(header)
         if waitingForAccess {
-            menu.addItem(item("Grant Accessibility Access…", "hand.raised", #selector(openAccessibility)))
+            menu.addItem(item(L("Grant Accessibility Access…"), "hand.raised", #selector(openAccessibility)))
         }
         if let error = tiler.configError {
-            let e = NSMenuItem(title: "Config error", action: #selector(openSettings), keyEquivalent: "")
+            let e = NSMenuItem(title: L("Config error"), action: #selector(openSettings), keyEquivalent: "")
             e.target = self
             e.subtitle = error
             e.image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: nil)
@@ -138,31 +138,31 @@ final class StatusItem: NSObject, NSMenuDelegate {
         arrangements(menu)
         recent(menu)
         menu.addItem(.separator())
-        menu.addItem(item("Open Picker…", "magnifyingglass", #selector(pick), for: .pick("")))
-        let zen = item(tiler.zen == nil ? "Zen" : "Leave Zen", "moon", #selector(toggleZen), for: .zen)
+        menu.addItem(item(L("Open Picker…"), "magnifyingglass", #selector(pick), for: .pick("")))
+        let zen = item(tiler.zen == nil ? "Zen" : L("Leave Zen"), "moon", #selector(toggleZen), for: .zen)
         let breaks = tiler.breaksToday
-        zen.subtitle = (tiler.zenTitle ?? "25 min focus, 5 min break") + (breaks == 0 ? "" : " · \(breaks) break\(breaks == 1 ? "" : "s") today")
+        zen.subtitle = (tiler.zenTitle ?? L("25 min focus, 5 min break")) + (breaks == 0 ? "" : " · " + (breaks == 1 ? L("1 break today") : L("\(breaks) breaks today")))
         menu.addItem(zen)
-        let cup = item(tiler.caffeine == nil ? "Keep Awake" : "Let the Mac Sleep", "cup.and.saucer", #selector(toggleCaffeine),
+        let cup = item(tiler.caffeine == nil ? L("Keep Awake") : L("Let the Mac Sleep"), "cup.and.saucer", #selector(toggleCaffeine),
                        for: .caffeine(nil))
         cup.subtitle = tiler.caffeine.map { c in
-            c.until.map { "awake until \($0.formatted(date: .omitted, time: .shortened))" } ?? "awake until turned off"
-        } ?? "keep the Mac awake"
+            c.until.map { L("awake until \($0.formatted(date: .omitted, time: .shortened))") } ?? L("awake until turned off")
+        } ?? L("keep the Mac awake")
         menu.addItem(cup)
-        menu.addItem(item("Settings…", "gearshape", #selector(openSettings), key: ",", mods: [.command]))
-        menu.addItem(item("Tutorial…", "questionmark.circle", #selector(openTutorial)))
-        menu.addItem(item("Doctor…", "stethoscope", #selector(openDoctor)))
+        menu.addItem(item(L("Settings…"), "gearshape", #selector(openSettings), key: ",", mods: [.command]))
+        menu.addItem(item(L("Tutorial…"), "questionmark.circle", #selector(openTutorial)))
+        menu.addItem(item(L("Doctor…"), "stethoscope", #selector(openDoctor)))
         menu.addItem(.separator())
-        menu.addItem(item("Rescue Windows", "lifepreserver", #selector(rescue), for: .rescue))
-        menu.addItem(item("Re-tile", "rectangle.3.group", #selector(retile), for: .retile))
-        menu.addItem(item("Clear This Screen", "rectangle.portrait.and.arrow.right", #selector(clear), for: .clearMonitor))
-        menu.addItem(tiler.paused ? item("Resume Tiling", "play.circle", #selector(pause))
-                                  : item("Pause Tiling", "pause.circle", #selector(pause), for: .pause))
+        menu.addItem(item(L("Rescue Windows"), "lifepreserver", #selector(rescue), for: .rescue))
+        menu.addItem(item(L("Re-tile"), "rectangle.3.group", #selector(retile), for: .retile))
+        menu.addItem(item(L("Clear This Screen"), "rectangle.portrait.and.arrow.right", #selector(clear), for: .clearMonitor))
+        menu.addItem(tiler.paused ? item(L("Resume Tiling"), "play.circle", #selector(pause))
+                                  : item(L("Pause Tiling"), "pause.circle", #selector(pause), for: .pause))
         menu.addItem(.separator())
-        menu.addItem(item("Reload Config", "arrow.clockwise", #selector(reload), for: .reload))
-        menu.addItem(item("Open Log", "doc.text", #selector(openLog)))
+        menu.addItem(item(L("Reload Config"), "arrow.clockwise", #selector(reload), for: .reload))
+        menu.addItem(item(L("Open Log"), "doc.text", #selector(openLog)))
         menu.addItem(.separator())
-        menu.addItem(item("Quit tess", "power", #selector(quit), key: "q", mods: [.command]))
+        menu.addItem(item(L("Quit tess"), "power", #selector(quit), key: "q", mods: [.command]))
     }
 
     /// The commands behind the layout pictures, by button tag.
@@ -203,7 +203,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
         }
         guard !choices.isEmpty else { return }
         menu.addItem(.separator())
-        menu.addItem(.sectionHeader(title: "Layout"))
+        menu.addItem(.sectionHeader(title: L("Layout")))
         row.frame.size = row.fittingSize
         let item = NSMenuItem()
         item.view = row
@@ -238,11 +238,12 @@ final class StatusItem: NSObject, NSMenuDelegate {
     private func recent(_ menu: NSMenu) {
         guard !tiler.history.isEmpty else { return }
         menu.addItem(.separator())
-        menu.addItem(.sectionHeader(title: "Recent: click to undo or redo"))
+        menu.addItem(.sectionHeader(title: L("Recent: click to undo or redo")))
         let applied = tiler.history.count - tiler.undone
         let ago = RelativeDateTimeFormatter()
         ago.unitsStyle = .short
         ago.dateTimeStyle = .named
+        ago.locale = Locale(identifier: Strings.language.rawValue)
         for (i, step) in tiler.history.enumerated().reversed() {
             let done = i < applied
             let row = NSMenuItem(title: step.title, action: #selector(revisit(_:)), keyEquivalent: "")
@@ -251,7 +252,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
             row.subtitle = [ago.localizedString(for: step.at, relativeTo: Date()), step.detail].filter { !$0.isEmpty }
                 .joined(separator: " · ")
             row.image = NSImage(systemSymbolName: done ? "arrow.uturn.backward" : "arrow.uturn.forward", accessibilityDescription: nil)
-            row.toolTip = done ? "Undo this and everything after it" : "Redo up to here"
+            row.toolTip = done ? L("Undo this and everything after it") : L("Redo up to here")
             if !done {
                 row.attributedTitle = NSAttributedString(string: step.title, attributes: [.foregroundColor: NSColor.secondaryLabelColor])
             }

@@ -273,7 +273,7 @@ final class Tiler {
             self?.starting = false
             self?.rebuild()
             if let self { Events.record("start", ["version": version, "restarted_after_hang": restartedAfterHang, "state": self.stateJSON()]) }
-            if restartedAfterHang { self?.toast("restarted after a hang") }
+            if restartedAfterHang { self?.toast(L("restarted after a hang")) }
             if let self { Browsers.history(self.config.history) { _ in } }  // warm the caches for the picker
             self?.refreshApps()
             _ = self?.picker
@@ -508,16 +508,16 @@ final class Tiler {
     /// What a drop does, in words, on its preview.
     func caption(_ zone: DropZone) -> String {
         switch zone {
-        case .stay: return "Back in place"
-        case .swap(let t): return "Swap with \(appName(t))"
-        case .screen(let m): return "Screen \(m + 1)"
+        case .stay: return L("Back in place")
+        case .swap(let t): return L("Swap with \(appName(t))")
+        case .screen(let m): return L("Screen \(m + 1)")
         case .lane(let t, let after), .stack(let t, let after):
             // A lane is beside in columns and above or below in rows; a stack the other way.
             var stack = false
             if case .stack = zone { stack = true }
             let rows = world.locate(t).map { world.monitors[$0.m].rows } ?? false
-            let side = stack == rows ? (after ? "Right of" : "Left of") : (after ? "Below" : "Above")
-            return "\(side) \(appName(t))"
+            let name = appName(t)
+            return stack == rows ? (after ? L("Right of \(name)") : L("Left of \(name)")) : (after ? L("Below \(name)") : L("Above \(name)"))
         }
     }
 
@@ -654,7 +654,7 @@ final class Tiler {
                     Events.record("frame.refused", describe(id).merging(["wanted": target.json]) { $1 })
                     // Only about the window in use: one further back has nothing to act on.
                     if id == world.focused {
-                        toast("\(appName(id)) did not accept its tile. Try enlarging it or floating the window.", seconds: 5)
+                        toast(L("\(appName(id)) did not accept its tile. Try enlarging it or floating the window."), seconds: 5)
                     }
                 }
                 continue
@@ -725,7 +725,7 @@ final class Tiler {
     func announce(_ id: WindowID, on m: Int) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             guard let self, let screen = self.world.monitors[safe: m]?.frame else { return }
-            self.overlay.toast("\(self.appName(id)) opened on screen \(m + 1)", on: screen)
+            self.overlay.toast(L("\(self.appName(id)) opened on screen \(m + 1)"), on: screen)
             if let f = self.windowStack.first(where: { $0.id == id })?.frame { self.overlay.flash(f) }
         }
     }
@@ -787,7 +787,7 @@ final class Tiler {
         let failed = hotkeys.register(mode == "tess" ? modeBindings.merging(tessLetterKeys) { binding, _ in binding } : modeBindings)
         if !failed.isEmpty {
             Log.write("could not register: \(failed)")
-            toast("could not register \(failed.joined(separator: ", "))")
+            toast(L("could not register \(failed.joined(separator: ", "))"))
         }
     }
 
@@ -813,7 +813,7 @@ final class Tiler {
                 ?? .systemOrange
             drawn = []  // redrawn in the new color
             Events.record("config", ["ok": true])
-            if announce { toast("config reloaded") }
+            if announce { toast(L("config reloaded")) }
         } catch {
             configError = "\(error)"
             Log.write("config: \(error)")

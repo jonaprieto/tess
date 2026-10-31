@@ -142,16 +142,15 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
         magnifier.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil)?
             .withSymbolConfiguration(.init(pointSize: 18, weight: .medium))
-        magnifier.contentTintColor = .secondaryLabelColor
+        magnifier.contentTintColor = Panels.quiet
         field.isBordered = false
         field.drawsBackground = false
         field.focusRingType = .none
         field.font = .systemFont(ofSize: 20, weight: .regular)
         field.delegate = self
         divider.wantsLayer = true
-        divider.layer?.backgroundColor = NSColor.separatorColor.cgColor
         footer.font = .systemFont(ofSize: 12)
-        footer.textColor = .secondaryLabelColor
+        footer.textColor = Panels.quiet
         footer.alignment = .center
         footer.lineBreakMode = .byTruncatingMiddle
         for v in [magnifier, field, divider, list, map, footer] as [NSView] { content.addSubview(v) }
@@ -165,7 +164,10 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         self.items = items
         self.verbs = verbs
         self.fixed = fixed
-        field.placeholderString = L("Window, tab or app")
+        divider.layer?.backgroundColor = NSColor.separatorColor.cgColor
+        field.placeholderAttributedString = NSAttributedString(string: L("Window, tab or app"), attributes: [
+            .font: field.font as Any, .foregroundColor: Panels.quiet,
+        ])
         field.setAccessibilityLabel(L("Search windows, tabs, apps or commands"))
         self.screen = screen
         mapModel = map
@@ -668,7 +670,7 @@ final class ListView: NSView {
         if selected < top || selected >= top + Self.visible { top = max(0, selected - Self.visible + 1) }
         if items.isEmpty {
             (empty as NSString).draw(at: NSPoint(x: 16, y: 12), withAttributes: [
-                .font: NSFont.systemFont(ofSize: 14), .foregroundColor: NSColor.secondaryLabelColor,
+                .font: NSFont.systemFont(ofSize: 14), .foregroundColor: Panels.quiet,
             ])
             return
         }
@@ -679,13 +681,13 @@ final class ListView: NSView {
                 let bg = r.insetBy(dx: 2, dy: 2)
                 NSColor.labelColor.withAlphaComponent(0.12).setFill()
                 NSBezierPath(roundedRect: bg, xRadius: 8, yRadius: 8).fill()
-                NSColor.controlAccentColor.setFill()
+                Panels.accent.setFill()
                 NSBezierPath(roundedRect: NSRect(x: bg.minX + 4, y: bg.minY + 8, width: 3, height: bg.height - 16),
                              xRadius: 1.5, yRadius: 1.5).fill()
             }
             item.icon?.draw(in: NSRect(x: 12, y: r.midY - 12, width: 24, height: 24))
             let detailAttrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.secondaryLabelColor,
+                .font: NSFont.systemFont(ofSize: 12), .foregroundColor: Panels.quiet,
             ]
             let detail = item.detail as NSString
             let style = NSMutableParagraphStyle()
@@ -706,7 +708,7 @@ final class ListView: NSView {
         for p in fuzzyPositions(query, text) ?? [] {
             // Character index to UTF-16 range.
             let start = String(chars[..<p]).utf16.count
-            s.addAttributes([.foregroundColor: NSColor.controlAccentColor, .font: NSFont.systemFont(ofSize: 14, weight: .bold)],
+            s.addAttributes([.foregroundColor: Panels.readable(Panels.accent), .font: NSFont.systemFont(ofSize: 14, weight: .bold)],
                             range: NSRange(location: start, length: String(chars[p]).utf16.count))
         }
         return s
@@ -748,10 +750,10 @@ final class MapView: NSView {
             path.stroke()
             // The screen's number key heads it, in the inverse of the window letters.
             if let digit = "\(n + 1)".first {
-                Self.keycap(digit, NSRect(x: box.minX + 8, y: box.minY + 7, width: 24, height: 24), fill: warning == nil ? .labelColor : .systemOrange, text: .textBackgroundColor)
+                Self.keycap(digit, NSRect(x: box.minX + 8, y: box.minY + 7, width: 24, height: 24), fill: warning == nil ? .labelColor : .systemOrange)
             }
             ((warning.map { L("⚠ \($0) may not fit") } ?? L("Screen \(n + 1)")) as NSString).draw(in: NSRect(x: box.minX + 40, y: box.minY + 11, width: box.width - 48, height: 16), withAttributes: [
-                .font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.secondaryLabelColor,
+                .font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: Panels.quiet,
             ])
         }
         // A window inside its screen's box, below the header.
@@ -773,9 +775,9 @@ final class MapView: NSView {
             guard r.width > 4, r.height > 4 else { continue }
             let isPicked = w.id == picked
             let path = NSBezierPath(roundedRect: r, xRadius: min(9, r.height / 3), yRadius: min(9, r.height / 3))
-            (isPicked ? NSColor.controlAccentColor.withAlphaComponent(0.35) : NSColor.labelColor.withAlphaComponent(0.1)).setFill()
+            (isPicked ? Panels.accent.withAlphaComponent(0.35) : NSColor.labelColor.withAlphaComponent(0.1)).setFill()
             path.fill()
-            (isPicked ? NSColor.controlAccentColor : NSColor.labelColor.withAlphaComponent(0.18)).setStroke()
+            (isPicked ? Panels.readable(Panels.accent) : NSColor.labelColor.withAlphaComponent(0.18)).setStroke()
             path.lineWidth = isPicked ? 2 : 1
             path.stroke()
             NSGraphicsContext.saveGraphicsState()
@@ -799,7 +801,7 @@ final class MapView: NSView {
                 ])
                 if !caption.isEmpty {
                     line.append(NSAttributedString(string: "  \(caption)", attributes: [
-                        .font: NSFont.systemFont(ofSize: 11), .foregroundColor: warning == nil ? NSColor.secondaryLabelColor : .systemOrange,
+                        .font: NSFont.systemFont(ofSize: 11), .foregroundColor: warning == nil ? Panels.quiet : Panels.readable(.systemOrange),
                     ]))
                 }
                 line.addAttribute(.paragraphStyle, value: clip, range: NSRange(location: 0, length: line.length))
@@ -813,7 +815,7 @@ final class MapView: NSView {
                     .font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: NSColor.labelColor, .paragraphStyle: clip,
                 ])
                 (caption as NSString).draw(in: NSRect(x: r.minX + 8, y: iconRect.maxY + 22, width: r.width - 16, height: 30), withAttributes: [
-                    .font: NSFont.systemFont(ofSize: 11), .foregroundColor: warning == nil ? NSColor.secondaryLabelColor : .systemOrange, .paragraphStyle: clip,
+                    .font: NSFont.systemFont(ofSize: 11), .foregroundColor: warning == nil ? Panels.quiet : Panels.readable(.systemOrange), .paragraphStyle: clip,
                 ])
                 if let label { Self.keycap(label, NSRect(x: r.minX + 9, y: r.minY + 9, width: 28, height: 28), fill: capColor) }
             }
@@ -821,11 +823,11 @@ final class MapView: NSView {
         }
     }
 
-    static func keycap(_ label: Character, _ cap: NSRect, fill: NSColor = .controlAccentColor, text color: NSColor = .white) {
+    static func keycap(_ label: Character, _ cap: NSRect, fill: NSColor = Panels.accent) {
         fill.setFill()
         NSBezierPath(roundedRect: cap, xRadius: cap.height / 4, yRadius: cap.height / 4).fill()
         let text = String(label).uppercased() as NSString
-        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: cap.height * 0.55, weight: .bold), .foregroundColor: color]
+        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: cap.height * 0.55, weight: .bold), .foregroundColor: Panels.ink(on: fill)]
         let s = text.size(withAttributes: attrs)
         text.draw(at: NSPoint(x: cap.midX - s.width / 2, y: cap.midY - s.height / 2), withAttributes: attrs)
     }

@@ -65,7 +65,7 @@ final class DecorationView: NSView {
         if active {
             let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 10, yRadius: 10)
             path.lineWidth = 1
-            Panels.accent.withAlphaComponent(0.3).setStroke()
+            Panels.readable(Panels.accent).withAlphaComponent(0.3).setStroke()
             path.stroke()
         }
         // Borders first, the focused one last so it is on top.
@@ -73,7 +73,7 @@ final class DecorationView: NSView {
             let r = local(w.frame).insetBy(dx: -1, dy: -1)
             let path = NSBezierPath(roundedRect: r, xRadius: 12, yRadius: 12)
             path.lineWidth = w.focused ? 1.5 : 1
-            (w.focused ? Panels.accent.withAlphaComponent(0.75) : Panels.inactiveBorder).setStroke()
+            (w.focused ? Panels.readable(Panels.accent).withAlphaComponent(0.75) : Panels.inactiveBorder).setStroke()
             path.stroke()
         }
         // Letters on each window: in its middle while they are keys (clear of a tab bar), else
@@ -112,7 +112,7 @@ final class DecorationView: NSView {
         path.stroke()
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: r.height * 0.58, weight: .bold),
-            .foregroundColor: strong ? NSColor.white : NSColor.labelColor,
+            .foregroundColor: strong ? Panels.ink(on: Panels.accent) : NSColor.labelColor,
         ]
         let s = (text as NSString).size(withAttributes: attrs)
         (text as NSString).draw(at: NSPoint(x: r.midX - s.width / 2, y: r.midY - s.height / 2), withAttributes: attrs)

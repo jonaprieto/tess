@@ -177,7 +177,6 @@ final class Overlay {
         let pill = dropCaption ?? {
             let label = NSTextField(labelWithString: "")
             label.font = .systemFont(ofSize: 15, weight: .semibold)
-            label.textColor = .white
             let pill = NSView()
             pill.wantsLayer = true
             pill.layer?.cornerRadius = 10
@@ -187,6 +186,7 @@ final class Overlay {
         }()
         dropCaption = pill
         pill.layer?.backgroundColor = Panels.selection.cgColor
+        (pill.subviews.first as? NSTextField)?.textColor = Panels.ink(on: Panels.selection)
         Self.show(p, rect)
         if let label = pill.subviews.first as? NSTextField, let box = p.contentView?.bounds {
             label.stringValue = caption
@@ -351,7 +351,7 @@ final class ModeSheet: NSView {
         for column in columns {
             let (capW, total) = columnWidth(column.rows, column.title)
             (column.title.uppercased() as NSString).draw(at: NSPoint(x: x, y: top), withAttributes: [
-                .font: Self.headFont, .foregroundColor: NSColor.secondaryLabelColor, .kern: 0.6,
+                .font: Self.headFont, .foregroundColor: Panels.quiet, .kern: 0.6,
             ])
             for (i, row) in column.rows.enumerated() {
                 let y = top + 20 + CGFloat(i) * Self.rowHeight
@@ -371,7 +371,7 @@ final class ModeSheet: NSView {
                 bx += w + 5
             }
             (L("back to tiling") as NSString).draw(at: NSPoint(x: bx + 4, y: y - 1), withAttributes: [
-                .font: Self.labelFont, .foregroundColor: NSColor.secondaryLabelColor,
+                .font: Self.labelFont, .foregroundColor: Panels.quiet,
             ])
         }
     }
@@ -399,9 +399,10 @@ final class HintView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .bold)
+        let ink = Panels.ink(on: Panels.accent)
         for h in hints {
-            let text = NSMutableAttributedString(string: h.label.uppercased(), attributes: [.font: font, .foregroundColor: NSColor.white])
-            text.addAttribute(.foregroundColor, value: NSColor.white.withAlphaComponent(0.45),
+            let text = NSMutableAttributedString(string: h.label.uppercased(), attributes: [.font: font, .foregroundColor: ink])
+            text.addAttribute(.foregroundColor, value: ink.withAlphaComponent(0.45),
                               range: NSRange(location: 0, length: min(typed.count, h.label.count)))
             let size = text.size()
             let r = NSRect(x: h.frame.minX - origin.x - 2, y: h.frame.midY - origin.y - (size.height + 4) / 2,
@@ -409,7 +410,7 @@ final class HintView: NSView {
             let path = NSBezierPath(roundedRect: r, xRadius: 4, yRadius: 4)
             Panels.accent.setFill()
             path.fill()
-            NSColor.white.withAlphaComponent(0.7).setStroke()
+            ink.withAlphaComponent(0.7).setStroke()
             path.lineWidth = 1
             path.stroke()
             text.draw(at: NSPoint(x: r.minX + 4, y: r.minY + 2))

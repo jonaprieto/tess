@@ -35,3 +35,23 @@ import Testing
     #expect(model.raw.overlay?.selectionColor == nil)
     #expect(model.raw.overlay?.grayAmount == 0)
 }
+
+private func readable(_ color: NSColor, on ground: CGFloat) -> CGFloat {
+    Panels.contrast(Panels.readable(color), NSColor(white: ground, alpha: 1))
+}
+
+@Test func textReadsOnColorsAndInBothThemes() {
+    let pale = NSColor(srgbRed: 0x76 / 255, green: 0xd6 / 255, blue: 1, alpha: 1)
+    #expect(Panels.ink(on: pale) == .black)
+    #expect(Panels.ink(on: .systemOrange) == .black)
+    #expect(Panels.ink(on: NSColor(srgbRed: 0.1, green: 0.1, blue: 0.4, alpha: 1)) == .white)
+    for (name, ground) in [(NSAppearance.Name.aqua, CGFloat(0.82)), (.darkAqua, 0.24)] {
+        NSAppearance(named: name)?.performAsCurrentDrawingAppearance {
+            for color in [pale, .systemOrange, .systemMint, .systemTeal, .systemGray] {
+                #expect(readable(color, on: ground) >= 4.5, "\(name) \(color)")
+            }
+            let quiet = Panels.quiet.usingColorSpace(.sRGB)?.redComponent ?? -1
+            #expect(name == .aqua ? quiet < 0.2 : quiet > 0.8)
+        }
+    }
+}

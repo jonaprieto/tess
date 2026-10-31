@@ -66,7 +66,9 @@ final class StatusItem: NSObject, NSMenuDelegate {
         button.toolTip = "tess: \(tiler.paused ? L("paused") : Command.modeName(tiler.mode))" + (now.5 ? L(", keeping the Mac awake") : "")
     }
 
-    private var color: NSColor {
+    private var color: NSColor { Panels.readable(modeColor) }
+
+    private var modeColor: NSColor {
         if waitingForAccess { return .systemRed }
         if tiler.paused { return .systemGray }
         switch tiler.mode {

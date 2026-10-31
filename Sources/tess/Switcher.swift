@@ -210,11 +210,11 @@ final class SwitcherView: NSView {
                 .font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.labelColor, .paragraphStyle: center,
             ])
             (c.title as NSString).draw(in: NSRect(x: r.minX + 8, y: r.minY + 87, width: r.width - 16, height: 15), withAttributes: [
-                .font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: center,
+                .font: NSFont.systemFont(ofSize: 11), .foregroundColor: Panels.quiet, .paragraphStyle: center,
             ])
             if !c.detail.isEmpty {
                 (c.detail as NSString).draw(in: NSRect(x: r.minX + 8, y: r.minY + 106, width: r.width - 16, height: 14), withAttributes: [
-                    .font: NSFont.systemFont(ofSize: 10, weight: .medium), .foregroundColor: NSColor.tertiaryLabelColor, .paragraphStyle: center,
+                    .font: NSFont.systemFont(ofSize: 10, weight: .medium), .foregroundColor: Panels.quiet, .paragraphStyle: center,
                 ])
             }
             if let label = c.label { MapView.keycap(label, NSRect(x: r.minX + 8, y: r.minY + 8, width: 22, height: 22)) }

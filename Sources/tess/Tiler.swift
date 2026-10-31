@@ -808,7 +808,7 @@ final class Tiler {
             Panels.accent = config.borderColor.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) }
                 ?? .controlAccentColor
             Panels.inactiveBorder = config.inactiveBorderColor.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) }
-                ?? NSColor.labelColor.withAlphaComponent(0.22)
+                ?? Panels.label(0.22)
             Panels.selection = config.selectionColor.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) }
                 ?? .systemOrange
             drawn = []  // redrawn in the new color

@@ -20,7 +20,9 @@ extension Tiler {
       zen = Pomodoro(start: Date())
       zenWorking = true
       let t = Timer.scheduledTimer(withTimeInterval: 1, repeats: true)
-      { [weak self] _ in self?.zenTick() }
+      { [weak self] _ in
+        MainActor.assumeIsolated { self?.zenTick() }
+      }
       t.tolerance = 0.1
       zenTimer = t
       toast("zen: 25 min")
@@ -123,6 +125,7 @@ extension Tiler {
 /// above normal windows and below tess's own labels and toasts.
 /// Clicking through one focuses what is under it, and Zen follows. In
 /// the break, over everything, with the time left in the middle.
+@MainActor
 final class Veil {
   private var panels: [(panel: NSPanel, text: NSTextField)] = []
 

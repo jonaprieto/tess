@@ -4,6 +4,7 @@ import Layout
 /// The picker: step 1 picks what (a window, a browser tab, an app)
 /// from a filtered list, step 2 picks where on a map of every
 /// monitor. Keyboard only; a click elsewhere cancels.
+@MainActor
 final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
   enum Kind {
     case window(WindowID)
@@ -102,7 +103,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
   var search:
     (
       _ kind: PickerSearch, _ query: String,
-      _ done: @escaping ([Item]) -> Void
+      _ done: @escaping @MainActor @Sendable ([Item]) -> Void
     ) -> Void = { _, _, _ in }
   private var searchGeneration = 0
   /// Which of the candidates the typed text means (Jev, with the
@@ -111,7 +112,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     (
       (
         _ typed: String, _ candidates: [Item],
-        _ done: @escaping (Int?) -> Void
+        _ done: @escaping @MainActor @Sendable (Int?) -> Void
       ) -> Void
     )?
   private var jevAsked: (String, Int)?

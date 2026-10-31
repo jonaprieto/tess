@@ -31,6 +31,7 @@ private func ribbon(_ ids: [WindowID], focused: WindowID) -> Tiler {
   return tiler
 }
 
+@MainActor
 private func parked(_ tiler: Tiler) -> Set<WindowID> {
   tiler.world.parked(
     inner: tiler.config.inner, outer: tiler.config.outer)

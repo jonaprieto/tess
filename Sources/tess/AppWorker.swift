@@ -1,21 +1,23 @@
 import AppKit
-import ApplicationServices
+@preconcurrency import ApplicationServices
 import Layout
 
 /// One app's AX traffic, on its own thread: AX observers need a run
 /// loop, and a frozen app then only ever blocks itself. Every AX
 /// notification is a hint to re-read the app's windows; the result
 /// goes to the main thread as a snapshot.
-final class AppWorker {
+// Its state is its thread's, or behind `lock`, or marked main.
+final class AppWorker: @unchecked Sendable {
   let app: NSRunningApplication
   var pid: pid_t { app.processIdentifier }
   /// Main thread: the app icon as a small bitmap, set shortly after
   /// the worker starts.
   var icon: NSImage?
   /// Main thread: (pid, windows, focused window).
-  private let onSnapshot: (pid_t, [WinInfo], WindowID?) -> Void
+  private let onSnapshot:
+    @MainActor @Sendable (pid_t, [WinInfo], WindowID?) -> Void
   /// A window the mouse is moving (not resizing), as it moves.
-  private let onDrag: (WindowID) -> Void
+  private let onDrag: @MainActor @Sendable (WindowID) -> Void
 
   // Worker thread only.
   private var runLoop: CFRunLoop!
@@ -55,8 +57,11 @@ final class AppWorker {
 
   init(
     _ app: NSRunningApplication,
-    onSnapshot: @escaping (pid_t, [WinInfo], WindowID?) -> Void,
-    onDrag: @escaping (WindowID) -> Void
+    onSnapshot:
+      @escaping @MainActor @Sendable (
+        pid_t, [WinInfo], WindowID?
+      ) -> Void,
+    onDrag: @escaping @MainActor @Sendable (WindowID) -> Void
   ) {
     self.app = app
     self.onSnapshot = onSnapshot
@@ -275,9 +280,9 @@ final class AppWorker {
     }
     sent = (infos, focused)
     resend = false
-    let pid = pid
+    let pid = pid, snapshot = infos
     DispatchQueue.main.async { [onSnapshot] in
-      onSnapshot(pid, infos, focused)
+      onSnapshot(pid, snapshot, focused)
     }
   }
 
@@ -289,7 +294,7 @@ final class AppWorker {
   func tabs(
     of ids: [WindowID],
     _ done:
-      @escaping (
+      @escaping @MainActor @Sendable (
         [(window: WindowID, frame: CGRect, element: AXUIElement)]
       ) -> Void
   ) {
@@ -305,7 +310,8 @@ final class AppWorker {
           if let f = t.frame { out.append((id, f, t)) }
         }
       }
-      DispatchQueue.main.async { done(out) }
+      let found = out
+      DispatchQueue.main.async { done(found) }
     }
   }
 
@@ -375,7 +381,9 @@ final class AppWorker {
   func clickables(
     in id: WindowID,
     _ done:
-      @escaping ([(frame: CGRect, element: AXUIElement)]) -> Void
+      @escaping @MainActor @Sendable (
+        [(frame: CGRect, element: AXUIElement)]
+      ) -> Void
   ) {
     perform { [self] in
       if let t = treeRelease {
@@ -410,7 +418,9 @@ final class AppWorker {
   private func readClickables(
     in id: WindowID,
     _ done:
-      @escaping ([(frame: CGRect, element: AXUIElement)]) -> Void
+      @escaping @MainActor @Sendable (
+        [(frame: CGRect, element: AXUIElement)]
+      ) -> Void
   ) {
     var out: [(frame: CGRect, element: AXUIElement)] = []
     if let win = windows[id], let wf = win.frame {
@@ -525,7 +535,9 @@ final class AppWorker {
 
   /// The app's focused window, read fresh; `done` runs on the main
   /// thread.
-  func focusedWindow(_ done: @escaping (WindowID?) -> Void) {
+  func focusedWindow(
+    _ done: @escaping @MainActor @Sendable (WindowID?) -> Void
+  ) {
     perform { [self] in
       let id = axApp.element(kAXFocusedWindowAttribute)?.windowID
       DispatchQueue.main.async { done(id) }

@@ -5,6 +5,7 @@ import Layout
 /// on the focused window, and short toasts. Click-through panels
 /// above all windows that never take focus. Rects are in AX
 /// coordinates (top-left origin), like everything else in tess.
+@MainActor
 final class Overlay {
   private var modePanels: [NSPanel] = []
   private var toastPanel: NSPanel?
@@ -201,14 +202,18 @@ final class Overlay {
       p.animator().alphaValue = 1
     }
     let hide = DispatchWorkItem {
-      NSAnimationContext.runAnimationGroup(
-        { ctx in
-          ctx.duration = 0.25
-          p.animator().alphaValue = 0
-        },
-        completionHandler: {
-          if p.alphaValue == 0 { p.orderOut(nil) }
-        })
+      MainActor.assumeIsolated {
+        NSAnimationContext.runAnimationGroup(
+          { ctx in
+            ctx.duration = 0.25
+            p.animator().alphaValue = 0
+          },
+          completionHandler: {
+            MainActor.assumeIsolated {
+              if p.alphaValue == 0 { p.orderOut(nil) }
+            }
+          })
+      }
     }
     flashHide = hide
     DispatchQueue.main.asyncAfter(

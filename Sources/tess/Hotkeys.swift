@@ -4,6 +4,7 @@ import Layout
 /// Global hotkeys through Carbon's `RegisterEventHotKey`: no Input
 /// Monitoring needed, and a registered key never reaches the focused
 /// app.
+@MainActor
 final class Hotkeys {
   private var refs: [EventHotKeyRef] = []
   private var actions: [UInt32: [Command]] = [:]
@@ -31,7 +32,7 @@ final class Hotkeys {
       &eventHandler)
   }
 
-  deinit {
+  isolated deinit {
     unregisterAll()
     if let eventHandler { RemoveEventHandler(eventHandler) }
   }

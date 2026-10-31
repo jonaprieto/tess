@@ -318,8 +318,9 @@ final class MapView: NSView {
   }
 
   static func keycap(
-    _ label: Character, _ cap: NSRect, fill: NSColor = Panels.accent
+    _ label: Character, _ cap: NSRect, fill: NSColor? = nil
   ) {
+    let fill = fill ?? Panels.accent
     fill.setFill()
     NSBezierPath(
       roundedRect: cap, xRadius: cap.height / 4,

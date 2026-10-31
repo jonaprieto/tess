@@ -5,6 +5,7 @@ import SwiftUI
 /// The native settings window. It edits the merged config and saves
 /// only what differs from the defaults to
 /// `~/.config/tess/config.json`.
+@MainActor
 final class SettingsWindow {
   static let shared = SettingsWindow()
   private var window: NSWindow?
@@ -49,6 +50,7 @@ final class SettingsWindow {
 }
 
 @Observable
+@MainActor
 final class SettingsModel {
   struct Row: Identifiable, Equatable {
     let id = UUID()

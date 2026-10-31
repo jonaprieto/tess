@@ -258,9 +258,9 @@ extension Tiler {
     NSWorkspace.shared.openApplication(
       at: url, configuration: NSWorkspace.OpenConfiguration()
     ) { [weak self] app, _ in
-      DispatchQueue.main.async {
+      DispatchQueue.main.async { [weak self] in
         guard let pid = app?.processIdentifier else { return }
-        func send(tries: Int) {
+        @MainActor func send(tries: Int) {
           guard
             NSWorkspace.shared.frontmostApplication?.processIdentifier
               == pid
@@ -336,7 +336,8 @@ extension Tiler {
 
   /// arXiv's API for `query`: open-access papers, best match first.
   static func arxiv(
-    _ query: String, _ done: @escaping ([Picker.Item]) -> Void
+    _ query: String,
+    _ done: @escaping @MainActor @Sendable ([Picker.Item]) -> Void
   ) {
     let terms = Parse.arxivQuery(query)
     var c = URLComponents(
@@ -366,7 +367,7 @@ extension Tiler {
   /// the background, the previous one stopped.
   func search(
     _ kind: PickerSearch, _ query: String,
-    _ done: @escaping ([Picker.Item]) -> Void
+    _ done: @escaping @MainActor @Sendable ([Picker.Item]) -> Void
   ) {
     Proc.stop(searchProcess)
     let skip =
@@ -576,14 +577,14 @@ extension Tiler {
       let apps =
         previous.flatMap { $0.folders == folders ? $0.apps : nil }
         ?? Self.scanApps(ignoring: ignore)
-      DispatchQueue.main.async {
+      DispatchQueue.main.async { [weak self] in
         self?.appCache = (apps, Date(), folders)
       }
     }
   }
 
 
-  static func appFolderDates() -> [Date] {
+  nonisolated static func appFolderDates() -> [Date] {
     appFolders.map {
       (try? FileManager.default.attributesOfItem(atPath: $0)[
         .modificationDate] as? Date) ?? .distantPast
@@ -591,7 +592,7 @@ extension Tiler {
   }
 
 
-  static func scanApps(ignoring ignore: [String]) -> [(
+  nonisolated static func scanApps(ignoring ignore: [String]) -> [(
     url: URL, name: String, bundleID: String?, icon: NSImage
   )] {
     let fm = FileManager.default

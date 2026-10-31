@@ -39,7 +39,7 @@ extension Tiler {
       [weak self] out in
       guard let self, let device = out.flatMap(Parse.wifiDevice)
       else { return self?.toast(L("no Wi-Fi here")) ?? () }
-      func set(_ on: Bool) {
+      @MainActor func set(_ on: Bool) {
         Proc.run(
           tool, ["-setairportpower", device, on ? "on" : "off"],
           timeout: 10, log: "networksetup"
@@ -87,7 +87,7 @@ extension Tiler {
       caffeineTimer = Timer.scheduledTimer(
         withTimeInterval: until.timeIntervalSinceNow, repeats: false
       ) { [weak self] _ in
-        self?.setCaffeine(0)
+        MainActor.assumeIsolated { self?.setCaffeine(0) }
       }
     }
     toast(

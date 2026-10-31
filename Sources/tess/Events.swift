@@ -18,11 +18,15 @@ enum Events {
   // The queue only.
   nonisolated(unsafe) private static var handle: FileHandle?
   nonisolated(unsafe) private static var written = 0
-  private static let time: ISO8601DateFormatter = {
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return f
-  }()
+  // Thread-safe, though not marked Sendable.
+  nonisolated(unsafe) private static let time: ISO8601DateFormatter =
+    {
+      let f = ISO8601DateFormatter()
+      f.formatOptions = [
+        .withInternetDateTime, .withFractionalSeconds
+      ]
+      return f
+    }()
 
   static func record(_ type: String, _ fields: [String: Any] = [:]) {
     var event = fields
@@ -36,14 +40,15 @@ enum Events {
         options: [.sortedKeys, .withoutEscapingSlashes])
     else { return }
     line.append(0x0A)
+    let entry = line
     queue.async {
       lock.lock()
       defer { lock.unlock() }
       if handle == nil || written > 20_000_000 {
         reopen(rotate: handle != nil)
       }
-      try? handle?.write(contentsOf: line)
-      written += line.count
+      try? handle?.write(contentsOf: entry)
+      written += entry.count
     }
   }
 

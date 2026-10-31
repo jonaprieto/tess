@@ -11,12 +11,16 @@ enum Log {
   // The queue only.
   nonisolated(unsafe) private static var written = 0
   nonisolated(unsafe) private static var handle: FileHandle? = open()
-  private static let time: ISO8601DateFormatter = {
-    let f = ISO8601DateFormatter()
-    f.timeZone = .current
-    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return f
-  }()
+  // Thread-safe, though not marked Sendable.
+  nonisolated(unsafe) private static let time: ISO8601DateFormatter =
+    {
+      let f = ISO8601DateFormatter()
+      f.timeZone = .current
+      f.formatOptions = [
+        .withInternetDateTime, .withFractionalSeconds
+      ]
+      return f
+    }()
 
   private static func open() -> FileHandle? {
     let fm = FileManager.default

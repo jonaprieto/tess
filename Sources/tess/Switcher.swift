@@ -9,7 +9,8 @@ import Layout
 /// and letting go of cmd (or return) goes to the one picked. Every
 /// other key passes untouched, but in Zen's break no key or click
 /// gets through.
-final class CmdTab {
+// What is not atomic below is the tap's thread only.
+final class CmdTab: @unchecked Sendable {
   enum Key {
     case open(back: Bool), step(back: Bool), letter(UInt16), cancel,
       release, option(Bool), typed
@@ -32,13 +33,13 @@ final class CmdTab {
   // Written once on the tap's thread, before any break can start.
   nonisolated(unsafe) private static var clicks: CFMachPort?
 
-  private let onKey: (Key) -> Void
+  private let onKey: @MainActor @Sendable (Key) -> Void
   // The tap's thread only.
   private var tap: CFMachPort?
   private var open = false
   private var optionAlone = false
 
-  init(_ onKey: @escaping (Key) -> Void) {
+  init(_ onKey: @escaping @MainActor @Sendable (Key) -> Void) {
     self.onKey = onKey
     let thread = Thread { [unowned self] in self.run() }
     thread.name = "tess.cmdtab"
@@ -161,6 +162,7 @@ final class CmdTab {
 
 /// The cmd-tab panel: a card per window, the picked one tinted, on
 /// the screen being looked at.
+@MainActor
 final class Switcher {
   /// A window, or an app with no window on the cards (none open,
   /// hidden, minimized, on another Space): picking it brings the app

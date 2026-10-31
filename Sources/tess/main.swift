@@ -18,6 +18,7 @@ let usage = """
 
   """
 
+@MainActor
 func serve() -> Never {
   // A CLI that gave up before its answer must not take the app down
   // with it.
@@ -44,7 +45,7 @@ func serve() -> Never {
   }
   Watchdog.start()
   let hung = Watchdog.restartedAfterHang()
-  func begin() {
+  let begin: @MainActor @Sendable () -> Void = {
     status.waitingForAccess = false
     tiler.start(restartedAfterHang: hung)
     status.refreshIcon()
@@ -60,7 +61,7 @@ func serve() -> Never {
     Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { t in
       guard AXIsProcessTrusted() else { return }
       t.invalidate()
-      begin()
+      MainActor.assumeIsolated { begin() }
     }
   }
   app.run()
@@ -70,6 +71,7 @@ func serve() -> Never {
 /// Opened as an app (Finder, Spotlight): the running tess shows its
 /// Settings; else its LaunchAgent starts it, so a crash still
 /// restarts it; else this process becomes tess.
+@MainActor
 func openApp() -> Never {
   if Socket.send("settings") != nil { exit(0) }
   for label in ["com.jonaprieto.tess", "homebrew.mxcl.tess"] {
@@ -88,7 +90,7 @@ switch args.first {
 case nil
 where isatty(STDIN_FILENO) == 0
   && Bundle.main.bundleURL.pathExtension == "app":
-  openApp()
+  MainActor.assumeIsolated { openApp() }
 case nil, "-h", "--help", "help":
   print(usage, terminator: "")
 case "--version", "version":
@@ -98,7 +100,7 @@ case "default-config":
 case "doctor":
   exit(Doctor.run())
 case "serve":
-  serve()
+  MainActor.assumeIsolated { serve() }
 default:
   guard let reply = Socket.send(args.joined(separator: " ")) else {
     FileHandle.standardError.write(

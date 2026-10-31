@@ -62,7 +62,7 @@ extension Tiler {
 
   /// The config's language, for what shows before `start` loads the
   /// rest of it.
-  static func applyLanguage() {
+  nonisolated static func applyLanguage() {
     let file = try? Data(contentsOf: configURL)
     Strings.language =
       ((try? Config.load(file)) ?? Config.defaults).language

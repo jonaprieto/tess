@@ -71,7 +71,9 @@ enum Socket {
 
   /// Accepts connections on a background thread; `handler` runs on
   /// the main thread.
-  static func serve(_ handler: @escaping (String) -> String) throws {
+  static func serve(
+    _ handler: @escaping @MainActor @Sendable (String) -> String
+  ) throws {
     try FileManager.default.createDirectory(
       at: dir, withIntermediateDirectories: true)
     unlink(path)
@@ -107,7 +109,9 @@ enum Socket {
         let line = readAll(client).trimmingCharacters(
           in: .whitespacesAndNewlines)
         var reply = ""
-        DispatchQueue.main.sync { reply = handler(line) }
+        DispatchQueue.main.sync {
+          reply = MainActor.assumeIsolated { handler(line) }
+        }
         writeAll(client, reply.isEmpty ? "" : reply + "\n")
         close(client)
       }

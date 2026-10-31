@@ -4,6 +4,7 @@ import Layout
 /// What is on screen in black and white at the configured strength,
 /// but for the focused window: one click-through panel per screen,
 /// just above normal windows and below tess's labels.
+@MainActor
 final class Grayscale {
   private var panels: [(panel: NSPanel, hole: CGRect?)] = []
   private let available = Grayscale.backdrop() != nil

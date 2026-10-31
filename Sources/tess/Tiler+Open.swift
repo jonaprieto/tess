@@ -111,7 +111,7 @@ extension Tiler {
             != nil
             || FileManager.default.fileExists(atPath: dest.path)
         } ?? false
-      DispatchQueue.main.async {
+      DispatchQueue.main.async { [weak self] in
         guard let self else { return }
         let status =
           ok

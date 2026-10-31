@@ -12,7 +12,9 @@ enum Browsers {
 
   /// Tabs of every running browser; `done` runs on the main thread
   /// once per browser.
-  static func tabs(_ done: @escaping ([Picker.Item]) -> Void) {
+  static func tabs(
+    _ done: @escaping @MainActor @Sendable ([Picker.Item]) -> Void
+  ) {
     for (bundleID, titleKey) in all {
       guard
         let app = NSRunningApplication.runningApplications(
@@ -37,7 +39,7 @@ enum Browsers {
         end tell
         return out
         """
-      osascript(script, onMain: false) { output in
+      osascriptOffMain(script) { output in
         let name = app.localizedName ?? bundleID
         let icon = Icons.small(app.icon)
         let items = (output ?? "").split(separator: "\n").compactMap(
@@ -63,11 +65,13 @@ enum Browsers {
   /// have comes from the first. Brave's history needs macOS's "data
   /// from other apps" consent and Safari's Full Disk Access; without
   /// them that source is skipped. Read again after five minutes.
-  nonisolated(unsafe) private static var cache:
+  @MainActor private static var cache:
     (items: [Picker.Item], at: Date, order: [String])?
 
+  @MainActor
   static func history(
-    _ order: [String], _ done: @escaping ([Picker.Item]) -> Void
+    _ order: [String],
+    _ done: @escaping @MainActor @Sendable ([Picker.Item]) -> Void
   ) {
     if let c = cache, c.order == order,
       Date().timeIntervalSince(c.at) < 300
@@ -103,29 +107,23 @@ enum Browsers {
     let braveRunning = !NSRunningApplication.runningApplications(
       withBundleIdentifier: brave
     ).isEmpty
-    func uri(_ path: String) -> String {
-      "file:"
-        + (path.addingPercentEncoding(
-          withAllowedCharacters: .urlPathAllowed) ?? path)
-        + "?immutable=1"
-    }
     typealias Source = (
       browser: String, kind: String,
-      run: (@escaping (String?) -> Void) -> Void
+      run: @Sendable (@escaping @Sendable (String?) -> Void) -> Void
     )
     let sources = order.flatMap { browser -> [Source] in
       browser == brave
         ? [
           (
             brave, "bookmark",
-            {
+            { @Sendable in
               braveRunning
-                ? osascript(bookmarks, onMain: false, $0) : $0(nil)
+                ? osascriptOffMain(bookmarks, $0) : $0(nil)
             }
           ),
           (
             brave, "history",
-            {
+            { @Sendable in
               sqlite(
                 uri(
                   home
@@ -133,30 +131,26 @@ enum Browsers {
                 ),
                 """
                 select title, url from urls where hidden = 0 order by visit_count + 5 * typed_count desc limit 3000
-                """, onMain: false, $0)
+                """, $0)
             }
           )
         ]
         : [
           (
             safari, "history",
-            {
+            { @Sendable in
               sqlite(
                 uri(home + "/Library/Safari/History.db"),
                 """
                 select coalesce((select title from history_visits v where v.history_item = i.id order by v.visit_time desc limit 1), ''),
                        i.url from history_items i order by i.visit_count desc limit 3000
-                """, onMain: false, $0)
+                """, $0)
             }
           )
         ]
     }
-    var arrived = [[Picker.Item]?](
-      repeating: nil, count: sources.count)
-    var next = 0
-    var all: [Picker.Item] = []
-    var seen = Set<String>()
-    var answered = false
+    let merged = Merged(count: sources.count)
+    let count = sources.count
     for (k, source) in sources.enumerated() {
       // Parsed where it arrives, off the main thread; merged on it.
       source.run { text in
@@ -180,42 +174,52 @@ enum Browsers {
         // Each source once the ones before it have answered, so ties
         // and repeats go to the browser listed first.
         DispatchQueue.main.async {
-          arrived[k] = items
-          if text != nil { answered = true }
-          while next < sources.count, let items = arrived[next] {
-            next += 1
+          merged.arrived[k] = items
+          if text != nil { merged.answered = true }
+          while merged.next < count,
+            let items = merged.arrived[merged.next]
+          {
+            merged.next += 1
             let fresh = items.filter {
-              seen.insert($0.search).inserted
+              merged.seen.insert($0.search).inserted
             }
-            all += fresh
+            merged.all += fresh
             if !fresh.isEmpty { done(fresh) }
           }
           // Not cached when every source failed (no permission yet):
           // try again next open.
-          if next == sources.count, answered {
-            cache = (all, Date(), order)
+          if merged.next == count, merged.answered {
+            cache = (merged.all, Date(), order)
           }
         }
       }
     }
   }
 
+  private static func uri(_ path: String) -> String {
+    "file:"
+      + (path.addingPercentEncoding(
+        withAllowedCharacters: .urlPathAllowed) ?? path)
+      + "?immutable=1"
+  }
+
   /// Read-only query on an immutable snapshot of the file; tab
   /// separated, nil on failure.
   static func sqlite(
-    _ uri: String, _ query: String, onMain: Bool = true,
-    _ done: @escaping (String?) -> Void
+    _ uri: String, _ query: String,
+    _ done: @escaping @Sendable (String?) -> Void
   ) {
-    Proc.run(
+    Proc.start(
       "/usr/bin/sqlite3",
       ["-readonly", "-separator", "\t", uri, query], timeout: 10,
-      onMain: onMain,
       log: "sqlite", done)
   }
 
   /// Brings the tab to the front of its window and the window to the
   /// front of the browser.
-  static func select(_ t: Picker.Tab, _ done: @escaping () -> Void) {
+  static func select(
+    _ t: Picker.Tab, _ done: @escaping @MainActor @Sendable () -> Void
+  ) {
     let pick =
       t.bundleID == "com.apple.Safari"
       ? "set current tab of w to tab \(t.index) of w"
@@ -235,11 +239,35 @@ enum Browsers {
   /// A browser stuck on a dialog would otherwise hold this for the 2
   /// minute Apple event timeout.
   static func osascript(
-    _ script: String, onMain: Bool = true,
-    _ done: @escaping (String?) -> Void
+    _ script: String,
+    _ done: @escaping @MainActor @Sendable (String?) -> Void
   ) {
     Proc.run(
       "/usr/bin/osascript", ["-e", script], timeout: 10,
-      onMain: onMain, log: "osascript", done)
+      log: "osascript", done)
+  }
+
+  /// As `osascript`, with `done` off the main thread.
+  private static func osascriptOffMain(
+    _ script: String, _ done: @escaping @Sendable (String?) -> Void
+  ) {
+    Proc.start(
+      "/usr/bin/osascript", ["-e", script], timeout: 10,
+      log: "osascript", done)
+  }
+}
+
+/// History sources as they answer, main thread only: each is held
+/// until the ones before it are in.
+@MainActor
+private final class Merged {
+  var arrived: [[Picker.Item]?]
+  var next = 0
+  var all: [Picker.Item] = []
+  var seen = Set<String>()
+  var answered = false
+
+  init(count: Int) {
+    arrived = .init(repeating: nil, count: count)
   }
 }

@@ -15,7 +15,7 @@ extension Tiler {
 
   /// Homebrew's prefix if `executable` is in its Cellar, however it
   /// was reached.
-  static func homebrew(_ executable: String?) -> String? {
+  nonisolated static func homebrew(_ executable: String?) -> String? {
     guard let executable else { return nil }
     let path = URL(fileURLWithPath: executable)
       .resolvingSymlinksInPath().path
@@ -35,7 +35,9 @@ extension Tiler {
     checkForUpdate()
     let timer = Timer.scheduledTimer(
       withTimeInterval: 3600, repeats: true
-    ) { [weak self] _ in self?.checkForUpdate() }
+    ) { [weak self] _ in
+      MainActor.assumeIsolated { self?.checkForUpdate() }
+    }
     timer.tolerance = 300
   }
 
@@ -52,7 +54,9 @@ extension Tiler {
 
   /// The latest release's version on the main thread, nil if GitHub
   /// could not be asked.
-  func askLatest(_ done: @escaping (String?) -> Void) {
+  func askLatest(
+    _ done: @escaping @MainActor @Sendable (String?) -> Void
+  ) {
     URLSession.shared.dataTask(
       with: URLRequest(url: Self.latestRelease, timeoutInterval: 15)
     ) { data, _, _ in

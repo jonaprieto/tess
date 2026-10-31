@@ -151,7 +151,7 @@ extension Tiler {
   }
 
   /// How long ago, at a glance: 12m, 3h, 2d.
-  static func age(_ since: Date) -> String {
+  nonisolated static func age(_ since: Date) -> String {
     let m = max(0, Int(-since.timeIntervalSinceNow / 60))
     return m < 60 ? "\(m)m" : m < 1440 ? "\(m / 60)h" : "\(m / 1440)d"
   }

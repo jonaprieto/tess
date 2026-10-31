@@ -4,6 +4,7 @@ import Layout
 /// Main thread. Owns the model, turns AX snapshots into model
 /// changes, runs commands, and writes frames back through the app
 /// workers.
+@MainActor
 final class Tiler {
   var world = World()
 
@@ -204,13 +205,12 @@ final class Tiler {
   let overlay = Overlay()
 
 
-  static let configURL = FileManager.default
+  nonisolated static let configURL = FileManager.default
     .homeDirectoryForCurrentUser.appendingPathComponent(
       ".config/tess/config.json")
 
 
-  nonisolated(unsafe) private static var liveCache:
-    (ids: Set<WindowID>, at: Date)?
+  private static var liveCache: (ids: Set<WindowID>, at: Date)?
 
 
   var sweeps = 0
@@ -316,7 +316,7 @@ final class Tiler {
   var searchProcess: Process?
 
 
-  static let appFolders = [
+  nonisolated static let appFolders = [
     "/Applications", "/Applications/Utilities",
     "/System/Applications",
     "/System/Applications/Utilities",
@@ -332,13 +332,14 @@ final class Tiler {
     let ws = NSWorkspace.shared.notificationCenter
     func onApp(
       _ name: Notification.Name,
-      _ body: @escaping (NSRunningApplication) -> Void
+      _ body:
+        @escaping @MainActor @Sendable (NSRunningApplication) -> Void
     ) {
       ws.addObserver(forName: name, object: nil, queue: .main) { n in
         if let app = n.userInfo?[NSWorkspace.applicationUserInfoKey]
           as? NSRunningApplication
         {
-          body(app)
+          MainActor.assumeIsolated { body(app) }
         }
       }
     }
@@ -373,41 +374,51 @@ final class Tiler {
       forName: NSWorkspace.activeSpaceDidChangeNotification,
       object: nil, queue: .main
     ) { [weak self] _ in
-      self?.spaceChangedAt = Date()
-      self?.spaceChanges += 1
-      Events.record(
-        "space",
-        [
-          "frontmost": NSWorkspace.shared.frontmostApplication?
-            .bundleIdentifier ?? ""
-        ])
-      self?.sweep(all: true)
+      MainActor.assumeIsolated {
+        self?.spaceChangedAt = Date()
+        self?.spaceChanges += 1
+        Events.record(
+          "space",
+          [
+            "frontmost": NSWorkspace.shared.frontmostApplication?
+              .bundleIdentifier ?? ""
+          ])
+        self?.sweep(all: true)
+      }
     }
     ws.addObserver(
       forName: NSWorkspace.didWakeNotification, object: nil,
       queue: .main
     ) { [weak self] _ in
-      Events.record("wake")
-      self?.screensChanged()
-      self?.sweep(all: true)
+      MainActor.assumeIsolated {
+        Events.record("wake")
+        self?.screensChanged()
+        self?.sweep(all: true)
+      }
     }
     NotificationCenter.default.addObserver(
       forName: NSApplication.didChangeScreenParametersNotification,
       object: nil,
       queue: .main
-    ) { [weak self] _ in self?.screensChanged() }
+    ) { [weak self] _ in
+      MainActor.assumeIsolated { self?.screensChanged() }
+    }
     NSWorkspace.shared.runningApplications.forEach(track)
     // A safety net: AX notifications report nearly everything as it
     // happens.
     let sweepTimer = Timer.scheduledTimer(
       withTimeInterval: 5, repeats: true
-    ) { [weak self] _ in self?.sweep() }
+    ) { [weak self] _ in
+      MainActor.assumeIsolated { self?.sweep() }
+    }
     sweepTimer.tolerance = 1
     // A full picture every ten minutes, between the change events.
     let stateTimer = Timer.scheduledTimer(
       withTimeInterval: 600, repeats: true
     ) { [weak self] _ in
-      if let self { Events.record("state", self.stateJSON()) }
+      MainActor.assumeIsolated {
+        if let self { Events.record("state", self.stateJSON()) }
+      }
     }
     stateTimer.tolerance = 30
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -470,9 +481,11 @@ final class Tiler {
       },
       onDrag: { [weak self] id in self?.dragging(id) })
     workers[pid] = worker
-    DispatchQueue.global(qos: .utility).async {
+    DispatchQueue.global(qos: .utility).async { [weak self] in
       let icon = Icons.small(app.icon)
-      DispatchQueue.main.async { worker.icon = icon }
+      DispatchQueue.main.async {
+        [weak self] in self?.workers[pid]?.icon = icon
+      }
     }
   }
 
@@ -765,8 +778,9 @@ final class Tiler {
     refreshDecorations()
     func check() {
       guard NSEvent.pressedMouseButtons & 1 == 0 else {
-        DispatchQueue.main.asyncAfter(
-          deadline: .now() + 0.1, execute: check)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+          check()
+        }
         return
       }
       overlay.showDrop(nil)

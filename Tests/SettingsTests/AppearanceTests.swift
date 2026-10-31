@@ -42,12 +42,14 @@ import Testing
   #expect(model.raw.overlay?.grayAmount == 0)
 }
 
+@MainActor
 private func readable(_ color: NSColor, on ground: CGFloat) -> CGFloat
 {
   Panels.contrast(
     Panels.readable(color), NSColor(white: ground, alpha: 1))
 }
 
+@MainActor
 @Test func textReadsOnColorsAndInBothThemes() {
   let pale = NSColor(
     srgbRed: 0x76 / 255, green: 0xd6 / 255, blue: 1, alpha: 1)

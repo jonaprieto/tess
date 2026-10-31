@@ -1,11 +1,12 @@
 import AppKit
 
+@MainActor
 enum Panels {
   /// Borders and highlights: the config's overlay.border_color, else
   /// the macOS accent color.
-  nonisolated(unsafe) static var accent = NSColor.controlAccentColor
-  nonisolated(unsafe) static var inactiveBorder = label(0.22)
-  nonisolated(unsafe) static var selection = NSColor.systemOrange
+  static var accent = NSColor.controlAccentColor
+  static var inactiveBorder = label(0.22)
+  static var selection = NSColor.systemOrange
   /// Details and hints in small type: the system's secondary label
   /// falls short of 4.5:1 on light glass.
   static let quiet = label(0.62)

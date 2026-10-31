@@ -5,6 +5,11 @@ import Foundation
 /// background, stopped with whatever it started after `timeout`, and
 /// its stdout handed to `done` (nil when it failed or was stopped).
 enum Proc {
+  /// Written by one thread, read by another once it has signaled.
+  private final class Output: @unchecked Sendable {
+    var data = Data()
+  }
+
   /// Launchd starts tess with a bare PATH; Homebrew tools live here.
   static let env = [
     "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
@@ -15,16 +20,21 @@ enum Proc {
   @discardableResult
   static func run(
     _ path: String, _ args: [String], env: [String: String]? = nil,
-    timeout: Double, onMain: Bool = true,
-    log: String? = nil, _ done: @escaping (String?) -> Void
+    timeout: Double, log: String? = nil,
+    _ done: @escaping @MainActor @Sendable (String?) -> Void
   ) -> Process? {
-    func deliver(_ text: String?) {
-      if onMain {
-        DispatchQueue.main.async { done(text) }
-      } else {
-        done(text)
-      }
+    start(path, args, env: env, timeout: timeout, log: log) { text in
+      DispatchQueue.main.async { done(text) }
     }
+  }
+
+  /// As `run`, with `done` off the main thread.
+  @discardableResult
+  static func start(
+    _ path: String, _ args: [String], env: [String: String]? = nil,
+    timeout: Double, log: String? = nil,
+    _ deliver: @escaping @Sendable (String?) -> Void
+  ) -> Process? {
     let p = Process()
     p.executableURL = URL(fileURLWithPath: path)
     p.arguments = args
@@ -41,10 +51,10 @@ enum Proc {
     }
     // stderr is drained on its own, so a chatty program cannot fill
     // it and hang.
-    var problem = Data()
+    let problem = Output()
     let errDone = DispatchSemaphore(value: 0)
     DispatchQueue.global().async {
-      problem = err.fileHandleForReading.readDataToEndOfFile()
+      problem.data = err.fileHandleForReading.readDataToEndOfFile()
       errDone.signal()
     }
     DispatchQueue.global().async {
@@ -53,7 +63,7 @@ enum Proc {
       errDone.wait()
       if p.terminationStatus != 0, let log {
         Log.write(
-          "\(log): \(String(decoding: problem, as: UTF8.self).prefix(300))"
+          "\(log): \(String(decoding: problem.data, as: UTF8.self).prefix(300))"
         )
       }
       deliver(

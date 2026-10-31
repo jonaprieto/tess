@@ -6,6 +6,7 @@ import Layout
 /// outline on the active screen. One click-through panel per screen,
 /// just above normal windows, redrawn after each layout pass. In jump
 /// mode the letters grow, since they are then the keys.
+@MainActor
 final class Decorations {
   struct Window: Equatable {
     var frame: CGRect

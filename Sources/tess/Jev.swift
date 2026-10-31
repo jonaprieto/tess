@@ -7,13 +7,15 @@ import Foundation
 /// TYPESAFE_API_KEY from tess's environment or, since launchd passes
 /// none, the login shell's, kept in memory. What it sends is never
 /// logged.
+@MainActor
 enum Jev {
-  nonisolated(unsafe) private static var key: String?
-  nonisolated(unsafe) private static var waiting: [(String?) -> Void]?
+  private static var key: String?
+  private static var waiting: [@MainActor (String?) -> Void]?
 
   /// The key, read once; `done` runs on the main thread, with nil
   /// when there is none.
-  static func withKey(_ done: @escaping (String?) -> Void) {
+  static func withKey(_ done: @escaping @MainActor (String?) -> Void)
+  {
     if let key { return done(key) }
     if let env = ProcessInfo.processInfo.environment[
       "TYPESAFE_API_KEY"], !env.isEmpty
@@ -59,7 +61,10 @@ enum Jev {
   /// thread.
   static func pick(
     _ typed: String, focused: String?, candidates: [String],
-    _ done: @escaping ((index: Int, p: Double, fits: Double)?) -> Void
+    _ done:
+      @escaping @MainActor @Sendable (
+        (index: Int, p: Double, fits: Double)?
+      ) -> Void
   ) {
     guard !candidates.isEmpty else { return done(nil) }
     let ids = candidates.indices.map { String(format: "c%03d", $0) }
@@ -102,7 +107,7 @@ enum Jev {
   /// title, empty on any failure, on the main thread.
   static func titleParts(
     _ items: [(app: String, title: String, parts: [String])],
-    _ done: @escaping ([String: String]) -> Void
+    _ done: @escaping @MainActor @Sendable ([String: String]) -> Void
   ) {
     let ids = items.indices.map { String(format: "w%03d", $0) }
     let state: [String: Any] = [
@@ -138,7 +143,7 @@ enum Jev {
   private static func ask(
     _ state: [String: Any], _ questions: [String: Any],
     timeout: Double,
-    _ done: @escaping ([String: Any]?) -> Void
+    _ done: @escaping @MainActor @Sendable ([String: Any]?) -> Void
   ) {
     withKey { key in
       guard let key else { return done(nil) }
@@ -160,7 +165,9 @@ enum Jev {
           try? JSONSerialization.jsonObject(with: $0)
             as? [String: Any]
         }
-        let answers = json?["answers"] as? [String: Any]
+        // Handed over, not shared: nothing here reads it again.
+        nonisolated(unsafe) let answers =
+          json?["answers"] as? [String: Any]
         if answers == nil {
           Log.write("jev: no answer (HTTP \(status))")
         }

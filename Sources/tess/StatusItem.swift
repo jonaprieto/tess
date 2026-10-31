@@ -4,6 +4,7 @@ import Layout
 /// Menu bar item: a live miniature of the monitors as they are
 /// arranged, with their columns and windows. The focused window and
 /// the active monitor take the mode's color.
+@MainActor
 final class StatusItem: NSObject, NSMenuDelegate {
   private let item = NSStatusBar.system.statusItem(
     withLength: NSStatusItem.variableLength)

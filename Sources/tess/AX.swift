@@ -99,15 +99,16 @@ extension AXUIElement {
   }
 
   /// Size, then position, then size again: some apps clamp a size
-  /// that does not fit at the old position.
-  func setFrame(_ r: CGRect) {
+  /// that does not fit at the old position. A window that only moves
+  /// is spared the size, which makes apps lay out again.
+  func setFrame(_ r: CGRect, moveOnly: Bool = false) {
     var size = r.size, origin = r.origin
     guard let s = AXValueCreate(.cgSize, &size),
       let p = AXValueCreate(.cgPoint, &origin)
     else { return }
-    set(kAXSizeAttribute, s)
+    if !moveOnly { set(kAXSizeAttribute, s) }
     set(kAXPositionAttribute, p)
-    set(kAXSizeAttribute, s)
+    if !moveOnly { set(kAXSizeAttribute, s) }
   }
 
   func press(_ button: String) {

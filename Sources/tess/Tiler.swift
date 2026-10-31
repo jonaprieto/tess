@@ -951,6 +951,7 @@ final class Tiler {
         continue
       }
       var w = writes[id] ?? (target, 0)
+      let moveOnly = onlyMoves(id, from: info.frame, to: target)
       if w.target != target { w = (target, 0) }
       guard w.tries < 3 else {
         if refused.insert(id).inserted {
@@ -975,12 +976,24 @@ final class Tiler {
       }
       w.tries += 1
       writes[id] = w
-      worker.setFrame(id, target)
+      worker.setFrame(id, target, moveOnly: moveOnly)
       // Assume it lands; the next snapshot says otherwise if not.
       infos[id]?.frame = target
       assumed.insert(id)
       landing[id] = Date().addingTimeInterval(1.5)
     }
+  }
+
+
+  /// Whether going to `target` takes no resize: the window has that
+  /// size, or was refused it and no one has wiped `writes` to have it
+  /// asked again, as a ribbon's every move otherwise would.
+  func onlyMoves(
+    _ id: WindowID, from frame: CGRect, to target: CGRect
+  ) -> Bool {
+    frame.size == target.size
+      || (refused.contains(id)
+        && writes[id]?.target.size == target.size)
   }
 
 

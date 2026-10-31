@@ -43,7 +43,8 @@ final class AppWorker {
   // Frame writes waiting for the worker thread; a newer one for the
   // same window replaces it.
   private let lock = NSLock()
-  private var pendingFrames: [WindowID: CGRect] = [:]
+  private var pendingFrames:
+    [WindowID: (frame: CGRect, moveOnly: Bool)] = [:]
 
   static let windowNotifications = [
     kAXUIElementDestroyedNotification,
@@ -476,15 +477,19 @@ final class AppWorker {
 
   // MARK: Writing
 
-  func setFrame(_ id: WindowID, _ r: CGRect) {
+  func setFrame(_ id: WindowID, _ r: CGRect, moveOnly: Bool = false) {
     lock.lock()
-    pendingFrames[id] = r
+    // A resize still waiting is not to be lost to a move that takes
+    // its place.
+    pendingFrames[id] = (
+      r, moveOnly && pendingFrames[id]?.moveOnly != false
+    )
     lock.unlock()
     perform { [self] in
       lock.lock()
-      let r = pendingFrames.removeValue(forKey: id)
+      let pending = pendingFrames.removeValue(forKey: id)
       lock.unlock()
-      guard let r, let el = windows[id] else { return }
+      guard let pending, let el = windows[id] else { return }
       // A snapshot goes out after the write even if it looks
       // unchanged: the main thread assumed this write landed, and has
       // to hear if the app refused it. Refreshed here, since an app
@@ -499,7 +504,7 @@ final class AppWorker {
       if enhanced {
         axApp.set("AXEnhancedUserInterface", kCFBooleanFalse)
       }
-      el.setFrame(r)
+      el.setFrame(pending.frame, moveOnly: pending.moveOnly)
       if enhanced {
         axApp.set("AXEnhancedUserInterface", kCFBooleanTrue)
       }

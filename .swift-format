@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "indentation": { "spaces": 2 },
+  "lineLength": 70,
+  "maximumBlankLines": 2,
+  "multiElementCollectionTrailingCommas": false,
+  "rules": {
+    "AlwaysUseLowerCamelCase": false,
+    "DoNotUseSemicolons": false,
+    "GroupNumericLiterals": false,
+    "OneCasePerLine": false,
+    "OneVariableDeclarationPerLine": false,
+    "ReplaceForEachWithForLoop": false
+  }
+}

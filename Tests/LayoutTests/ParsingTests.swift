@@ -4,143 +4,247 @@ import Testing
 @testable import Layout
 
 @Test func arxivQueriesDropStopwords() {
-    #expect(Parse.arxivQuery("Attention is all you need Vaswani") == "all:attention AND all:need AND all:vaswani")
+  #expect(
+    Parse.arxivQuery("Attention is all you need Vaswani")
+      == "all:attention AND all:need AND all:vaswani")
 }
 
 @Test func arxivEntriesBecomePapers() {
-    let xml = """
-        <feed><title>query</title><entry><id>http://arxiv.org/abs/1706.03762v7</id>
-        <published>2017-06-12T17:57:34Z</published><title>Attention Is All
-          You Need</title><author><name>Ashish Vaswani</name></author><author><name>Noam Shazeer</name></author>
-        <author><name>Niki Parmar</name></author></entry></feed>
-        """
-    let p = Parse.arxiv(xml)
-    #expect(p.count == 1)
-    #expect(p[0].id == "1706.03762v7")
-    #expect(p[0].title == "Attention Is All You Need")
-    #expect(p[0].fileName == "2017-vaswani-attention-is-all-you-need.pdf")
-    #expect(p[0].detail == "arXiv · Ashish Vaswani, Noam Shazeer et al. · 2017")
-    #expect(p[0].pdf == URL(string: "https://arxiv.org/pdf/1706.03762v7"))
+  let xml = """
+    <feed><title>query</title><entry><id>http://arxiv.org/abs/1706.03762v7</id>
+    <published>2017-06-12T17:57:34Z</published><title>Attention Is All
+      You Need</title><author><name>Ashish Vaswani</name></author><author><name>Noam Shazeer</name></author>
+    <author><name>Niki Parmar</name></author></entry></feed>
+    """
+  let p = Parse.arxiv(xml)
+  #expect(p.count == 1)
+  #expect(p[0].id == "1706.03762v7")
+  #expect(p[0].title == "Attention Is All You Need")
+  #expect(
+    p[0].fileName == "2017-vaswani-attention-is-all-you-need.pdf")
+  #expect(
+    p[0].detail
+      == "arXiv · Ashish Vaswani, Noam Shazeer et al. · 2017")
+  #expect(
+    p[0].pdf == URL(string: "https://arxiv.org/pdf/1706.03762v7"))
 }
 
 @Test func folioResultsBecomeBooks() {
-    let json = #"[{"md5": "abc", "title": "SICP", "author": "Abelson", "year": "1996", "ext": "pdf", "size": "4 MB"}, {"title": "no md5"}]"#
-    #expect(Parse.folio(json) == [Parse.Book(md5: "abc", title: "SICP", detail: "Abelson · 1996 · pdf · 4 MB", ext: "pdf")])
-    #expect(Parse.folio("not json").isEmpty)
+  let json =
+    #"[{"md5": "abc", "title": "SICP", "author": "Abelson", "year": "1996", "ext": "pdf", "size": "4 MB"}, {"title": "no md5"}]"#
+  #expect(
+    Parse.folio(json) == [
+      Parse.Book(
+        md5: "abc", title: "SICP",
+        detail: "Abelson · 1996 · pdf · 4 MB", ext: "pdf")
+    ])
+  #expect(Parse.folio("not json").isEmpty)
 }
 
 @Test func rgLinesBecomeMatches() {
-    #expect(Parse.rg("./tess/Sources/x.swift:12:   let a: Int = 1") ==
-            Parse.Match(path: "tess/Sources/x.swift", line: 12, text: "let a: Int = 1"))
-    #expect(Parse.rg("garbage") == nil)
+  #expect(
+    Parse.rg("./tess/Sources/x.swift:12:   let a: Int = 1")
+      == Parse.Match(
+        path: "tess/Sources/x.swift", line: 12, text: "let a: Int = 1"
+      ))
+  #expect(Parse.rg("garbage") == nil)
 }
 
 @Test func browserLinesBecomeTabsAndPages() {
-    #expect(Parse.tab("123\t2\tPull request\thttps://github.com/a/b/pull/1") ==
-            Parse.Tab(window: 123, index: 2, title: "Pull request", url: "https://github.com/a/b/pull/1"))
-    #expect(Parse.tab("123\t2\t\thttps://x.org")?.title == "https://x.org")
-    #expect(Parse.page("Slack\thttps://app.slack.com/client")?.host == "app.slack.com")
-    #expect(Parse.page("Settings\tchrome://settings") == nil)
-    #expect(Parse.short("/Users/j/anoma", home: "/Users/j") == "~/anoma")
+  #expect(
+    Parse.tab("123\t2\tPull request\thttps://github.com/a/b/pull/1")
+      == Parse.Tab(
+        window: 123, index: 2, title: "Pull request",
+        url: "https://github.com/a/b/pull/1"))
+  #expect(
+    Parse.tab("123\t2\t\thttps://x.org")?.title == "https://x.org")
+  #expect(
+    Parse.page("Slack\thttps://app.slack.com/client")?.host
+      == "app.slack.com")
+  #expect(Parse.page("Settings\tchrome://settings") == nil)
+  #expect(
+    Parse.short("/Users/j/anoma", home: "/Users/j") == "~/anoma")
 }
 
 @Test func windowsAreTiledFloatedOrLeftAlone() {
-    var c = Config.defaults
-    c.float = ["com.apple.finder"]
-    c.tile = ["com.anthropic.claudefordesktop"]
-    let w = WinInfo(id: 1, pid: 1, frame: .zero, title: "", standard: true, fullscreenButton: true, nativeFullscreen: false)
-    #expect(w.kind(bundleID: "com.example", c) == .tile)
-    #expect(w.kind(bundleID: "com.apple.finder", c) == .float)
-    var dialog = w
-    dialog.fullscreenButton = false
-    #expect(dialog.kind(bundleID: "com.example", c) == .float)
-    #expect(dialog.kind(bundleID: "com.anthropic.claudefordesktop", c) == .tile)
-    var minimized = w
-    minimized.standard = false
-    #expect(minimized.kind(bundleID: "com.example", c) == .skip)
+  var c = Config.defaults
+  c.float = ["com.apple.finder"]
+  c.tile = ["com.anthropic.claudefordesktop"]
+  let w = WinInfo(
+    id: 1, pid: 1, frame: .zero, title: "", standard: true,
+    fullscreenButton: true, nativeFullscreen: false)
+  #expect(w.kind(bundleID: "com.example", c) == .tile)
+  #expect(w.kind(bundleID: "com.apple.finder", c) == .float)
+  var dialog = w
+  dialog.fullscreenButton = false
+  #expect(dialog.kind(bundleID: "com.example", c) == .float)
+  #expect(
+    dialog.kind(bundleID: "com.anthropic.claudefordesktop", c)
+      == .tile)
+  var minimized = w
+  minimized.standard = false
+  #expect(minimized.kind(bundleID: "com.example", c) == .skip)
 }
 
 @Test func geometryHelpers() {
-    let screen = CGRect(x: 0, y: 0, width: 1000, height: 800)
-    #expect(CGRect(x: 0, y: 0, width: 100, height: 100).isNear(CGRect(x: 1, y: 0, width: 100, height: 99)))
-    #expect(!CGRect(x: 0, y: 0, width: 100, height: 100).isNear(CGRect(x: 2, y: 0, width: 100, height: 100)))
-    #expect(CGRect.centered(CGSize(width: 2000, height: 100), in: screen) == CGRect(x: 50, y: 350, width: 900, height: 100))
-    #expect(CGRect(x: 995, y: 795, width: 400, height: 400).isLost(on: [screen]))
-    #expect(!CGRect(x: 10, y: 10, width: 400, height: 400).isLost(on: [screen]))
+  let screen = CGRect(x: 0, y: 0, width: 1000, height: 800)
+  #expect(
+    CGRect(x: 0, y: 0, width: 100, height: 100).isNear(
+      CGRect(x: 1, y: 0, width: 100, height: 99)))
+  #expect(
+    !CGRect(x: 0, y: 0, width: 100, height: 100).isNear(
+      CGRect(x: 2, y: 0, width: 100, height: 100)))
+  #expect(
+    CGRect.centered(CGSize(width: 2000, height: 100), in: screen)
+      == CGRect(x: 50, y: 350, width: 900, height: 100))
+  #expect(
+    CGRect(x: 995, y: 795, width: 400, height: 400).isLost(on: [
+      screen
+    ]))
+  #expect(
+    !CGRect(x: 10, y: 10, width: 400, height: 400).isLost(on: [screen]
+    ))
 }
 
 @Test func jumpKeysCoverLettersScreensAndExits() {
-    let (keys, exits) = jumpKeys(labels: [7: "a", 9: "s"], windows: [7, 9, 11], screens: 2, back: [.mode("main")])
-    #expect(keys[KeySpec(key: "a", mods: [])] == [.focusWindow(7), .mode("main")])
-    #expect(keys[KeySpec(key: "s", mods: [.shift])] == [.swapWith(9), .mode("main")])
-    #expect(keys[KeySpec(key: "2", mods: [])] == [.focusMonitor(2), .mode("main")])
-    #expect(keys[KeySpec(key: "3", mods: [])] == nil)
-    #expect(keys[KeySpec(key: "1", mods: [.shift])] == [.moveToMonitor(1), .mode("main")])
-    #expect(exits.allSatisfy { keys[$0] == [.mode("main")] })
+  let (keys, exits) = jumpKeys(
+    labels: [7: "a", 9: "s"], windows: [7, 9, 11], screens: 2,
+    back: [.mode("main")])
+  #expect(
+    keys[KeySpec(key: "a", mods: [])] == [
+      .focusWindow(7), .mode("main")
+    ])
+  #expect(
+    keys[KeySpec(key: "s", mods: [.shift])] == [
+      .swapWith(9), .mode("main")
+    ])
+  #expect(
+    keys[KeySpec(key: "2", mods: [])] == [
+      .focusMonitor(2), .mode("main")
+    ])
+  #expect(keys[KeySpec(key: "3", mods: [])] == nil)
+  #expect(
+    keys[KeySpec(key: "1", mods: [.shift])] == [
+      .moveToMonitor(1), .mode("main")
+    ])
+  #expect(exits.allSatisfy { keys[$0] == [.mode("main")] })
 }
 
 @Test func arithmeticForThePicker() {
-    #expect(Parse.arithmetic("2 * (3 + 4)") == 14)
-    #expect(Parse.arithmetic("1/2") == 0.5)
-    #expect(Parse.arithmetic("-2^2") == -4)
-    #expect(Parse.arithmetic("2^3^2") == 512)
-    #expect(Parse.arithmetic("10 % 3") == 1)
-    #expect(Parse.arithmetic("2^-1") == 0.5)
-    // Half typed, not arithmetic, or no number.
-    for bad in ["2+", "(1", "1)", "", "1..2", "abc", "1/0", "2+x"] {
-        #expect(Parse.arithmetic(bad) == nil, "\(bad)")
-    }
-    #expect(Parse.number(14) == "14")
-    #expect(Parse.number(0.1 + 0.2) == "0.3")
-    #expect(Parse.number(-0.0) == "0")
+  #expect(Parse.arithmetic("2 * (3 + 4)") == 14)
+  #expect(Parse.arithmetic("1/2") == 0.5)
+  #expect(Parse.arithmetic("-2^2") == -4)
+  #expect(Parse.arithmetic("2^3^2") == 512)
+  #expect(Parse.arithmetic("10 % 3") == 1)
+  #expect(Parse.arithmetic("2^-1") == 0.5)
+  // Half typed, not arithmetic, or no number.
+  for bad in ["2+", "(1", "1)", "", "1..2", "abc", "1/0", "2+x"] {
+    #expect(Parse.arithmetic(bad) == nil, "\(bad)")
+  }
+  #expect(Parse.number(14) == "14")
+  #expect(Parse.number(0.1 + 0.2) == "0.3")
+  #expect(Parse.number(-0.0) == "0")
 }
 
 @Test func linkVerbsEncodeTheText() {
-    #expect(Parse.link("https://chatgpt.com/?q=%s", "a&b c?")?.absoluteString == "https://chatgpt.com/?q=a%26b%20c%3F")
-    #expect(Parse.link("claude://claude.ai/new?q=%s", "héllo")?.absoluteString == "claude://claude.ai/new?q=h%C3%A9llo")
-    #expect(Parse.link("iTerm", "x") == nil)
-    #expect(Parse.link("https://chatgpt.com/?q=%s", "") == nil)
-    #expect(Config.defaults.verbs["claude"] == "claude://claude.ai/new?q=%s")
+  #expect(
+    Parse.link("https://chatgpt.com/?q=%s", "a&b c?")?.absoluteString
+      == "https://chatgpt.com/?q=a%26b%20c%3F")
+  #expect(
+    Parse.link("claude://claude.ai/new?q=%s", "héllo")?.absoluteString
+      == "claude://claude.ai/new?q=h%C3%A9llo")
+  #expect(Parse.link("iTerm", "x") == nil)
+  #expect(Parse.link("https://chatgpt.com/?q=%s", "") == nil)
+  #expect(
+    Config.defaults.verbs["claude"] == "claude://claude.ai/new?q=%s")
 }
 
 @Test func searchVerbsAreConfig() throws {
-    #expect(Config.defaults.verbs["file"].flatMap(PickerSearch.init(verb:)) == .files)
-    #expect(PickerSearch(verb: "iTerm") == nil && PickerSearch(verb: "https://x/?q=%s") == nil)
-    let c = try Config.load(Data(#"{"verbs": {"f": null, "find": "search:files"}}"#.utf8))
-    #expect(c.verbs["f"] == nil && c.verbs["find"] == "search:files" && c.verbs["rg"] == "search:text")
-    #expect(throws: ParseError.self) { try Config.load(Data(#"{"verbs": {"x": "search:music"}}"#.utf8)) }
-    #expect(Config.defaults.verbs["web"].flatMap(PickerSearch.init(verb:)) == .history)
-    #expect(Parse.address("github.com/anoma")?.absoluteString == "https://github.com/anoma")
-    #expect(Parse.address("http://x.org")?.absoluteString == "http://x.org")
-    #expect(Parse.address("standup notes") == nil && Parse.address("localhost") == nil && Parse.address("") == nil)
-    #expect(Config.defaults.verbs["brew"].flatMap { Parse.run($0, "install fzf") } == "brew install fzf")
-    #expect(Parse.run("run:%s", "ls -la ~") == "ls -la ~" && Parse.run("brew %s", "x") == nil)
-    #expect(throws: ParseError.self) { try Config.load(Data(#"{"verbs": {"x": "run:brew"}}"#.utf8)) }
-    let slack = Config.defaults.verbs["slack"].flatMap(KeysVerb.init(verb:))
-    #expect(slack?.app == "Slack" && slack?.key == KeySpec(key: "k", mods: [.cmd]))
-    #expect(KeysVerb(verb: "keys:Visual Studio Code:cmd-shift-p")?.app == "Visual Studio Code")
-    #expect(KeysVerb(verb: "Slack") == nil && KeysVerb(verb: "keys:Slack") == nil)
-    #expect(throws: ParseError.self) { try Config.load(Data(#"{"verbs": {"x": "keys:Slack:cmd-?"}}"#.utf8)) }
+  #expect(
+    Config.defaults.verbs["file"].flatMap(PickerSearch.init(verb:))
+      == .files)
+  #expect(
+    PickerSearch(verb: "iTerm") == nil
+      && PickerSearch(verb: "https://x/?q=%s") == nil)
+  let c = try Config.load(
+    Data(#"{"verbs": {"f": null, "find": "search:files"}}"#.utf8))
+  #expect(
+    c.verbs["f"] == nil && c.verbs["find"] == "search:files"
+      && c.verbs["rg"] == "search:text")
+  #expect(throws: ParseError.self) {
+    try Config.load(Data(#"{"verbs": {"x": "search:music"}}"#.utf8))
+  }
+  #expect(
+    Config.defaults.verbs["web"].flatMap(PickerSearch.init(verb:))
+      == .history)
+  #expect(
+    Parse.address("github.com/anoma")?.absoluteString
+      == "https://github.com/anoma")
+  #expect(
+    Parse.address("http://x.org")?.absoluteString == "http://x.org")
+  #expect(
+    Parse.address("standup notes") == nil
+      && Parse.address("localhost") == nil && Parse.address("") == nil
+  )
+  #expect(
+    Config.defaults.verbs["brew"].flatMap {
+      Parse.run($0, "install fzf")
+    } == "brew install fzf")
+  #expect(
+    Parse.run("run:%s", "ls -la ~") == "ls -la ~"
+      && Parse.run("brew %s", "x") == nil)
+  #expect(throws: ParseError.self) {
+    try Config.load(Data(#"{"verbs": {"x": "run:brew"}}"#.utf8))
+  }
+  let slack = Config.defaults.verbs["slack"].flatMap(
+    KeysVerb.init(verb:))
+  #expect(
+    slack?.app == "Slack"
+      && slack?.key == KeySpec(key: "k", mods: [.cmd]))
+  #expect(
+    KeysVerb(verb: "keys:Visual Studio Code:cmd-shift-p")?.app
+      == "Visual Studio Code")
+  #expect(
+    KeysVerb(verb: "Slack") == nil
+      && KeysVerb(verb: "keys:Slack") == nil)
+  #expect(throws: ParseError.self) {
+    try Config.load(
+      Data(#"{"verbs": {"x": "keys:Slack:cmd-?"}}"#.utf8))
+  }
 }
 
 @Test func machineCommandsParseAndPrint() throws {
-    let cases: [(String, Command)] = [
-        ("volume 30", .volume(.level(30))), ("volume +10", .volume(.step(10))), ("volume -5", .volume(.step(-5))),
-        ("volume mute", .volume(.mute)), ("volume 400", .volume(.level(100))), ("wifi", .wifi(nil)),
-        ("wifi off", .wifi(false)), ("caffeine", .caffeine(nil)), ("caffeine 90", .caffeine(90)), ("caffeine off", .caffeine(0)),
-    ]
-    for (line, c) in cases {
-        #expect(try Command.parse(line) == [c], "\(line)")
-        #expect(try Command.parse(c.description) == [c], "\(c.description)")
-    }
-    #expect(throws: ParseError.self) { try Command.parse("caffeine soon") }
-    #expect(throws: ParseError.self) { try Command.parse("wifi maybe") }
-    let ports = "Hardware Port: Ethernet\nDevice: en1\n\nHardware Port: Wi-Fi\nDevice: en0\nEthernet Address: x\n"
-    #expect(Parse.wifiDevice(ports) == "en0" && Parse.wifiDevice("") == nil)
-    #expect(Parse.wifiPower("Wi-Fi Power (en0): On\n") == true && Parse.wifiPower("Wi-Fi Power (en0): Off") == false)
-    #expect(Parse.wifiPower("Error") == nil)
-    #expect(try Command.parse("speedtest") == [.speedtest])
-    let json = #"{"base_rtt": 21.6, "dl_throughput": 412345678, "ul_throughput": 38123456, "responsiveness": 1200}"#
-    #expect(Parse.speedtest(json) == "↓ 412 Mbps  ↑ 38 Mbps  22 ms")
-    #expect(Parse.speedtest("{}") == nil && Parse.speedtest("not json") == nil)
+  let cases: [(String, Command)] = [
+    ("volume 30", .volume(.level(30))),
+    ("volume +10", .volume(.step(10))),
+    ("volume -5", .volume(.step(-5))),
+    ("volume mute", .volume(.mute)),
+    ("volume 400", .volume(.level(100))), ("wifi", .wifi(nil)),
+    ("wifi off", .wifi(false)), ("caffeine", .caffeine(nil)),
+    ("caffeine 90", .caffeine(90)), ("caffeine off", .caffeine(0))
+  ]
+  for (line, c) in cases {
+    #expect(try Command.parse(line) == [c], "\(line)")
+    #expect(
+      try Command.parse(c.description) == [c], "\(c.description)")
+  }
+  #expect(throws: ParseError.self) {
+    try Command.parse("caffeine soon")
+  }
+  #expect(throws: ParseError.self) { try Command.parse("wifi maybe") }
+  let ports =
+    "Hardware Port: Ethernet\nDevice: en1\n\nHardware Port: Wi-Fi\nDevice: en0\nEthernet Address: x\n"
+  #expect(
+    Parse.wifiDevice(ports) == "en0" && Parse.wifiDevice("") == nil)
+  #expect(
+    Parse.wifiPower("Wi-Fi Power (en0): On\n") == true
+      && Parse.wifiPower("Wi-Fi Power (en0): Off") == false)
+  #expect(Parse.wifiPower("Error") == nil)
+  #expect(try Command.parse("speedtest") == [.speedtest])
+  let json =
+    #"{"base_rtt": 21.6, "dl_throughput": 412345678, "ul_throughput": 38123456, "responsiveness": 1200}"#
+  #expect(Parse.speedtest(json) == "↓ 412 Mbps  ↑ 38 Mbps  22 ms")
+  #expect(
+    Parse.speedtest("{}") == nil && Parse.speedtest("not json") == nil
+  )
 }

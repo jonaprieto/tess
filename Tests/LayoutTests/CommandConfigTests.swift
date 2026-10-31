@@ -3,241 +3,354 @@ import Testing
 @testable import Layout
 
 @Test func commandsParse() throws {
-    #expect(try Command.parse("focus left") == [.focus(.left)])
-    #expect(try Command.parse("resize width -50") == [.resize(.width, -50)])
-    #expect(try Command.parse("resize height +50") == [.resize(.height, 50)])
-    #expect(try Command.parse("focus-screen 2") == [.focusMonitor(2)])
-    #expect(try Command.parse("focus-screen prev") == [.cycleMonitor(-1)])
-    #expect(try Command.parse("move-to-screen 3") == [.moveToMonitor(3)])
-    #expect(try Command.parse("clear-screen") == [.clearMonitor])
-    #expect(try Command.parse("break") == [.zenBreak])
-    // One name per command.
-    for old in ["focus-monitor 2", "move-to-monitor 3", "clear-monitor"] {
-        #expect(throws: ParseError.self, "\(old)") { try Command.parse(old) }
+  #expect(try Command.parse("focus left") == [.focus(.left)])
+  #expect(
+    try Command.parse("resize width -50") == [.resize(.width, -50)])
+  #expect(
+    try Command.parse("resize height +50") == [.resize(.height, 50)])
+  #expect(try Command.parse("focus-screen 2") == [.focusMonitor(2)])
+  #expect(
+    try Command.parse("focus-screen prev") == [.cycleMonitor(-1)])
+  #expect(
+    try Command.parse("move-to-screen 3") == [.moveToMonitor(3)])
+  #expect(try Command.parse("clear-screen") == [.clearMonitor])
+  #expect(try Command.parse("break") == [.zenBreak])
+  // One name per command.
+  for old in ["focus-monitor 2", "move-to-monitor 3", "clear-monitor"]
+  {
+    #expect(throws: ParseError.self, "\(old)") {
+      try Command.parse(old)
     }
-    #expect(Command.moveToMonitor(2).description == "move-to-screen 2")
-    #expect(Command.clearMonitor.description == "clear-screen")
-    #expect(try Command.parse("retile; mode main") == [.retile, .mode("main")])
-    #expect(try Command.parse("state") == [.state])
+  }
+  #expect(Command.moveToMonitor(2).description == "move-to-screen 2")
+  #expect(Command.clearMonitor.description == "clear-screen")
+  #expect(
+    try Command.parse("retile; mode main") == [.retile, .mode("main")]
+  )
+  #expect(try Command.parse("state") == [.state])
 }
 
 @Test func pickTakesItsStartingText() throws {
-    #expect(try Command.parse("pick") == [.pick("")])
-    #expect(try Command.parse("pick cd ~/an") == [.pick("cd ~/an")])
-    #expect(Command.pick("code ~").description == "pick code ~")
+  #expect(try Command.parse("pick") == [.pick("")])
+  #expect(try Command.parse("pick cd ~/an") == [.pick("cd ~/an")])
+  #expect(Command.pick("code ~").description == "pick code ~")
 }
 
-@Test func pickerHasCommandSpaceAndAFallbackInEveryDefaultMode() throws {
-    for bindings in Config.defaults.modes.values {
-        #expect(bindings[KeySpec(key: "space", mods: [.cmd])] == [.pick("")])
-        #expect(bindings[KeySpec(key: "space", mods: [.alt])] == [.pick("")])
-    }
-    let old = try Config.load(Data(#"{"modes":{"main":{"alt-space":"pick"}}}"#.utf8))
-    #expect(old.modes["main"]?[KeySpec(key: "space", mods: [.cmd])] == [.pick("")])
+@Test func pickerHasCommandSpaceAndAFallbackInEveryDefaultMode()
+  throws
+{
+  for bindings in Config.defaults.modes.values {
+    #expect(
+      bindings[KeySpec(key: "space", mods: [.cmd])] == [.pick("")])
+    #expect(
+      bindings[KeySpec(key: "space", mods: [.alt])] == [.pick("")])
+  }
+  let old = try Config.load(
+    Data(#"{"modes":{"main":{"alt-space":"pick"}}}"#.utf8))
+  #expect(
+    old.modes["main"]?[KeySpec(key: "space", mods: [.cmd])] == [
+      .pick("")
+    ])
 }
 
 @Test func execTakesTheRestOfTheLine() throws {
-    #expect(try Command.parse("exec open -a kitty; echo hi") == [.exec("open -a kitty; echo hi")])
-    #expect(try Command.parse("balance; exec open x") == [.balance, .exec("open x")])
+  #expect(
+    try Command.parse("exec open -a kitty; echo hi") == [
+      .exec("open -a kitty; echo hi")
+    ])
+  #expect(
+    try Command.parse("balance; exec open x") == [
+      .balance, .exec("open x")
+    ])
 }
 
 @Test func badCommandsSayWhatIsWrong() {
-    for bad in ["jump left", "focus sideways", "resize width", "focus-monitor 0", "", "balance;"] {
-        #expect(throws: ParseError.self, "\(bad)") { try Command.parse(bad) }
+  for bad in [
+    "jump left", "focus sideways", "resize width", "focus-monitor 0",
+    "", "balance;"
+  ] {
+    #expect(throws: ParseError.self, "\(bad)") {
+      try Command.parse(bad)
     }
-    do {
-        _ = try Command.parse("jump left")
-    } catch {
-        #expect("\(error)".contains("jump left"))
-    }
+  }
+  do {
+    _ = try Command.parse("jump left")
+  } catch {
+    #expect("\(error)".contains("jump left"))
+  }
 }
 
 @Test func keySpecsParse() throws {
-    #expect(try KeySpec.parse("alt-shift-h") == KeySpec(key: "h", mods: [.alt, .shift]))
-    #expect(try KeySpec.parse("cmd-alt-ctrl-shift-semicolon") == KeySpec(key: "semicolon", mods: [.cmd, .alt, .ctrl, .shift]))
-    #expect(try KeySpec.parse("esc") == KeySpec(key: "esc", mods: []))
-    for bad in ["hyper-h", "alt-alt-h", "alt-", "alt-shift-hh"] {
-        #expect(throws: ParseError.self, "\(bad)") { try KeySpec.parse(bad) }
+  #expect(
+    try KeySpec.parse("alt-shift-h")
+      == KeySpec(key: "h", mods: [.alt, .shift]))
+  #expect(
+    try KeySpec.parse("cmd-alt-ctrl-shift-semicolon")
+      == KeySpec(key: "semicolon", mods: [.cmd, .alt, .ctrl, .shift]))
+  #expect(try KeySpec.parse("esc") == KeySpec(key: "esc", mods: []))
+  for bad in ["hyper-h", "alt-alt-h", "alt-", "alt-shift-hh"] {
+    #expect(throws: ParseError.self, "\(bad)") {
+      try KeySpec.parse(bad)
     }
+  }
 }
 
 @Test func defaultsCoverTheSpec() throws {
-    let c = Config.defaults
-    #expect(c.inner == 10 && c.outer == 10)
-    #expect(c.ignore == ["io.github.ender-wang.EdgeMark"])
-    #expect(c.tile == ["com.anthropic.claudefordesktop"])
-    #expect(c.float.contains("com.apple.finder"))
-    let main = try #require(c.modes["main"])
-    #expect(main[KeySpec(key: "h", mods: [.alt])] == [.focus(.left)])
-    #expect(main[KeySpec(key: "semicolon", mods: [.alt, .shift])] == [.retile])
-    #expect(main[KeySpec(key: "h", mods: [.cmd])] == [.nop])
-    #expect(c.modes["resize"]?[KeySpec(key: "esc", mods: [])] == [.mode("back")])
-    #expect(c.modes["tess"]?[KeySpec(key: "s", mods: [])] == [.retile])
-    #expect(!main.keys.contains(KeySpec(key: "backtick", mods: [.ctrl])))
+  let c = Config.defaults
+  #expect(c.inner == 10 && c.outer == 10)
+  #expect(c.ignore == ["io.github.ender-wang.EdgeMark"])
+  #expect(c.tile == ["com.anthropic.claudefordesktop"])
+  #expect(c.float.contains("com.apple.finder"))
+  let main = try #require(c.modes["main"])
+  #expect(main[KeySpec(key: "h", mods: [.alt])] == [.focus(.left)])
+  #expect(
+    main[KeySpec(key: "semicolon", mods: [.alt, .shift])] == [.retile]
+  )
+  #expect(main[KeySpec(key: "h", mods: [.cmd])] == [.nop])
+  #expect(
+    c.modes["resize"]?[KeySpec(key: "esc", mods: [])] == [
+      .mode("back")
+    ])
+  #expect(c.modes["tess"]?[KeySpec(key: "s", mods: [])] == [.retile])
+  #expect(
+    !main.keys.contains(KeySpec(key: "backtick", mods: [.ctrl])))
 }
 
 @Test func badConfigNamesThePlace() {
-    let typo = #"{"modes": {"main": {"alt-h": "focus lefty"}}}"#
-    #expect(throws: ParseError.self) { try Config.load(Data(typo.utf8)) }
-    do {
-        _ = try Config.load(Data(typo.utf8))
-    } catch {
-        #expect("\(error)".contains("modes.main.alt-h"))
-    }
-    let noMode = #"{"modes": {"main": {"alt-r": "mode nowhere"}}}"#
-    #expect(throws: ParseError.self) { try Config.load(Data(noMode.utf8)) }
-    #expect(throws: ParseError.self) { try Config.load(Data("{".utf8)) }
+  let typo = #"{"modes": {"main": {"alt-h": "focus lefty"}}}"#
+  #expect(throws: ParseError.self) {
+    try Config.load(Data(typo.utf8))
+  }
+  do {
+    _ = try Config.load(Data(typo.utf8))
+  } catch {
+    #expect("\(error)".contains("modes.main.alt-h"))
+  }
+  let noMode = #"{"modes": {"main": {"alt-r": "mode nowhere"}}}"#
+  #expect(throws: ParseError.self) {
+    try Config.load(Data(noMode.utf8))
+  }
+  #expect(throws: ParseError.self) { try Config.load(Data("{".utf8)) }
 }
 
 @Test func theFileGoesOnTopOfTheDefaults() throws {
-    #expect(try Config.load(Data("{}".utf8)) == Config.defaults)
-    #expect(try Config.load(nil) == Config.defaults)
-    // An old full copy of the defaults still gets bindings added since.
-    let old = #"{"modes": {"main": {"alt-h": "focus left"}}}"#
-    let c = try Config.load(Data(old.utf8))
-    #expect(c.modes["main"]?[KeySpec(key: "space", mods: [.alt])] == [.pick("")])
-    // null removes a default binding; lists replace.
-    let edits = #"{"float": [], "gaps": {"inner": 4}, "modes": {"main": {"alt-t": null, "alt-y": "balance"}}}"#
-    let e = try Config.load(Data(edits.utf8))
-    #expect(e.float.isEmpty)
-    #expect(e.inner == 4 && e.outer == 10)
-    #expect(e.modes["main"]?[KeySpec(key: "t", mods: [.alt])] == nil)
-    #expect(e.modes["main"]?[KeySpec(key: "y", mods: [.alt])] == [.balance])
-    #expect(e.verbs["cd"] == "iTerm")
+  #expect(try Config.load(Data("{}".utf8)) == Config.defaults)
+  #expect(try Config.load(nil) == Config.defaults)
+  // An old full copy of the defaults still gets bindings added since.
+  let old = #"{"modes": {"main": {"alt-h": "focus left"}}}"#
+  let c = try Config.load(Data(old.utf8))
+  #expect(
+    c.modes["main"]?[KeySpec(key: "space", mods: [.alt])] == [
+      .pick("")
+    ])
+  // null removes a default binding; lists replace.
+  let edits =
+    #"{"float": [], "gaps": {"inner": 4}, "modes": {"main": {"alt-t": null, "alt-y": "balance"}}}"#
+  let e = try Config.load(Data(edits.utf8))
+  #expect(e.float.isEmpty)
+  #expect(e.inner == 4 && e.outer == 10)
+  #expect(e.modes["main"]?[KeySpec(key: "t", mods: [.alt])] == nil)
+  #expect(
+    e.modes["main"]?[KeySpec(key: "y", mods: [.alt])] == [.balance])
+  #expect(e.verbs["cd"] == "iTerm")
 }
 
 @Test func overridesKeepOnlyWhatChanged() throws {
-    let base = Config.defaultRaw
-    #expect(Config.overrides(base, over: base) == Config.Raw())
-    var edited = base
-    edited.gaps = .init(inner: 6, outer: 10)
-    edited.modes?["main"]?["alt-t"] = nil
-    edited.modes?["main"]?["alt-y"] = "balance"
-    edited.verbs?["ssh"] = "iTerm"
-    edited.ignore = ["io.github.ender-wang.EdgeMark", "com.example.app"]
-    let o = Config.overrides(edited, over: base)
-    #expect(o.float == nil && o.tile == nil)
-    #expect(o.modes?["main"]?.count == 2)
-    #expect(o.modes?["main"]?["alt-t"] == .some(nil))
-    #expect(Config.merged(base, o) == edited)
+  let base = Config.defaultRaw
+  #expect(Config.overrides(base, over: base) == Config.Raw())
+  var edited = base
+  edited.gaps = .init(inner: 6, outer: 10)
+  edited.modes?["main"]?["alt-t"] = nil
+  edited.modes?["main"]?["alt-y"] = "balance"
+  edited.verbs?["ssh"] = "iTerm"
+  edited.ignore = ["io.github.ender-wang.EdgeMark", "com.example.app"]
+  let o = Config.overrides(edited, over: base)
+  #expect(o.float == nil && o.tile == nil)
+  #expect(o.modes?["main"]?.count == 2)
+  #expect(o.modes?["main"]?["alt-t"] == .some(nil))
+  #expect(Config.merged(base, o) == edited)
 }
 
 @Test func descriptionsParseBack() throws {
-    for (_, bindings) in Config.defaults.modes {
-        for (_, commands) in bindings {
-            for c in commands { #expect(try Command.parse(c.description) == [c], "\(c)") }
-        }
+  for (_, bindings) in Config.defaults.modes {
+    for (_, commands) in bindings {
+      for c in commands {
+        #expect(try Command.parse(c.description) == [c], "\(c)")
+      }
     }
-    #expect(Command.resize(.width, -50).description == "resize width -50")
-    #expect(Command.resize(.height, 12.5).description == "resize height +12.5")
+  }
+  #expect(
+    Command.resize(.width, -50).description == "resize width -50")
+  #expect(
+    Command.resize(.height, 12.5).description == "resize height +12.5"
+  )
 }
 
 @Test func altTEntersAndLocksTessMode() throws {
-    let c = Config.defaults
-    let altT = KeySpec(key: "t", mods: [.alt])
-    #expect(c.modes["main"]?[altT] == [.mode("tess")])
-    let wm = try #require(c.modes["tess"])
-    #expect(wm[altT] == [.mode("tess")])
-    #expect(wm[KeySpec(key: "esc", mods: [])] == [.mode("main")])
-    #expect(wm[KeySpec(key: "h", mods: [])] == [.focus(.left)])
-    #expect(wm[KeySpec(key: "l", mods: [.shift])] == [.move(.right)])
-    #expect(wm[KeySpec(key: "2", mods: [.shift])] == [.moveToMonitor(2)])
-    #expect(wm[KeySpec(key: "c", mods: [.shift])] == [.close])
-    #expect(wm[KeySpec(key: "c", mods: [])] == nil)
-    #expect(wm[KeySpec(key: "f", mods: [.alt])] == [.click])
-    #expect(wm.count == 40)
-    #expect(wm[KeySpec(key: "z", mods: [])] == [.zen, .mode("main")])
-    #expect(wm[KeySpec(key: "u", mods: [])] == [.undo])
-    #expect(wm[KeySpec(key: "u", mods: [.shift])] == [.redo])
-    #expect(wm[KeySpec(key: "backspace", mods: [])] == [.clearMonitor])
-    #expect(wm[KeySpec(key: "x", mods: [])] == [.closeReplace])
-    #expect(c.modes["main"]?[KeySpec(key: "space", mods: [.alt])] == [.pick("")])
-    // Nothing needs a Hyper key: every default binding works on any Mac keyboard.
-    #expect(c.modes.values.allSatisfy { $0.keys.allSatisfy { $0.mods.count < 4 } })
+  let c = Config.defaults
+  let altT = KeySpec(key: "t", mods: [.alt])
+  #expect(c.modes["main"]?[altT] == [.mode("tess")])
+  let wm = try #require(c.modes["tess"])
+  #expect(wm[altT] == [.mode("tess")])
+  #expect(wm[KeySpec(key: "esc", mods: [])] == [.mode("main")])
+  #expect(wm[KeySpec(key: "h", mods: [])] == [.focus(.left)])
+  #expect(wm[KeySpec(key: "l", mods: [.shift])] == [.move(.right)])
+  #expect(
+    wm[KeySpec(key: "2", mods: [.shift])] == [.moveToMonitor(2)])
+  #expect(wm[KeySpec(key: "c", mods: [.shift])] == [.close])
+  #expect(wm[KeySpec(key: "c", mods: [])] == nil)
+  #expect(wm[KeySpec(key: "f", mods: [.alt])] == [.click])
+  #expect(wm.count == 40)
+  #expect(wm[KeySpec(key: "z", mods: [])] == [.zen, .mode("main")])
+  #expect(wm[KeySpec(key: "u", mods: [])] == [.undo])
+  #expect(wm[KeySpec(key: "u", mods: [.shift])] == [.redo])
+  #expect(wm[KeySpec(key: "backspace", mods: [])] == [.clearMonitor])
+  #expect(wm[KeySpec(key: "x", mods: [])] == [.closeReplace])
+  #expect(
+    c.modes["main"]?[KeySpec(key: "space", mods: [.alt])] == [
+      .pick("")
+    ])
+  // Nothing needs a Hyper key: every default binding works on any Mac
+  // keyboard.
+  #expect(
+    c.modes.values.allSatisfy {
+      $0.keys.allSatisfy { $0.mods.count < 4 }
+    })
 }
 
 @Test func cheatSheetOnEveryScreenIsTheDefault() throws {
-    #expect(Config.defaults.overlayAllScreens)
-    let off = try Config.load(Data(#"{"overlay": {"all_screens": false}}"#.utf8))
-    #expect(!off.overlayAllScreens)
-    var edited = Config.defaultRaw
-    edited.overlay = .init(allScreens: false, windowLabels: .jump)
-    #expect(Config.overrides(edited, over: Config.defaultRaw).overlay?.allScreens == false)
-    #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).overlay == nil)
+  #expect(Config.defaults.overlayAllScreens)
+  let off = try Config.load(
+    Data(#"{"overlay": {"all_screens": false}}"#.utf8))
+  #expect(!off.overlayAllScreens)
+  var edited = Config.defaultRaw
+  edited.overlay = .init(allScreens: false, windowLabels: .jump)
+  #expect(
+    Config.overrides(edited, over: Config.defaultRaw).overlay?
+      .allScreens == false)
+  #expect(
+    Config.overrides(Config.defaultRaw, over: Config.defaultRaw)
+      .overlay == nil)
 }
 
 @Test func emptyScreensIsOnByDefault() throws {
-    #expect(Config.defaults.emptyScreens)
-    #expect(try !Config.load(Data(#"{"empty_screens": false}"#.utf8)).emptyScreens)
-    var edited = Config.defaultRaw
-    edited.emptyScreens = false
-    #expect(Config.overrides(edited, over: Config.defaultRaw).emptyScreens == false)
-    #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).emptyScreens == nil)
+  #expect(Config.defaults.emptyScreens)
+  #expect(
+    try !Config.load(Data(#"{"empty_screens": false}"#.utf8))
+      .emptyScreens)
+  var edited = Config.defaultRaw
+  edited.emptyScreens = false
+  #expect(
+    Config.overrides(edited, over: Config.defaultRaw).emptyScreens
+      == false)
+  #expect(
+    Config.overrides(Config.defaultRaw, over: Config.defaultRaw)
+      .emptyScreens == nil)
 }
 
 @Test func historyIsBraveThenSafariByDefault() throws {
-    #expect(Config.defaults.history == ["com.brave.Browser", "com.apple.Safari"])
-    #expect(try Config.load(Data(#"{"history": ["com.brave.Browser"]}"#.utf8)).history == ["com.brave.Browser"])
-    #expect(throws: ParseError.self) { try Config.load(Data(#"{"history": ["com.google.Chrome"]}"#.utf8)) }
-    var edited = Config.defaultRaw
-    edited.history = ["com.apple.Safari", "com.brave.Browser"]
-    #expect(Config.overrides(edited, over: Config.defaultRaw).history == ["com.apple.Safari", "com.brave.Browser"])
-    #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).history == nil)
+  #expect(
+    Config.defaults.history == [
+      "com.brave.Browser", "com.apple.Safari"
+    ])
+  #expect(
+    try Config.load(Data(#"{"history": ["com.brave.Browser"]}"#.utf8))
+      .history == ["com.brave.Browser"])
+  #expect(throws: ParseError.self) {
+    try Config.load(Data(#"{"history": ["com.google.Chrome"]}"#.utf8))
+  }
+  var edited = Config.defaultRaw
+  edited.history = ["com.apple.Safari", "com.brave.Browser"]
+  #expect(
+    Config.overrides(edited, over: Config.defaultRaw).history == [
+      "com.apple.Safari", "com.brave.Browser"
+    ])
+  #expect(
+    Config.overrides(Config.defaultRaw, over: Config.defaultRaw)
+      .history == nil)
 }
 
 @Test func tessModeIsOneShotByDefault() throws {
-    #expect(Config.defaults.oneShot == ["tess"])
-    #expect(try Config.load(Data(#"{"one_shot": []}"#.utf8)).oneShot == [])
-    #expect(throws: ParseError.self) { try Config.load(Data(#"{"one_shot": ["nope"]}"#.utf8)) }
-    var edited = Config.defaultRaw
-    edited.oneShot = []
-    #expect(Config.overrides(edited, over: Config.defaultRaw).oneShot == [])
-    #expect(Config.overrides(Config.defaultRaw, over: Config.defaultRaw).oneShot == nil)
+  #expect(Config.defaults.oneShot == ["tess"])
+  #expect(
+    try Config.load(Data(#"{"one_shot": []}"#.utf8)).oneShot == [])
+  #expect(throws: ParseError.self) {
+    try Config.load(Data(#"{"one_shot": ["nope"]}"#.utf8))
+  }
+  var edited = Config.defaultRaw
+  edited.oneShot = []
+  #expect(
+    Config.overrides(edited, over: Config.defaultRaw).oneShot == [])
+  #expect(
+    Config.overrides(Config.defaultRaw, over: Config.defaultRaw)
+      .oneShot == nil)
 }
 
 @Test func terminalOpensTheConfiguredApp() throws {
-    #expect(try Command.parse("terminal") == [.terminal])
-    #expect(Config.defaults.terminal == "iTerm")
-    #expect(try Config.load(Data(#"{"terminal": "Ghostty"}"#.utf8)).terminal == "Ghostty")
-    #expect(Config.defaults.modes["tess"]?[KeySpec(key: "t", mods: [])] == [.terminal])
+  #expect(try Command.parse("terminal") == [.terminal])
+  #expect(Config.defaults.terminal == "iTerm")
+  #expect(
+    try Config.load(Data(#"{"terminal": "Ghostty"}"#.utf8)).terminal
+      == "Ghostty")
+  #expect(
+    Config.defaults.modes["tess"]?[KeySpec(key: "t", mods: [])] == [
+      .terminal
+    ])
 }
 
 @Test func appearanceSettingsValidateAndRoundTrip() throws {
-    let data = Data(##"{"overlay":{"gray_amount":0.35,"inactive_border_color":"#112233","selection_color":"#ff8000"}}"##.utf8)
-    let c = try Config.load(data)
-    #expect(c.grayAmount == 0.35)
-    let inactive: [Double] = [17.0 / 255, 34.0 / 255, 51.0 / 255]
-    #expect(c.inactiveBorderColor == inactive)
-    #expect(c.selectionColor == [1, 128.0 / 255, 0])
-    let reloaded = try Config.load(Config.file(for: c.raw))
-    #expect(reloaded.raw == c.raw)
-    #expect(Config.defaults.grayAmount == 0.8)
-    for amount in [-0.1, 1.1] {
-        var r = Config.defaultRaw
-        r.overlay?.grayAmount = amount
-        #expect(throws: ParseError.self) { try Config.validate(r) }
+  let data = Data(
+    ##"{"overlay":{"gray_amount":0.35,"inactive_border_color":"#112233","selection_color":"#ff8000"}}"##
+      .utf8)
+  let c = try Config.load(data)
+  #expect(c.grayAmount == 0.35)
+  let inactive: [Double] = [17.0 / 255, 34.0 / 255, 51.0 / 255]
+  #expect(c.inactiveBorderColor == inactive)
+  #expect(c.selectionColor == [1, 128.0 / 255, 0])
+  let reloaded = try Config.load(Config.file(for: c.raw))
+  #expect(reloaded.raw == c.raw)
+  #expect(Config.defaults.grayAmount == 0.8)
+  for amount in [-0.1, 1.1] {
+    var r = Config.defaultRaw
+    r.overlay?.grayAmount = amount
+    #expect(throws: ParseError.self) { try Config.validate(r) }
+  }
+  for key in ["inactive_border_color", "selection_color"] {
+    #expect(throws: ParseError.self) {
+      try Config.load(
+        Data("{\"overlay\":{\"\(key)\":\"invalid\"}}".utf8))
     }
-    for key in ["inactive_border_color", "selection_color"] {
-        #expect(throws: ParseError.self) { try Config.load(Data("{\"overlay\":{\"\(key)\":\"invalid\"}}".utf8)) }
-    }
+  }
 }
 
 @Test func borderColorIsAHexColor() throws {
-    #expect(Config.defaults.borderColor == nil)
-    #expect(try Config.load(Data(##"{"overlay": {"border_color": "#ff8000"}}"##.utf8)).borderColor == [1, 128.0 / 255, 0])
-    for bad in ["orange", "#ff80", "#gg0000"] {
-        #expect(throws: ParseError.self, "\(bad)") { try Config.load(Data(##"{"overlay": {"border_color": "\##(bad)"}}"##.utf8)) }
+  #expect(Config.defaults.borderColor == nil)
+  #expect(
+    try Config.load(
+      Data(##"{"overlay": {"border_color": "#ff8000"}}"##.utf8)
+    ).borderColor == [1, 128.0 / 255, 0])
+  for bad in ["orange", "#ff80", "#gg0000"] {
+    #expect(throws: ParseError.self, "\(bad)") {
+      try Config.load(
+        Data(##"{"overlay": {"border_color": "\##(bad)"}}"##.utf8))
     }
-    // Other overlay settings keep it.
-    let c = try Config.load(Data(##"{"overlay": {"border_color": "#00ff00", "all_screens": false}}"##.utf8))
-    #expect(c.borderColor == [0, 1, 0] && !c.overlayAllScreens)
+  }
+  // Other overlay settings keep it.
+  let c = try Config.load(
+    Data(
+      ##"{"overlay": {"border_color": "#00ff00", "all_screens": false}}"##
+        .utf8))
+  #expect(c.borderColor == [0, 1, 0] && !c.overlayAllScreens)
 }
 
 @Test func otherWindowsAreGrayUnlessTurnedOff() throws {
-    #expect(Config.defaults.grayOthers)
-    let off = try Config.load(Data(#"{"overlay": {"gray_others": false}}"#.utf8))
-    #expect(!off.grayOthers && off.windowLabels == .jump)
-    var edited = Config.defaultRaw
-    edited.overlay?.grayOthers = false
-    #expect(Config.overrides(edited, over: Config.defaultRaw).overlay?.grayOthers == false)
+  #expect(Config.defaults.grayOthers)
+  let off = try Config.load(
+    Data(#"{"overlay": {"gray_others": false}}"#.utf8))
+  #expect(!off.grayOthers && off.windowLabels == .jump)
+  var edited = Config.defaultRaw
+  edited.overlay?.grayOthers = false
+  #expect(
+    Config.overrides(edited, over: Config.defaultRaw).overlay?
+      .grayOthers == false)
 }

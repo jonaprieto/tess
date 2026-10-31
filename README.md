@@ -76,6 +76,8 @@ From source:
 ```sh
 make install   # build, sign, start at login and after a crash; links ~/.local/bin/tess, adds tess.app
 make test
+make hooks     # before each commit: formatted, and no compiler warnings (needs pre-commit)
+make format    # what the first of those checks
 ```
 
 `make install` also installs [Folio](https://github.com/jonaprieto/folio) through Homebrew if it

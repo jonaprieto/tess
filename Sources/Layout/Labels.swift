@@ -82,6 +82,7 @@ extension Command {
         : m.map { L("Keep awake for \($0) min") } ?? L("Keep awake")
     case .speedtest: L("Speed test")
     case .ribbon: L("Ribbon")
+    case .update: L("Update tess")
     case .moveToMonitor(let n): L("Move to screen \(n)")
     case .exec(let line):
       line.hasPrefix("open -a ")

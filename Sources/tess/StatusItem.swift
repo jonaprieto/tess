@@ -28,27 +28,35 @@ final class StatusItem: NSObject, NSMenuDelegate {
   private var drawn:
     (
       world: World, mode: String, paused: Bool, waiting: Bool,
-      zen: String?, awake: Bool, language: Language
+      zen: String?, awake: Bool, language: Language, update: String?
     )?
 
   /// Yellow: the menu bar's orange, green and purple dots are macOS's
   /// own, for the microphone, the camera and the screen. Edged to
   /// show on a light menu bar too.
-  private static let awakeDot: NSImage = {
+  private static let awakeDot = dot(
+    .systemYellow, L("keeping the Mac awake"))
+
+  private static let updateDot = dot(
+    .systemBlue, L("update available"))
+
+  private static func dot(_ color: NSColor, _ description: String)
+    -> NSImage
+  {
     let image = NSImage(
       size: NSSize(width: 9, height: 9), flipped: false
     ) { r in
       let dot = NSBezierPath(ovalIn: r.insetBy(dx: 0.5, dy: 0.5))
-      NSColor.systemYellow.setFill()
+      color.setFill()
       dot.fill()
       NSColor.black.withAlphaComponent(0.4).setStroke()
       dot.lineWidth = 0.5
       dot.stroke()
       return true
     }
-    image.accessibilityDescription = L("keeping the Mac awake")
+    image.accessibilityDescription = description
     return image
-  }()
+  }
 
   /// Skipped when nothing the icon shows changed (most snapshots
   /// change nothing visible).
@@ -56,11 +64,12 @@ final class StatusItem: NSObject, NSMenuDelegate {
     guard let button = item.button else { return }
     let now = (
       tiler.world, tiler.mode, tiler.paused, waitingForAccess,
-      tiler.zenTitle, tiler.caffeine != nil, Strings.language
+      tiler.zenTitle, tiler.caffeine != nil, Strings.language,
+      tiler.update
     )
     if let d = drawn, d.world == now.0, d.mode == now.1,
       d.paused == now.2, d.waiting == now.3, d.zen == now.4,
-      d.awake == now.5, d.language == now.6
+      d.awake == now.5, d.language == now.6, d.update == now.7
     {
       return
     }
@@ -83,10 +92,12 @@ final class StatusItem: NSObject, NSMenuDelegate {
           ofSize: 12, weight: .bold), .foregroundColor: color
       ])
     // A dot while caffeine keeps the Mac awake, so it is not left on
-    // by accident.
-    if now.5 {
+    // by accident, and one while a newer version waits.
+    for image in [
+      now.5 ? Self.awakeDot : nil, now.7 == nil ? nil : Self.updateDot
+    ].compactMap({ $0 }) {
       let dot = NSTextAttachment()
-      dot.image = Self.awakeDot
+      dot.image = image
       dot.bounds = CGRect(x: 0, y: 0, width: 9, height: 9)
       title.insert(NSAttributedString(attachment: dot), at: 0)
       title.insert(NSAttributedString(string: " "), at: 0)
@@ -95,6 +106,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
     button.toolTip =
       "tess: \(tiler.paused ? L("paused") : Command.modeName(tiler.mode))"
       + (now.5 ? L(", keeping the Mac awake") : "")
+      + (now.7 == nil ? "" : L(", update available"))
   }
 
   private var color: NSColor { Panels.readable(modeColor) }
@@ -197,6 +209,16 @@ final class StatusItem: NSObject, NSMenuDelegate {
         item(
           L("Grant Accessibility Access…"), "hand.raised",
           #selector(openAccessibility)))
+    }
+    if let new = tiler.update {
+      let update = item(
+        L("Update to \(new)"), "arrow.down.circle", #selector(update),
+        for: .update)
+      update.subtitle =
+        Tiler.homebrew(Bundle.main.executablePath) == nil
+        ? L("opens the release to install it")
+        : L("with Homebrew, then tess restarts")
+      menu.addItem(update)
     }
     if let error = tiler.configError {
       let e = NSMenuItem(
@@ -491,6 +513,9 @@ final class StatusItem: NSObject, NSMenuDelegate {
   }
   @objc private func toggleRibbon() {
     _ = tiler.run([.ribbon], source: "menu")
+  }
+  @objc private func update() {
+    _ = tiler.run([.update], source: "menu")
   }
   @objc private func clear() {
     _ = tiler.run([.clearMonitor], source: "menu")

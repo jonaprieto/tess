@@ -243,6 +243,22 @@ final class Tiler {
   /// else writes until they are there.
   var gliding = false
 
+  /// A newer version than this one, once GitHub has said so, and when
+  /// it last answered.
+  var update: String?
+
+  var updateChecked = Date.distantPast
+
+  var updating = false
+
+  /// launchd starts a tess that exited with an error, as after a
+  /// hang, and that is the new binary now. False if it was not
+  /// launchd that started this one.
+  var restart: () -> Bool = {
+    if getppid() == 1 { exit(1) }
+    return false
+  }
+
   /// Layout changes, oldest first; the last `undone` of them were
   /// undone.
   var history: [Step] = []
@@ -412,6 +428,7 @@ final class Tiler {
       }
       // warm the caches for the picker
       if let self { Browsers.history(self.config.history) { _ in } }
+      self?.watchForUpdates()
       self?.refreshApps()
       _ = self?.picker
     }

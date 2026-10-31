@@ -53,7 +53,9 @@ extension Tiler {
 
 
   func execute(_ c: Command) -> String {
-    if paused, ![.pause, .tree, .reload, .tutorial].contains(c) {
+    if paused,
+      ![.pause, .tree, .reload, .tutorial, .update].contains(c)
+    {
       return "error: \(L("paused"))"
     }
     Log.write("command: \(c)")
@@ -137,6 +139,7 @@ extension Tiler {
     case .wifi(let on): setWifi(on)
     case .caffeine(let minutes): setCaffeine(minutes)
     case .speedtest: runSpeedtest()
+    case .update: runUpdate()
     case .ribbon:
       world.toggleRibbon()
       toast(

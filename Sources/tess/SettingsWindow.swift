@@ -66,6 +66,7 @@ final class SettingsModel {
   var selectionColor: Color
   var emptyScreens: Bool
   var ribbon: Bool
+  var updateCheck: Bool
   var windowLabels: Config.LabelMode
   /// A language code; nil is macOS's.
   var language: String?
@@ -106,6 +107,7 @@ final class SettingsModel {
       config.selectionColor, fallback: .systemOrange)
     emptyScreens = raw.emptyScreens ?? true
     ribbon = raw.ribbon ?? false
+    updateCheck = raw.updateCheck ?? true
     windowLabels = raw.overlay?.windowLabels ?? .jump
     language = raw.language
     float = raw.float ?? []
@@ -151,6 +153,7 @@ final class SettingsModel {
     r.overlay = overlay
     r.emptyScreens = emptyScreens
     r.ribbon = ribbon
+    r.updateCheck = updateCheck
     r.language = language
     r.float = float
     r.tile = tile
@@ -191,6 +194,7 @@ final class SettingsModel {
   func revert() {
     let fresh = SettingsModel(raw: original, save: saveRaw)
     ribbon = fresh.ribbon
+    updateCheck = fresh.updateCheck
     (
       inner, outer, overlayAllScreens, grayOthers, emptyScreens,
       windowLabels, float, tile, ignore, verbs, modes
@@ -296,6 +300,16 @@ struct GeneralTab: View {
         Text(
           L(
             "Columns keep their width and run past the screen: the view scrolls to the window in use, and the rest wait along the bottom with their title bars showing."
+          )
+        )
+        .foregroundStyle(.secondary)
+      }
+      Section {
+        Toggle(L("Check for updates"), isOn: $model.updateCheck)
+      } footer: {
+        Text(
+          L(
+            "Once a day tess asks GitHub for its latest version, and tells you when there is a newer one."
           )
         )
         .foregroundStyle(.secondary)

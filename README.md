@@ -325,6 +325,14 @@ columns in view come first and those on the strip follow them.
 
 </details>
 
+## Stay up to date
+
+Once a day tess asks GitHub for its latest version. When there is a newer one you get a toast
+and a blue dot in the menu bar, and Update in the menu installs it. `tess update` does the same
+at any time. With Homebrew that is one click: `brew upgrade` runs and tess restarts on the new
+version, which also ends Keep Awake and Zen. A build from source opens the release instead,
+since `git pull && make install` is yours to run.
+
 ## Make it yours
 
 Settings in the menu bar, or `tess settings`, edits gaps, colors, labels, language, picker
@@ -351,6 +359,7 @@ and `null` removes a default.
 - `"empty_screens": false` stops new windows going to an empty screen, and Settings and a
   mode's keys to the screen with the fewest windows.
 - `"ribbon": true` starts every screen as a ribbon.
+- `"update_check": false` stops the daily question to GitHub. `tess update` still works.
 - `"language": "es"` or `"en"`. Left out, tess follows macOS: the first of its languages it
   speaks, else English. Commands, config keys, `tess --help`, `tess tree` and the logs stay in
   English.
@@ -438,6 +447,7 @@ every key, the only way to get macOS's own `⌘Tab` back. Resume the same way.
   in about 20 seconds.
 - `tess zen`: Zen on or off. `tess break`: Zen's break now.
 - `tess ribbon`: the screen in use becomes a ribbon, or stops being one.
+- `tess update`: install the latest version.
 - `tess doctor`, `tess tutorial`, `tess settings`.
 - `tess reload`, `tess default-config`, `tess --version`.
 
@@ -452,7 +462,8 @@ Security) for the tess binary: `$(brew --prefix)/opt/tess/bin/tess` from Homebre
 `~/tess/build/tess` from source. Without it the picker still lists tabs and Brave bookmarks.
 Log Out, Restart and Shut Down may ask once for Automation of loginwindow.
 
-Logs stay on this Mac, and picker queries are not recorded.
+Logs stay on this Mac, and picker queries are not recorded. Asking GitHub for the latest version
+sends nothing but the request (`"update_check": false` turns it off).
 
 - `~/Library/Logs/tess/events.jsonl`: one JSON object per line for everything that changes:
   apps and windows opening and closing, focus, every command and where it came from, the layout

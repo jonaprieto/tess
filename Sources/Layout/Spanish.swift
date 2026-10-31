@@ -28,6 +28,7 @@ let spanish: [String: String] = [
   "%@ windows, none from %@": "%@ ventanas, ninguna de %@",
   "%@ · runs in the terminal": "%@ · se ejecuta en la terminal",
   ", keeping the Mac awake": ", manteniendo tu Mac despierta",
+  ", update available": ", actualización disponible",
   "0% keeps full color; 100% makes other windows black and white. The focused window stays in color.":
     "0% conserva todo el color; 100% deja las demás ventanas en blanco y negro. La ventana con foco sigue en color.",
   "1 break today": "1 descanso hoy",
@@ -59,6 +60,7 @@ let spanish: [String: String] = [
   "Break": "Descanso",
   "Browser Automation/Full Disk Access and network download availability are not tested.":
     "No se comprueban la automatización del navegador, el acceso total al disco ni la disponibilidad de descargas por red.",
+  "Check for updates": "Buscar actualizaciones",
   "Choose where it goes": "Elige dónde va",
   "Clear This Screen": "Despejar esta pantalla",
   "Clear this screen": "Despejar esta pantalla",
@@ -116,6 +118,7 @@ let spanish: [String: String] = [
   "Help when you need it": "Ayuda cuando la necesites",
   "Hidden": "Oculta",
   "History": "Historial",
+  "Homebrew does not have %@ yet": "Homebrew aún no tiene %@",
   "Ignore": "Ignorar",
   "Inactive borders": "Bordes sin foco",
   "Inactive borders appear when borders and letters are set to Every window, or while jumping.":
@@ -167,6 +170,8 @@ let spanish: [String: String] = [
   "Nothing matches": "Sin coincidencias",
   "OPTIONAL": "OPCIONAL",
   "Off": "Desactivado",
+  "Once a day tess asks GitHub for its latest version, and tells you when there is a newer one.":
+    "Una vez al día tess le pregunta a GitHub por su última versión y te avisa si hay una más nueva.",
   "Open %@": "Abrir %@",
   "Open Log": "Abrir registro",
   "Open Picker…": "Abrir selector…",
@@ -192,6 +197,7 @@ let spanish: [String: String] = [
   "Rescue Windows": "Rescatar ventanas",
   "Rescue windows": "Rescatar ventanas",
   "Resize": "Redimensionar",
+  "Restart tess to finish": "Reinicia tess para terminar",
   "Restart…": "Reiniciar…",
   "Resume Tiling": "Reanudar tiling",
   "Revert": "Revertir",
@@ -263,6 +269,9 @@ let spanish: [String: String] = [
   "Undo this and everything after it":
     "Deshacer esto y todo lo que vino después",
   "Unmute": "Quitar silencio",
+  "Update failed": "La actualización falló",
+  "Update tess": "Actualizar tess",
+  "Update to %@": "Actualizar a %@",
   "Use %@ to enter Tess mode. Letters on windows and tabs let you go directly to them. The key guide shows your current bindings.\n\nUse %@ to enter resize mode. Its guide shows which keys adjust width and height. Esc returns to the previous mode.\n\nTry these on your own windows after closing this walkthrough.":
     "Usa %@ para entrar al modo tess. Las letras en ventanas y pestañas te llevan directo a ellas. La guía de teclas muestra tus atajos actuales.\n\nUsa %@ para entrar al modo Redimensionar. Su guía muestra qué teclas ajustan el ancho y el alto. Esc vuelve al modo anterior.\n\nPrueba esto con tus propias ventanas cuando cierres este recorrido.",
   "Use empty screens": "Usar pantallas vacías",
@@ -307,6 +316,7 @@ let spanish: [String: String] = [
   "could not keep the Mac awake":
     "no se pudo mantener tu Mac despierta",
   "could not open %@": "no se pudo abrir %@",
+  "could not reach GitHub": "no se pudo conectar con GitHub",
   "could not register %@": "no se pudo registrar %@",
   "could not run it: %@": "no se pudo ejecutar: %@",
   "esc back": "esc volver",
@@ -353,6 +363,8 @@ let spanish: [String: String] = [
   "open %@": "abierta hace %@",
   "open in %@": "abrir en %@",
   "opening apps and documents": "abrir apps y documentos",
+  "opens the release to install it":
+    "abre la versión para instalarla",
   "other Space": "otro Space",
   "paused": "en pausa",
   "provided by macOS": "incluido en macOS",
@@ -380,15 +392,23 @@ let spanish: [String: String] = [
     "para intercambiar hace falta una ventana en tiling con el foco y otra en tiling",
   "swap: %@": "intercambiar: %@",
   "system": "sistema",
+  "tess %@ is out: update from the menu bar":
+    "Salió tess %@: actualízalo desde la barra de menús",
+  "tess %@ is up to date": "tess %@ está al día",
   "tess Settings": "Ajustes de tess",
+  "tess is already updating": "tess ya se está actualizando",
   "tess never touches them (EdgeMark's panel, for one).":
     "tess nunca las toca (el panel de EdgeMark, por ejemplo).",
+  "tess updated to %@": "tess actualizado a %@",
   "the Mac can sleep": "tu Mac ya puede dormir",
   "title author": "título autor",
+  "update available": "actualización disponible",
   "verb": "verbo",
   "volume %@%": "volumen %@%",
   "volume changed": "volumen cambiado",
   "volume did not change": "el volumen no cambió",
+  "with Homebrew, then tess restarts":
+    "con Homebrew, y tess se reinicia",
   "zen off": "zen desactivado",
   "↵ Choose     ⌘↵ Reveal in Finder     ↑↓ Navigate     ⇥ Complete     Esc Close":
     "↵ Elegir     ⌘↵ Mostrar en Finder     ↑↓ Navegar     ⇥ Completar     Esc Cerrar",

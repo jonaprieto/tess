@@ -330,6 +330,22 @@ public enum Parse {
       "↓ \(Int((down / 1e6).rounded())) Mbps  ↑ \(Int((up / 1e6).rounded())) Mbps\(rtt)"
   }
 
+  /// The version in GitHub's JSON for a release: its tag, without the
+  /// `v`.
+  public static func release(_ json: String) -> String? {
+    guard
+      let d = try? JSONSerialization.jsonObject(with: Data(json.utf8))
+        as? [String: Any],
+      let tag = d["tag_name"] as? String
+    else { return nil }
+    return tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+  }
+
+  /// By number, so 0.10.0 is after 0.9.0.
+  public static func isNewer(_ a: String, than b: String) -> Bool {
+    a.compare(b, options: .numeric) == .orderedDescending
+  }
+
   /// A `run:` verb's shell line (`run:brew %s`) with `text` for `%s`,
   /// as typed: it is a command the person wrote, so it is not quoted.
   public static func run(_ value: String, _ text: String) -> String? {

@@ -27,6 +27,7 @@ func serve() -> Never {
     }
     let app = NSApplication.shared
     app.setActivationPolicy(.accessory)
+    Tiler.applyLanguage()
     let tiler = Tiler()
     let status = StatusItem(tiler)
     tiler.onChange = { status.refreshIcon() }

@@ -792,11 +792,19 @@ final class Tiler {
     }
 
 
+    /// The config's language, for what shows before `start` loads the rest of it.
+    static func applyLanguage() {
+        let file = try? Data(contentsOf: configURL)
+        Strings.language = ((try? Config.load(file)) ?? Config.defaults).language
+    }
+
+
     func loadConfig(announce: Bool) {
         let url = Self.configURL
         do {
             config = try Config.load(FileManager.default.fileExists(atPath: url.path) ? Data(contentsOf: url) : nil)
             configError = nil
+            Strings.language = config.language
             Panels.accent = config.borderColor.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) }
                 ?? .controlAccentColor
             Panels.inactiveBorder = config.inactiveBorderColor.map { NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1) }

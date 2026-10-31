@@ -43,6 +43,8 @@ public struct Config: Equatable, Sendable {
     /// The picker asks TypeSafe's Jev what the typed text means (it sends that text and the
     /// titles of windows, tabs, apps and commands, never browser history).
     public var jev = false
+    /// The interface's language; left out of the file, macOS's.
+    public var language = Language.first(of: Locale.preferredLanguages)
 
     public enum LabelMode: String, Codable, Sendable {
         /// Always on screen.
@@ -123,8 +125,9 @@ public struct Config: Equatable, Sendable {
         public var jev: Bool?
         public var oneShot: [String]?
         public var terminal: String?
+        public var language: String?
         enum CodingKeys: String, CodingKey {
-            case gaps, overlay, float, tile, ignore, history, verbs, modes, terminal, jev
+            case gaps, overlay, float, tile, ignore, history, verbs, modes, terminal, jev, language
             case emptyScreens = "empty_screens"
             case oneShot = "one_shot"
         }
@@ -176,6 +179,7 @@ public struct Config: Equatable, Sendable {
                                 selectionColor: top.overlay?.selectionColor ?? base.overlay?.selectionColor)
         r.emptyScreens = top.emptyScreens ?? base.emptyScreens
         r.jev = top.jev ?? base.jev
+        r.language = top.language ?? base.language
         r.oneShot = top.oneShot ?? base.oneShot
         r.terminal = top.terminal ?? base.terminal
         r.float = top.float ?? base.float
@@ -202,6 +206,7 @@ public struct Config: Equatable, Sendable {
         if edited.overlay != base.overlay { o.overlay = edited.overlay }
         if edited.emptyScreens != base.emptyScreens { o.emptyScreens = edited.emptyScreens }
         if edited.jev != base.jev { o.jev = edited.jev }
+        if edited.language != base.language { o.language = edited.language }
         if edited.oneShot != base.oneShot { o.oneShot = edited.oneShot }
         if edited.terminal != base.terminal { o.terminal = edited.terminal }
         if edited.float != base.float { o.float = edited.float }
@@ -252,6 +257,12 @@ public struct Config: Equatable, Sendable {
         }
         c.emptyScreens = raw.emptyScreens ?? true
         c.jev = raw.jev ?? false
+        if let code = raw.language {
+            guard let language = Language(rawValue: code) else {
+                throw ParseError("config: language is \(Language.allCases.map(\.rawValue).joined(separator: " or ")), not \"\(code)\"")
+            }
+            c.language = language
+        }
         c.float = raw.float ?? []
         c.tile = raw.tile ?? []
         c.ignore = raw.ignore ?? []

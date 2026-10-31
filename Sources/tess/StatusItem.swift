@@ -23,14 +23,30 @@ final class StatusItem: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) { fill(menu) }
 
     /// Cheap enough to run on every layout or focus change.
-    private var drawn: (world: World, mode: String, paused: Bool, waiting: Bool, zen: String?, cup: Bool)?
+    private var drawn: (world: World, mode: String, paused: Bool, waiting: Bool, zen: String?, awake: Bool)?
+
+    /// Yellow: the menu bar's orange, green and purple dots are macOS's own, for the microphone,
+    /// the camera and the screen. Edged to show on a light menu bar too.
+    private static let awakeDot: NSImage = {
+        let image = NSImage(size: NSSize(width: 9, height: 9), flipped: false) { r in
+            let dot = NSBezierPath(ovalIn: r.insetBy(dx: 0.5, dy: 0.5))
+            NSColor.systemYellow.setFill()
+            dot.fill()
+            NSColor.black.withAlphaComponent(0.4).setStroke()
+            dot.lineWidth = 0.5
+            dot.stroke()
+            return true
+        }
+        image.accessibilityDescription = "keeping the Mac awake"
+        return image
+    }()
 
     /// Skipped when nothing the icon shows changed (most snapshots change nothing visible).
     func refreshIcon() {
         guard let button = item.button else { return }
         let now = (tiler.world, tiler.mode, tiler.paused, waitingForAccess, tiler.zenTitle, tiler.caffeine != nil)
         if let d = drawn, d.world == now.0, d.mode == now.1, d.paused == now.2, d.waiting == now.3, d.zen == now.4,
-           d.cup == now.5 { return }
+           d.awake == now.5 { return }
         drawn = now
         button.image = minimap()
         button.imagePosition = .imageLeft
@@ -39,22 +55,16 @@ final class StatusItem: NSObject, NSMenuDelegate {
         let title = NSMutableAttributedString(string: word.isEmpty ? "" : " " + word.uppercased(), attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .bold), .foregroundColor: color,
         ])
-        // A cup while caffeine keeps the Mac awake, so it is not left on by accident.
-        if now.5, let symbol = NSImage(systemSymbolName: "cup.and.saucer.fill", accessibilityDescription: "caffeine") {
-            let color = color
-            let cup = NSTextAttachment()
-            cup.image = NSImage(size: NSSize(width: 15, height: 13), flipped: false) { r in
-                symbol.draw(in: r)
-                color.set()
-                r.fill(using: .sourceAtop)
-                return true
-            }
-            cup.bounds = CGRect(x: 0, y: -2, width: 15, height: 13)
-            title.insert(NSAttributedString(attachment: cup), at: 0)
+        // A dot while caffeine keeps the Mac awake, so it is not left on by accident.
+        if now.5 {
+            let dot = NSTextAttachment()
+            dot.image = Self.awakeDot
+            dot.bounds = CGRect(x: 0, y: 0, width: 9, height: 9)
+            title.insert(NSAttributedString(attachment: dot), at: 0)
             title.insert(NSAttributedString(string: " "), at: 0)
         }
         button.attributedTitle = title
-        button.toolTip = "tess: \(tiler.paused ? "paused" : tiler.mode)"
+        button.toolTip = "tess: \(tiler.paused ? "paused" : tiler.mode)" + (now.5 ? ", keeping the Mac awake" : "")
     }
 
     private var color: NSColor {
@@ -141,7 +151,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
         let breaks = tiler.breaksToday
         zen.subtitle = (tiler.zenTitle ?? "25 min focus, 5 min break") + (breaks == 0 ? "" : " · \(breaks) break\(breaks == 1 ? "" : "s") today")
         menu.addItem(zen)
-        let cup = item(tiler.caffeine == nil ? "Caffeine" : "Caffeine Off", "cup.and.saucer", #selector(toggleCaffeine),
+        let cup = item(tiler.caffeine == nil ? "Keep Awake" : "Let the Mac Sleep", "cup.and.saucer", #selector(toggleCaffeine),
                        for: .caffeine(nil))
         cup.subtitle = tiler.caffeine.map { c in
             c.until.map { "awake until \($0.formatted(date: .omitted, time: .shortened))" } ?? "awake until turned off"

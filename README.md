@@ -243,7 +243,8 @@ on the screen with the fewest windows; `"empty_screens": false` turns that off.
 - `tess undo`, `tess redo`: the last layout change.
 - `tess volume 30` (or `+10`, `-10`, `mute`, `unmute`), `tess wifi` (`on`, `off`, or the
   other way round), `tess caffeine` (keeps the Mac awake until run again; `caffeine 60` for
-  an hour, `caffeine off`). A cup in the menu bar says caffeine is on, and the menu has it.
+  an hour, `caffeine off`). A yellow dot in the menu bar says the Mac is being kept
+  awake, and the menu has it as Keep Awake.
   `tess speedtest`: download and upload speed and latency, with macOS's own
   `networkQuality`, in about 20 seconds. Typed in the picker these work too, and they take
   keys like any command.

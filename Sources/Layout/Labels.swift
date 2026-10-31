@@ -53,7 +53,7 @@ extension Command {
         case .volume(.mute): "Mute"
         case .volume(.unmute): "Unmute"
         case .wifi(let on): on.map { $0 ? "Wi-Fi on" : "Wi-Fi off" } ?? "Wi-Fi on or off"
-        case .caffeine(let m): m == 0 ? "Caffeine off" : m.map { "Caffeine for \($0) min" } ?? "Caffeine"
+        case .caffeine(let m): m == 0 ? "Let the Mac sleep" : m.map { "Keep awake for \($0) min" } ?? "Keep awake"
         case .speedtest: "Speed test"
         case .moveToMonitor(let n): "Move to screen \(n)"
         case .exec(let line):

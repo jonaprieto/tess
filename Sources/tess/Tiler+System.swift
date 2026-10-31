@@ -45,12 +45,12 @@ extension Tiler {
         caffeineTimer?.invalidate()
         caffeineTimer = nil
         defer { onChange() }
-        if minutes == 0 || (minutes == nil && wasOn) { return toast("caffeine off") }
+        if minutes == 0 || (minutes == nil && wasOn) { return toast("the Mac can sleep") }
         var id: IOPMAssertionID = 0
         guard IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
                                           IOPMAssertionLevel(kIOPMAssertionLevelOn), "tess caffeine" as CFString,
                                           &id) == kIOReturnSuccess
-        else { return toast("caffeine did not start") }
+        else { return toast("could not keep the Mac awake") }
         let until = minutes.map { Date().addingTimeInterval(Double($0) * 60) }
         caffeine = (id, until)
         if let until {
@@ -58,7 +58,7 @@ extension Tiler {
                 self?.setCaffeine(0)
             }
         }
-        toast(minutes.map { "caffeine for \($0) min" } ?? "caffeine on")
+        toast(minutes.map { "awake for \($0) min" } ?? "keeping the Mac awake")
     }
 
     /// macOS's own speed test, about 20 seconds of upload and download at once; the result

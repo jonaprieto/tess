@@ -8,7 +8,7 @@ VERSION := $(shell sed -n 's/^let version = "\(.*\)"/\1/p' Sources/tess/main.swi
 # ad-hoc fallback ("-") changes with every build and loses it.
 SIGN ?= $(or $(shell security find-identity -v -p codesigning | grep -v REVOKED | grep -m1 -o '[0-9A-F]\{40\}'),-)
 
-.PHONY: build test e2e format lint hooks app dist deps install uninstall
+.PHONY: build test mutants coverage e2e format lint hooks app dist deps install uninstall
 
 deps:
 	@if ! PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin command -v folio >/dev/null; then \
@@ -31,6 +31,10 @@ test:
 	@mkdir -p .build
 	@set -o pipefail; swift test 2>&1 | tee .build/test.log
 	@[ "$$(grep -cE 'Test run with [0-9]+ tests? .*passed' .build/test.log)" = 2 ] || { echo "make test: a test target did not finish"; exit 1; }
+
+# Every mutant takes about 40 minutes; N=40 is a sample.
+mutants:
+	python3 -I Tests/mutants.py $(N)
 
 format:
 	swift format --in-place --recursive --parallel Sources Tests Package.swift

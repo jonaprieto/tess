@@ -63,6 +63,7 @@ let spanish: [String: String] = [
   "Clear This Screen": "Despejar esta pantalla",
   "Clear this screen": "Despejar esta pantalla",
   "Click by label": "Clic por etiqueta",
+  "Click to undo or redo": "Clic para deshacer o rehacer",
   "Close window": "Cerrar ventana",
   "Close, pick a replacement": "Cerrar y elegir un reemplazo",
   "Colors": "Colores",
@@ -112,6 +113,7 @@ let spanish: [String: String] = [
   "Halves": "Mitades",
   "Help when you need it": "Ayuda cuando la necesites",
   "Hidden": "Oculta",
+  "History": "Historial",
   "Ignore": "Ignorar",
   "Inactive borders": "Bordes sin foco",
   "Inactive borders appear when borders and letters are set to Every window, or while jumping.":
@@ -180,8 +182,6 @@ let spanish: [String: String] = [
   "Quieter": "Bajar volumen",
   "Quit tess": "Salir de tess",
   "Re-tile": "Volver a organizar",
-  "Recent: click to undo or redo":
-    "Reciente: clic para deshacer o rehacer",
   "Redid: %@": "Rehecho: %@",
   "Redo": "Rehacer",
   "Redo up to here": "Rehacer hasta aquí",

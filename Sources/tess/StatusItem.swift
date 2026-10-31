@@ -362,14 +362,13 @@ final class StatusItem: NSObject, NSMenuDelegate {
     }
   }
 
-  /// The last changes, newest first. Clicking one in effect undoes it
-  /// and what came after; clicking an undone one (dimmed) redoes up
-  /// to it.
+  /// The last changes, newest first, in a submenu. Clicking one in
+  /// effect undoes it and what came after; clicking an undone one
+  /// (dimmed) redoes up to it.
   private func recent(_ menu: NSMenu) {
     guard !tiler.history.isEmpty else { return }
-    menu.addItem(.separator())
-    menu.addItem(
-      .sectionHeader(title: L("Recent: click to undo or redo")))
+    let rows = NSMenu()
+    rows.addItem(.sectionHeader(title: L("Click to undo or redo")))
     let applied = tiler.history.count - tiler.undone
     let ago = RelativeDateTimeFormatter()
     ago.unitsStyle = .short
@@ -400,8 +399,16 @@ final class StatusItem: NSObject, NSMenuDelegate {
           string: step.title,
           attributes: [.foregroundColor: NSColor.secondaryLabelColor])
       }
-      menu.addItem(row)
+      rows.addItem(row)
     }
+    menu.addItem(.separator())
+    let history = NSMenuItem(
+      title: L("History"), action: nil, keyEquivalent: "")
+    history.image = NSImage(
+      systemSymbolName: "clock.arrow.circlepath",
+      accessibilityDescription: nil)
+    history.submenu = rows
+    menu.addItem(history)
   }
 
   /// A menu row with a symbol, showing the main-mode shortcut bound

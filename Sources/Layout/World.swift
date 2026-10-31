@@ -37,6 +37,9 @@ public struct Lane: Equatable, Sendable {
   public var size: Double
   /// The focused window fills the lane and the others sit behind it.
   public var accordion = false
+  /// On a ribbon, how much of the screen the lane takes, gaps
+  /// included: 0.5 shows two.
+  public var span = 0.5
 
   public init(
     _ windows: [WindowID], size: Double = 1, sizes: [Double]? = nil
@@ -58,6 +61,11 @@ public struct Monitor: Equatable, Sendable {
   /// right.
   public var rows: Bool
   public var fullscreen: WindowID?
+  /// The lanes keep their own length and run on past the screen's
+  /// edge (see `Ribbon.swift`).
+  public var ribbon = false
+  /// How far along its lanes a ribbon is scrolled, in points.
+  public var scroll = 0.0
 
   public init(id: String, frame: CGRect) {
     self.id = id
@@ -83,6 +91,8 @@ public struct World: Equatable, Sendable {
   public var monitors: [Monitor] = []
   /// Tracked but never positioned.
   public var floating: Set<WindowID> = []
+  /// A screen tess has not met starts as a ribbon.
+  public var ribbons = false
   public var focused: WindowID? {
     didSet {
       guard let f = focused else { return }

@@ -81,6 +81,7 @@ extension Command {
         ? L("Let the Mac sleep")
         : m.map { L("Keep awake for \($0) min") } ?? L("Keep awake")
     case .speedtest: L("Speed test")
+    case .ribbon: L("Ribbon")
     case .moveToMonitor(let n): L("Move to screen \(n)")
     case .exec(let line):
       line.hasPrefix("open -a ")
@@ -130,7 +131,7 @@ extension Command {
       .focus
     case .move, .moveToMonitor, .clearMonitor: .move
     case .resize, .grow, .balance, .flip, .accordion, .arrange,
-      .fullscreen, .float, .showAll:
+      .fullscreen, .float, .showAll, .ribbon:
       .layout
     default: .more
     }

@@ -8,7 +8,14 @@ extension World {
     CGRect]
   {
     var out: [WindowID: CGRect] = [:]
-    for mon in monitors {
+    for (m, mon) in monitors.enumerated() {
+      if mon.ribbon {
+        out.merge(ribbonFrames(m, inner: inner, outer: outer)) { $1 }
+        if let fs = mon.fullscreen, out[fs] != nil {
+          out[fs] = mon.frame
+        }
+        continue
+      }
       let area = mon.frame.insetBy(dx: outer, dy: outer)
       guard !area.isNull, area.width > 0, area.height > 0 else {
         continue
@@ -53,12 +60,16 @@ extension World {
   /// lane at the end of the active monitor. A window covering its
   /// monitor edge to edge, which only tess fullscreen does, is
   /// fullscreen again, its lane at the right end (so a restart keeps
-  /// it). Accordion is not recovered.
+  /// it). Accordion is not recovered. A ribbon keeps its order, and
+  /// the gaps give it back each lane's length; after a restart its
+  /// parked windows follow those in view.
   public mutating func rebuild(
-    _ windows: [(id: WindowID, frame: CGRect)]
+    _ windows: [(id: WindowID, frame: CGRect)], inner: Double = 0,
+    outer: Double = 0
   ) {
     guard !monitors.isEmpty else { return }
     let full = monitors.compactMap(\.fullscreen)
+    let order = monitors.map(\.windows)
     for i in monitors.indices {
       monitors[i].lanes = []
       monitors[i].fullscreen = nil
@@ -72,6 +83,7 @@ extension World {
     var byMonitor = Array(
       repeating: [(id: WindowID, frame: CGRect)](),
       count: monitors.count)
+    var onStrips = byMonitor
     var edgeToEdge: [(id: WindowID, m: Int)] = []
     for w in windows {
       floating.remove(w.id)
@@ -79,6 +91,10 @@ extension World {
         $0.frame.isNear(w.frame)
       }) {
         edgeToEdge.append((w.id, m))
+      } else if let m = monitors.indices.first(where: {
+        onStrip($0, w.frame)
+      }) {
+        onStrips[m].append(w)
       } else if let m = monitorIndex(for: w.frame) {
         byMonitor[m].append(w)
       } else {
@@ -139,6 +155,25 @@ extension World {
             : stack.map { rows ? $0.frame.width : $0.frame.height })
         lane.accordion = piled
         return lane
+      }
+      // In the order they stand, which on a strip is that of the
+      // ribbon.
+      for w in onStrips[m].sorted(by: {
+        ($0.frame.minX, $0.frame.minY, $0.id) < (
+          $1.frame.minX, $1.frame.minY, $1.id
+        )
+      }) {
+        monitors[m].lanes.append(newLane(w.id, on: m))
+      }
+      if monitors[m].ribbon {
+        let lengths = (byMonitor[m] + onStrips[m]).reduce(
+          into: [WindowID: Double]()
+        ) {
+          $0[$1.id] = rows ? $1.frame.height : $1.frame.width
+        }
+        keepRibbon(
+          m, order: order[m], lengths: lengths, inner: inner,
+          outer: outer)
       }
     }
     let m = min(activeMonitor, monitors.count - 1)

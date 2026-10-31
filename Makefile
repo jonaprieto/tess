@@ -7,7 +7,7 @@ VERSION := $(shell sed -n 's/^let version = "\(.*\)"/\1/p' Sources/tess/main.swi
 # ad-hoc fallback ("-") changes with every build and loses it.
 SIGN ?= $(or $(shell security find-identity -v -p codesigning | grep -v REVOKED | grep -m1 -o '[0-9A-F]\{40\}'),-)
 
-.PHONY: build test format lint hooks app dist deps install uninstall
+.PHONY: build test e2e format lint hooks app dist deps install uninstall
 
 deps:
 	@if ! PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin command -v folio >/dev/null; then \
@@ -36,6 +36,10 @@ lint:
 
 hooks:
 	pre-commit install
+
+# Moves real windows, of apps it opens and quits itself: see the script.
+e2e: build
+	./Tests/ribbon-e2e.sh
 
 # Opened from Finder or Spotlight it shows Settings, or starts tess again after a Quit.
 app: build

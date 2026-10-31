@@ -53,13 +53,19 @@ extension Tiler {
     }
   }
 
-  /// The shown windows whose middle is not under another window.
+  /// The shown windows whose middle is not under another window, and
+  /// those parked on a ribbon's strip, which keep a letter whichever
+  /// of them macOS has in front.
   func visibleWindows(_ stack: [(id: WindowID, frame: CGRect)])
     -> [WindowID]
   {
-    shownWindows.filter { id in
+    let parked = world.parked(
+      inner: config.inner, outer: config.outer)
+    return shownWindows.filter { id in
       stack.first(where: { $0.id == id }).map {
-        onTop(CGPoint(x: $0.frame.midX, y: $0.frame.midY), id, stack)
+        parked.contains(id)
+          || onTop(
+            CGPoint(x: $0.frame.midX, y: $0.frame.midY), id, stack)
       } ?? false
     }
   }
@@ -126,7 +132,8 @@ extension Tiler {
     labels = stableLabels(
       labels, windows: visible, alphabet: labelPool)
     let all = config.windowLabels == .always || labelsAreKeys
-    guard config.windowLabels != .off, !paused, !starting, drag == nil
+    guard config.windowLabels != .off, !paused, !starting,
+      drag == nil, !gliding
     else {
       if drawn != nil { decorations.hide() }
       drawn = nil

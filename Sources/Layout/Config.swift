@@ -51,6 +51,8 @@ public struct Config: Equatable, Sendable {
   /// sends that text and the titles of windows, tabs, apps and
   /// commands, never browser history).
   public var jev = false
+  /// Every screen starts as a ribbon (see `Ribbon.swift`).
+  public var ribbon = false
   /// The interface's language; left out of the file, macOS's.
   public var language = Language.first(of: Locale.preferredLanguages)
 
@@ -150,9 +152,10 @@ public struct Config: Equatable, Sendable {
     public var oneShot: [String]?
     public var terminal: String?
     public var language: String?
+    public var ribbon: Bool?
     enum CodingKeys: String, CodingKey {
       case gaps, overlay, float, tile, ignore, history, verbs, modes,
-        terminal, jev, language
+        terminal, jev, language, ribbon
       case emptyScreens = "empty_screens"
       case oneShot = "one_shot"
     }
@@ -232,6 +235,7 @@ public struct Config: Equatable, Sendable {
     r.emptyScreens = top.emptyScreens ?? base.emptyScreens
     r.jev = top.jev ?? base.jev
     r.language = top.language ?? base.language
+    r.ribbon = top.ribbon ?? base.ribbon
     r.oneShot = top.oneShot ?? base.oneShot
     r.terminal = top.terminal ?? base.terminal
     r.float = top.float ?? base.float
@@ -270,6 +274,7 @@ public struct Config: Equatable, Sendable {
     if edited.language != base.language {
       o.language = edited.language
     }
+    if edited.ribbon != base.ribbon { o.ribbon = edited.ribbon }
     if edited.oneShot != base.oneShot { o.oneShot = edited.oneShot }
     if edited.terminal != base.terminal {
       o.terminal = edited.terminal
@@ -343,6 +348,7 @@ public struct Config: Equatable, Sendable {
     }
     c.emptyScreens = raw.emptyScreens ?? true
     c.jev = raw.jev ?? false
+    c.ribbon = raw.ribbon ?? false
     if let code = raw.language {
       guard let language = Language(rawValue: code) else {
         throw ParseError(
@@ -433,6 +439,7 @@ public struct Config: Equatable, Sendable {
       "gaps": {"inner": 10, "outer": 10},
       "overlay": {"all_screens": true, "window_labels": "jump", "gray_others": true, "gray_amount": 0.8},
       "empty_screens": true,
+      "ribbon": false,
       "one_shot": ["tess"],
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
@@ -519,6 +526,7 @@ public struct Config: Equatable, Sendable {
           "u": "undo",
           "shift-u": "redo",
           "z": "zen; mode main",
+          "g": "ribbon",
           "backspace": "clear-screen",
           "alt-space": "pick",
           "cmd-space": "pick",

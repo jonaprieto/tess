@@ -137,6 +137,11 @@ extension Tiler {
     case .wifi(let on): setWifi(on)
     case .caffeine(let minutes): setCaffeine(minutes)
     case .speedtest: runSpeedtest()
+    case .ribbon:
+      world.toggleRibbon()
+      toast(
+        world.monitors[safe: world.activeMonitor]?.ribbon == true
+          ? L("ribbon on") : L("ribbon off"))
     case .moveToMonitor(let n):
       if let id = world.focused, world.floating.contains(id) {
         moveFloating(id, to: n - 1)
@@ -304,8 +309,12 @@ extension Tiler {
   func rescue() -> Int {
     var n = 0
     let screens = world.monitors.map(\.frame)
+    let parked = world.parked(
+      inner: config.inner, outer: config.outer)
     for (id, info) in infos
-    where info.standard && !offSpace.contains(id) {
+    where info.standard && !offSpace.contains(id)
+      && !parked.contains(id)
+    {
       guard info.frame.isLost(on: screens) else { continue }
       n += 1
       if world.locate(id) != nil {

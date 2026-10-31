@@ -134,7 +134,14 @@ extension World {
   public mutating func resize(_ axis: Axis, by px: Double) {
     guard let p = focusedPosition else { return }
     let mon = monitors[p.m]
-    if mon.isMajor(axis) {
+    if mon.isMajor(axis), mon.ribbon {
+      // A lone lane fills the screen: a width nobody can see would
+      // show up with the next window.
+      guard mon.lanes.count > 1 else { return }
+      let extent = mon.rows ? mon.frame.height : mon.frame.width
+      monitors[p.m].lanes[p.l].span =
+        (mon.lanes[p.l].span + px / extent).clamped(0.1, 1)
+    } else if mon.isMajor(axis) {
       let extent = mon.rows ? mon.frame.height : mon.frame.width
       let s = grown(
         mon.lanes.map(\.size), at: p.l, by: px, extent: extent)
@@ -165,7 +172,7 @@ extension World {
     guard !minimums.isEmpty else { return }
     for m in monitors.indices where monitors[m].fullscreen == nil {
       let mon = monitors[m]
-      let area = mon.frame.insetBy(dx: outer, dy: outer)
+      let area = tileArea(m, inner: inner, outer: outer)
       let (along, across) =
         mon.rows
         ? (area.height, area.width) : (area.width, area.height)
@@ -173,13 +180,24 @@ extension World {
         let size = minimums[id] ?? .zero
         return isAlong != mon.rows ? size.width : size.height
       }
-      let lanes = floored(
-        mon.lanes.map(\.size),
-        mon.lanes.map {
-          $0.windows.map { keeps($0, along: true) }.max() ?? 0
-        },
-        whole: along - inner * Double(mon.lanes.count - 1))
-      for i in lanes.indices { monitors[m].lanes[i].size = lanes[i] }
+      let wants = mon.lanes.map {
+        $0.windows.map { keeps($0, along: true) }.max() ?? 0
+      }
+      if mon.ribbon {
+        // A ribbon has room: only this lane gets wider.
+        for (i, want) in wants.enumerated() where want > 0 {
+          monitors[m].lanes[i].span = max(
+            mon.lanes[i].span,
+            min((want + inner) / (along + inner), 1))
+        }
+      } else {
+        let lanes = floored(
+          mon.lanes.map(\.size), wants,
+          whole: along - inner * Double(mon.lanes.count - 1))
+        for i in lanes.indices {
+          monitors[m].lanes[i].size = lanes[i]
+        }
+      }
       for (l, lane) in mon.lanes.enumerated() where !lane.accordion {
         monitors[m].lanes[l].sizes = floored(
           lane.sizes, lane.windows.map { keeps($0, along: false) },
@@ -192,6 +210,7 @@ extension World {
     guard monitors.indices.contains(activeMonitor) else { return }
     for i in monitors[activeMonitor].lanes.indices {
       monitors[activeMonitor].lanes[i].size = 1
+      monitors[activeMonitor].lanes[i].span = 0.5
       monitors[activeMonitor].lanes[i].sizes = monitors[activeMonitor]
         .lanes[i].sizes.map { _ in 1 }
     }
@@ -200,6 +219,7 @@ extension World {
   public mutating func flip() {
     guard monitors.indices.contains(activeMonitor) else { return }
     monitors[activeMonitor].rows.toggle()
+    monitors[activeMonitor].scroll = 0
   }
 
   public mutating func toggleAccordion() {
@@ -235,6 +255,7 @@ extension World {
     }
     monitors[activeMonitor].rows = a == .rows
     monitors[activeMonitor].fullscreen = nil
+    monitors[activeMonitor].scroll = 0
   }
 
   // MARK: Monitors
@@ -253,7 +274,9 @@ extension World {
     let old = monitors
     monitors = infos.map { info in
       guard var m = old.first(where: { $0.id == info.id }) else {
-        return Monitor(id: info.id, frame: info.frame)
+        var fresh = Monitor(id: info.id, frame: info.frame)
+        fresh.ribbon = ribbons
+        return fresh
       }
       // A display rotated between landscape and portrait gets the
       // lanes that fit it.
@@ -486,6 +509,7 @@ extension World {
     }
     w.parked = parked
     w.layouts = layouts
+    w.ribbons = ribbons
     w.setMonitors(monitors.map { (id: $0.id, frame: $0.frame) })
     for (m, mon) in monitors.enumerated() {
       for id in mon.windows where !w.contains(id) {

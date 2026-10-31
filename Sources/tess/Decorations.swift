@@ -111,7 +111,9 @@ final class DecorationView: NSView {
     let height: CGFloat = jumping ? 40 : 20
     for w in windows {
       guard let label = w.label else { continue }
-      let r = local(w.frame)
+      // What the screen shows of it: a window parked on a ribbon's
+      // strip is mostly past it.
+      let r = local(w.frame).intersection(bounds)
       let key = "\(Int(r.minX)),\(Int(r.minY)),\(Int(r.width))"
       let i = shared[key, default: 0]
       shared[key] = i + 1

@@ -30,7 +30,8 @@ extension Tiler {
       "active_screen": world.activeMonitor + 1,
       "screens": world.monitors.enumerated().map { n, m in
         [
-          "n": n + 1, "rows": m.rows,
+          "n": n + 1, "rows": m.rows, "ribbon": m.ribbon,
+          "scroll": m.scroll,
           "fullscreen": m.fullscreen.map { Int($0) as Any }
             ?? NSNull(),
           "lanes": m.lanes.map {
@@ -94,7 +95,7 @@ extension Tiler {
       let f = mon.frame
       out.append(
         "screen \(m + 1) \(mon.id.prefix(8)) \(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))x\(Int(f.height))"
-          + " \(mon.rows ? "rows" : "columns")\(m == world.activeMonitor ? " active" : "")"
+          + " \(mon.rows ? "rows" : "columns")\(mon.ribbon ? " ribbon" : "")\(m == world.activeMonitor ? " active" : "")"
       )
       for (l, lane) in mon.lanes.enumerated() {
         out.append(

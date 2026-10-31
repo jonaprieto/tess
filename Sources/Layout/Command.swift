@@ -48,6 +48,8 @@ public enum Command: Equatable, Sendable {
   /// Download and upload speed and idle latency, with macOS's own
   /// `networkQuality`.
   case speedtest
+  /// The active screen becomes a ribbon, or stops being one.
+  case ribbon
   case exec(String), reload, mode(String), retile, rescue, pause,
     tree, nop
   /// A new window of the config's terminal, in the home folder.
@@ -105,7 +107,7 @@ public enum Command: Equatable, Sendable {
     "undo": .undo, "redo": .redo, "zen": .zen, "break": .zenBreak,
     "terminal": .terminal,
     "wifi": .wifi(nil), "caffeine": .caffeine(nil),
-    "speedtest": .speedtest,
+    "speedtest": .speedtest, "ribbon": .ribbon,
     "halves": .arrange(.halves), "columns": .arrange(.columns),
     "rows": .arrange(.rows), "grid": .arrange(.grid)
   ]

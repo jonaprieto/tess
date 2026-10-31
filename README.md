@@ -185,7 +185,8 @@ whatever is typed. `web` also has `brave`, and `f` also has `file`. Books and pa
 `⌘Tab` shows a card for every window, and for each running app with none, with its screen,
 memory use and how long it has been open. Tab steps through them, a card's letter goes
 straight there, and the window you are about to land on is outlined on screen, even when it
-sits behind others.
+sits behind others. With a ribbon on, a map of it sits above the cards: where the screen is
+along it, what is out of view, and that window lit.
 
 ## Focus with Zen
 
@@ -248,7 +249,7 @@ Everything else:
 In tess mode, on top of the same actions without a modifier: `t` a terminal window, `x` close
 the window and pick what fills its place, `w` bring back lost windows, `s` re-tile, `r` resize
 mode, `b` balance, `f` fullscreen, `a` accordion, `v` columns or rows, `space` float, `u` and
-`shift-u` undo and redo, `z` Zen.
+`shift-u` undo and redo, `z` Zen, `g` ribbon.
 
 A keyboard with programmable keys can also send Hyper (⌃⌥⇧⌘) and bind it. This is optional:
 
@@ -287,6 +288,43 @@ moves, so a window lands once. A resize stops there, and the others keep the spa
 
 </details>
 
+## Keep every window its width with a ribbon
+
+Past three or four columns a screen runs out of room. A ribbon stops squeezing them: each
+column keeps its width and the screen scrolls along them, the way a paper strip passes under a
+window. Columns out of view wait along the bottom of the screen with their title bars showing.
+Go to one with the keyboard, its letter, `⌘Tab` or a click, and the ribbon slides to it.
+
+`g` in tess mode, `tess ribbon` or Ribbon in the menu turns it on or off for the screen in use,
+each screen keeping its own. `"ribbon": true` starts every screen that way. Off again, the
+columns share the screen as before.
+
+<details>
+<summary>How a ribbon behaves</summary>
+
+A new column takes half the screen, so two fill it. `⌥⇧=` and `⌥⇧-` change only the column in
+use and `⌥⇧0` takes the screen's columns back to half. A window takes its width along when it
+swaps, and an app's minimum widens its own column and no other.
+
+Columns of different widths seldom fill a screen exactly: one cut by the screen's edge stays out
+when nothing lies past that edge. Next to another screen it waits on the strip instead, so
+nothing lands on that screen.
+
+The strip keeps 52 points of the screen even when nothing waits on it, so windows are not
+resized each time one comes or goes. macOS keeps a window's title bar on screen, which is why
+that is its depth, and why windows waiting there are never lost: quit tess and they are still
+there to pick up. With a screen below, the strip moves to a free side, 20 points wide.
+
+Windows on the strip overlap once there are more than two, and macOS decides which is in front,
+but each keeps its letter in tess mode. They move without being resized, which spares apps from
+laying out again. With Reduce Motion on in macOS the ribbon goes straight there instead of
+sliding.
+
+The picker's map shows all the columns side by side. After a restart with `"ribbon": true` the
+columns in view come first and those on the strip follow them.
+
+</details>
+
 ## Make it yours
 
 Settings in the menu bar, or `tess settings`, edits gaps, colors, labels, language, picker
@@ -312,6 +350,7 @@ and `null` removes a default.
   have shows once from it, and a browser left out is not read.
 - `"empty_screens": false` stops new windows going to an empty screen, and Settings and a
   mode's keys to the screen with the fewest windows.
+- `"ribbon": true` starts every screen as a ribbon.
 - `"language": "es"` or `"en"`. Left out, tess follows macOS: the first of its languages it
   speaks, else English. Commands, config keys, `tess --help`, `tess tree` and the logs stay in
   English.
@@ -398,6 +437,7 @@ every key, the only way to get macOS's own `⌘Tab` back. Resume the same way.
 - `tess speedtest`: download and upload speed and latency, with macOS's own `networkQuality`,
   in about 20 seconds.
 - `tess zen`: Zen on or off. `tess break`: Zen's break now.
+- `tess ribbon`: the screen in use becomes a ribbon, or stops being one.
 - `tess doctor`, `tess tutorial`, `tess settings`.
 - `tess reload`, `tess default-config`, `tess --version`.
 

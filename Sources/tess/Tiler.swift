@@ -239,6 +239,10 @@ final class Tiler {
 
   var drawn: Decorations.Drawn?
 
+  /// A ribbon's windows are sliding to where it scrolled: nothing
+  /// else writes until they are there.
+  var gliding = false
+
   /// Layout changes, oldest first; the last `undone` of them were
   /// undone.
   var history: [Step] = []
@@ -523,15 +527,29 @@ final class Tiler {
   // fullscreen are reset; place one window by frame in Layout if that
   // ever bites.
   func adopt(_ found: [WinInfo]) {
+    // A ribbon is not where its windows are, so it stays out of this:
+    // what lands on one joins its end.
+    let ribbons = world.monitors.filter(\.ribbon)
+    let onRibbons = Set(ribbons.flatMap(\.windows))
     var flat = world
     for i in flat.monitors.indices {
       flat.monitors[i].fullscreen = nil
     }
     let targets = flat.frames(
       inner: config.inner, outer: config.outer
-    ).map { (id: $0.key, frame: $0.value) }
+    ).filter { !onRibbons.contains($0.key) }
+      .map { (id: $0.key, frame: $0.value) }
     world.rebuild(
-      targets + found.map { (id: $0.id, frame: $0.frame) })
+      targets + found.map { (id: $0.id, frame: $0.frame) },
+      inner: config.inner, outer: config.outer)
+    for was in ribbons {
+      guard
+        let m = world.monitors.firstIndex(where: { $0.id == was.id })
+      else { continue }
+      let joined = world.monitors[m].lanes
+      world.monitors[m] = was
+      world.monitors[m].lanes += joined
+    }
   }
 
 
@@ -879,7 +897,9 @@ final class Tiler {
     let tiles = infos.values.filter { kind($0) == .tile }.sorted {
       $0.id < $1.id
     }
-    world.rebuild(tiles.map { (id: $0.id, frame: $0.frame) })
+    world.rebuild(
+      tiles.map { (id: $0.id, frame: $0.frame) }, inner: config.inner,
+      outer: config.outer)
     world.floating = Set(
       infos.values.filter { kind($0) == .float }.map(\.id))
     if let f = osFocused, world.contains(f) { world.focused = f }
@@ -923,7 +943,7 @@ final class Tiler {
       refreshOverlays()
       refreshVeil()
     }
-    guard !starting, !paused else { return }
+    guard !starting, !paused, !gliding else { return }
     // Nothing moves under the mouse, nor before a drag's drop is in
     // the layout.
     if NSEvent.pressedMouseButtons & 1 != 0 || drag != nil {
@@ -936,6 +956,14 @@ final class Tiler {
     // afterwards, every window would move a second time.
     world.respect(
       windowMinimums, inner: config.inner, outer: config.outer)
+    // Reduce Motion is a say on this too: the windows go straight
+    // there.
+    if world.reveal(inner: config.inner, outer: config.outer),
+      !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+      glide()
+    {
+      return
+    }
     // A window still leaving macOS fullscreen cannot be moved yet.
     for (id, target) in targets
     where !offSpace.contains(id)
@@ -995,6 +1023,58 @@ final class Tiler {
       || (refused.contains(id)
         && writes[id]?.target.size == target.size)
   }
+
+
+  /// A ribbon scrolled: its windows slide there, moved only, in as
+  /// many steps as each app keeps up with, since a step not yet taken
+  /// gives way to the next. `apply` then writes where they go as
+  /// ever, so a window that missed the end still gets there. False if
+  /// there is no slide.
+  func glide() -> Bool {
+    let moves = targets.compactMap {
+      id, to -> (
+        id: WindowID, worker: AppWorker, from: CGPoint, to: CGPoint
+      )? in
+      guard let info = infos[id], let worker = workers[info.pid],
+        !offSpace.contains(id),
+        info.frame.size == to.size || refused.contains(id),
+        !info.frame.isNear(to)
+      else { return nil }
+      return (id, worker, info.frame.origin, to.origin)
+    }
+    guard !moves.isEmpty else { return false }
+    gliding = true
+    refreshDecorations()
+    let start = CFAbsoluteTimeGetCurrent()
+    let timer = DispatchSource.makeTimerSource(queue: .main)
+    timer.schedule(
+      deadline: .now(), repeating: 1.0 / 60, leeway: .milliseconds(2))
+    timer.setEventHandler { [weak self] in
+      guard let self else { return timer.cancel() }
+      let t = (CFAbsoluteTimeGetCurrent() - start) / Self.glideTime
+      guard t < 1 else {
+        timer.cancel()
+        self.gliding = false
+        self.apply()
+        return
+      }
+      let eased = 1 - (1 - t) * (1 - t)
+      for m in moves {
+        let p = CGPoint(
+          x: (m.from.x + (m.to.x - m.from.x) * eased).rounded(),
+          y: (m.from.y + (m.to.y - m.from.y) * eased).rounded())
+        m.worker.setFrame(
+          m.id,
+          CGRect(
+            origin: p, size: self.infos[m.id]?.frame.size ?? .zero),
+          moveOnly: true)
+      }
+    }
+    timer.resume()
+    return true
+  }
+
+  static let glideTime = 0.13
 
 
   /// A window kept a bigger size than its tile: that is now the
@@ -1220,6 +1300,14 @@ final class Tiler {
         FileManager.default.fileExists(atPath: url.path)
           ? Data(contentsOf: url) : nil)
       configError = nil
+      // In the file it is a choice for every screen, so changing it
+      // there changes them.
+      if world.ribbons != config.ribbon {
+        world.monitors.indices.forEach {
+          world.setRibbon($0, config.ribbon)
+        }
+      }
+      world.ribbons = config.ribbon
       Strings.language = config.language
       Panels.accent =
         config.borderColor.map {

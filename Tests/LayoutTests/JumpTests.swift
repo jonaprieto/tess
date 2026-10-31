@@ -35,8 +35,9 @@ import Testing
       Data(#"{"overlay": {"window_labels": "sometimes"}}"#.utf8))
   }
   #expect(
-    Config.defaults.modes["tess"]?[KeySpec(key: "g", mods: [])] == nil
-  )
+    Config.defaults.modes["tess"]?[KeySpec(key: "g", mods: [])] == [
+      .ribbon
+    ])
 }
 
 @Test func heldKeysAreLettersAndDigitsWithOption() {

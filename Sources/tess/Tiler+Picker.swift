@@ -784,10 +784,12 @@ extension Tiler {
 
   func pickerMap(for item: Picker.Item? = nil) -> Picker.Map {
     // Without tess fullscreen, so no window is drawn over the others'
-    // letters.
+    // letters, and with a ribbon's columns side by side, so all of
+    // them are there to pick.
     var flat = world
     for i in flat.monitors.indices {
       flat.monitors[i].fullscreen = nil
+      flat.monitors[i].ribbon = false
     }
     let frames = flat.frames(inner: config.inner, outer: config.outer)
     var windows:

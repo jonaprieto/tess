@@ -118,9 +118,11 @@ extension World {
   private mutating func share(
     _ t: WindowID, with id: WindowID, before: Bool
   ) -> Bool {
-    guard let p = locate(t), monitors[p.m].lanes.count == 1 else {
-      return false
-    }
+    // A ribbon has room for one more lane, and rows would turn it on
+    // its side.
+    guard let p = locate(t), monitors[p.m].lanes.count == 1,
+      !monitors[p.m].ribbon
+    else { return false }
     let lane = monitors[p.m].lanes[0]
     guard lane.windows.count > 1, !lane.accordion else {
       return false
@@ -155,6 +157,17 @@ extension World {
     guard let pa = locate(a), let pb = locate(b) else { return }
     monitors[pa.m].lanes[pa.l].windows[pa.w] = b
     monitors[pb.m].lanes[pb.l].windows[pb.w] = a
+    // On a ribbon a column is as wide as its window, which takes that
+    // along.
+    if monitors[pa.m].ribbon, monitors[pb.m].ribbon,
+      monitors[pa.m].lanes[pa.l].windows.count == 1,
+      monitors[pb.m].lanes[pb.l].windows.count == 1
+    {
+      let span = monitors[pa.m].lanes[pa.l].span
+      monitors[pa.m].lanes[pa.l].span =
+        monitors[pb.m].lanes[pb.l].span
+      monitors[pb.m].lanes[pb.l].span = span
+    }
   }
 
   /// Where tiled window `id` dragged to `point` would land (`frames`:

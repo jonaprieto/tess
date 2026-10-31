@@ -20,7 +20,17 @@ final class CmdTab {
   nonisolated(unsafe) static var enabled = true
 
   /// Zen's break: every key and click stops here.
-  nonisolated(unsafe) static var blocking = false
+  nonisolated(unsafe) static var blocking = false {
+    didSet {
+      if blocking != oldValue, let clicks {
+        CGEvent.tapEnable(tap: clicks, enable: blocking)
+      }
+    }
+  }
+
+  /// Clicks and scrolling, on only during a break: the rest of the
+  /// time each one would stop at this thread on its way to every app.
+  nonisolated(unsafe) private static var clicks: CFMachPort?
 
   private let onKey: (Key) -> Void
   // The tap's thread only.
@@ -34,12 +44,10 @@ final class CmdTab {
     thread.start()
   }
 
-  private func run() {
-    let mask = [
-      CGEventType.keyDown, .keyUp, .flagsChanged, .leftMouseDown,
-      .leftMouseUp, .rightMouseDown,
-      .rightMouseUp, .otherMouseDown, .otherMouseUp, .scrollWheel
-    ].reduce(CGEventMask(0)) { $0 | CGEventMask(1) << $1.rawValue }
+  private func listen(_ events: [CGEventType]) -> CFMachPort? {
+    let mask = events.reduce(CGEventMask(0)) {
+      $0 | CGEventMask(1) << $1.rawValue
+    }
     guard
       let tap = CGEvent.tapCreate(
         tap: .cgSessionEventTap, place: .headInsertEventTap,
@@ -49,15 +57,28 @@ final class CmdTab {
           Unmanaged<CmdTab>.fromOpaque(refcon!).takeUnretainedValue()
             .handle(type, e)
         }, userInfo: Unmanaged.passUnretained(self).toOpaque())
-    else {
+    else { return nil }
+    CFRunLoopAddSource(
+      CFRunLoopGetCurrent(),
+      CFMachPortCreateRunLoopSource(nil, tap, 0), .commonModes)
+    return tap
+  }
+
+  private func run() {
+    guard let tap = listen([.keyDown, .keyUp, .flagsChanged]) else {
       Log.write("cmd-tab: no event tap, macOS keeps it")
       return
     }
     self.tap = tap
-    CFRunLoopAddSource(
-      CFRunLoopGetCurrent(),
-      CFMachPortCreateRunLoopSource(nil, tap, 0), .commonModes)
     CGEvent.tapEnable(tap: tap, enable: true)
+    if let clicks = listen([
+      .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp,
+      .otherMouseDown, .otherMouseUp,
+      .scrollWheel
+    ]) {
+      CGEvent.tapEnable(tap: clicks, enable: Self.blocking)
+      Self.clicks = clicks
+    }
     CFRunLoopRun()
   }
 
@@ -70,6 +91,11 @@ final class CmdTab {
       || type == .tapDisabledByUserInput
     {
       if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+      // Only ever back on: turning a tap off lands here too, so
+      // turning it off from here would never end.
+      if Self.blocking, let clicks = Self.clicks {
+        CGEvent.tapEnable(tap: clicks, enable: true)
+      }
       return pass
     }
     if Self.blocking { return nil }

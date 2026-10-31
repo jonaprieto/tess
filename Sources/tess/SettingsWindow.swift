@@ -13,13 +13,17 @@ final class SettingsWindow {
         let w = window ?? {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 560),
                              styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-            w.title = "tess Settings"
             w.isReleasedWhenClosed = false
             w.center()
             window = w
             return w
         }()
-        w.contentView = NSHostingView(rootView: SettingsView(model: SettingsModel(raw: raw, save: save)))
+        w.title = L("tess Settings")
+        let saved: (Config.Raw) -> String? = { [weak w] raw in
+            defer { w?.title = L("tess Settings") }
+            return save(raw)
+        }
+        w.contentView = NSHostingView(rootView: SettingsView(model: SettingsModel(raw: raw, save: saved)))
         if let screen, !w.isVisible {
             let f = Screens.flip(screen)
             w.setFrameOrigin(NSPoint(x: f.midX - w.frame.width / 2, y: f.midY - w.frame.height / 2))
@@ -47,6 +51,10 @@ final class SettingsModel {
     var selectionColor: Color
     var emptyScreens: Bool
     var windowLabels: Config.LabelMode
+    /// A language code; nil is macOS's.
+    var language: String?
+    /// What the window is shown in: the view is built again when a save changes it.
+    var shownIn = Strings.language
     var float: [String]
     var tile: [String]
     var ignore: [String]
@@ -75,6 +83,7 @@ final class SettingsModel {
         selectionColor = color(config.selectionColor, fallback: .systemOrange)
         emptyScreens = raw.emptyScreens ?? true
         windowLabels = raw.overlay?.windowLabels ?? .jump
+        language = raw.language
         float = raw.float ?? []
         tile = raw.tile ?? []
         ignore = raw.ignore ?? []
@@ -106,6 +115,7 @@ final class SettingsModel {
         if selectionColor != saved.selectionColor { overlay.selectionColor = hex(selectionColor) }
         r.overlay = overlay
         r.emptyScreens = emptyScreens
+        r.language = language
         r.float = float
         r.tile = tile
         r.ignore = ignore
@@ -127,7 +137,8 @@ final class SettingsModel {
         message = saveRaw(r)
         failed = message != nil
         if message == nil {
-            message = "Saved"
+            shownIn = Strings.language
+            message = L("Saved")
             original = r
         }
     }
@@ -137,6 +148,7 @@ final class SettingsModel {
         (inner, outer, overlayAllScreens, grayOthers, emptyScreens, windowLabels, float, tile, ignore, verbs, modes) =
             (fresh.inner, fresh.outer, fresh.overlayAllScreens, fresh.grayOthers, fresh.emptyScreens, fresh.windowLabels, fresh.float, fresh.tile,
              fresh.ignore, fresh.verbs, fresh.modes)
+        language = fresh.language
         grayAmount = fresh.grayAmount
         borderColor = fresh.borderColor
         inactiveBorderColor = fresh.inactiveBorderColor
@@ -151,10 +163,10 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             TabView {
-                GeneralTab(model: model).tabItem { Label("General", systemImage: "gearshape") }
-                AppearanceTab(model: model).tabItem { Label("Appearance", systemImage: "paintpalette") }
-                AppsTab(model: model).tabItem { Label("Apps", systemImage: "square.grid.2x2") }
-                KeysTab(model: model).tabItem { Label("Keys", systemImage: "keyboard") }
+                GeneralTab(model: model).tabItem { Label(L("General"), systemImage: "gearshape") }
+                AppearanceTab(model: model).tabItem { Label(L("Appearance"), systemImage: "paintpalette") }
+                AppsTab(model: model).tabItem { Label(L("Apps"), systemImage: "square.grid.2x2") }
+                KeysTab(model: model).tabItem { Label(L("Keys"), systemImage: "keyboard") }
             }
             .padding([.horizontal, .top])
             HStack {
@@ -164,16 +176,17 @@ struct SettingsView: View {
                         .lineLimit(2)
                 }
                 Spacer()
-                Button("Revert") { model.revert() }
-                Button("Save") { model.save() }
+                Button(L("Revert")) { model.revert() }
+                Button(L("Save")) { model.save() }
                     .keyboardShortcut("s")
                     .buttonStyle(.borderedProminent)
                     .disabled(model.invalid > 0)
-                    .help(model.invalid > 0 ? "\(model.invalid) key binding(s) need fixing" : "")
+                    .help(model.invalid > 0 ? L("\(model.invalid) key binding(s) need fixing") : "")
             }
             .padding()
         }
         .frame(minWidth: 620, minHeight: 480)
+        .id(model.shownIn)
     }
 }
 
@@ -182,45 +195,52 @@ struct GeneralTab: View {
 
     var body: some View {
         Form {
-            Section("Gaps") {
+            Section {
+                SwiftUI.Picker(L("Language"), selection: $model.language) {
+                    Text(L("Same as macOS")).tag(String?.none)
+                    Text("English").tag(String?.some("en"))
+                    Text("Español").tag(String?.some("es"))
+                }
+            }
+            Section(L("Gaps")) {
                 Stepper(value: $model.inner, in: 0...60, step: 2) {
-                    LabeledContent("Between windows", value: "\(Int(model.inner)) pt")
+                    LabeledContent(L("Between windows"), value: "\(Int(model.inner)) pt")
                 }
                 Stepper(value: $model.outer, in: 0...60, step: 2) {
-                    LabeledContent("Around the screen", value: "\(Int(model.outer)) pt")
+                    LabeledContent(L("Around the screen"), value: "\(Int(model.outer)) pt")
                 }
             }
             Section {
-                Toggle("Use empty screens", isOn: $model.emptyScreens)
+                Toggle(L("Use empty screens"), isOn: $model.emptyScreens)
             } footer: {
-                Text("New windows open on an empty screen when there is one; Settings and a mode's keys show on the screen with the fewest windows.")
+                Text(L("New windows open on an empty screen when there is one; Settings and a mode's keys show on the screen with the fewest windows."))
                     .foregroundStyle(.secondary)
             }
-            Section("Overlays") {
-                Toggle("Show a mode's keys on every screen", isOn: $model.overlayAllScreens)
+            Section(L("Overlays")) {
+                Toggle(L("Show a mode's keys on every screen"), isOn: $model.overlayAllScreens)
                     .disabled(model.emptyScreens)
-                SwiftUI.Picker("Borders and letters", selection: $model.windowLabels) {
-                    Text("Focused window, letters when jumping").tag(Config.LabelMode.jump)
-                    Text("Every window, always").tag(Config.LabelMode.always)
-                    Text("Off").tag(Config.LabelMode.off)
+                SwiftUI.Picker(L("Borders and letters"), selection: $model.windowLabels) {
+                    Text(L("Focused window, letters when jumping")).tag(Config.LabelMode.jump)
+                    Text(L("Every window, always")).tag(Config.LabelMode.always)
+                    Text(L("Off")).tag(Config.LabelMode.off)
                 }
             }
             Section {
                 ForEach($model.verbs) { $row in
                     HStack {
-                        TextField("verb", text: $row.key).frame(width: 90).font(.body.monospaced())
+                        TextField(L("verb"), text: $row.key).frame(width: 90).font(.body.monospaced())
                         Image(systemName: "arrow.right").foregroundStyle(.tertiary)
-                        TextField("app name", text: $row.value)
+                        TextField(L("app name"), text: $row.value)
                         Button { model.verbs.removeAll { $0.id == row.id } } label: { Image(systemName: "minus.circle") }
                             .buttonStyle(.borderless)
                     }
                     .labelsHidden()
                 }
-                Button("Add Verb") { model.verbs.append(.init(key: "", value: "")) }
+                Button(L("Add Verb")) { model.verbs.append(.init(key: "", value: "")) }
             } header: {
-                Text("Picker verbs")
+                Text(L("Picker verbs"))
             } footer: {
-                Text("Typing a verb and a folder in the picker opens the folder with that app, e.g. cd ~/anoma.")
+                Text(L("Typing a verb and a folder in the picker opens the folder with that app, e.g. cd ~/anoma."))
                     .foregroundStyle(.secondary)
             }
         }
@@ -234,26 +254,26 @@ struct AppearanceTab: View {
     var body: some View {
         Form {
             Section {
-                ColorPicker("Focused border and highlights", selection: $model.borderColor, supportsOpacity: false)
-                ColorPicker("Inactive borders", selection: $model.inactiveBorderColor, supportsOpacity: false)
-                ColorPicker("Selection and drag outlines", selection: $model.selectionColor, supportsOpacity: false)
+                ColorPicker(L("Focused border and highlights"), selection: $model.borderColor, supportsOpacity: false)
+                ColorPicker(L("Inactive borders"), selection: $model.inactiveBorderColor, supportsOpacity: false)
+                ColorPicker(L("Selection and drag outlines"), selection: $model.selectionColor, supportsOpacity: false)
             } header: {
-                Text("Colors")
+                Text(L("Colors"))
             } footer: {
-                Text("Inactive borders appear when borders and letters are set to Every window, or while jumping.")
+                Text(L("Inactive borders appear when borders and letters are set to Every window, or while jumping."))
             }
             Section {
-                Toggle("Gray out other windows", isOn: $model.grayOthers)
+                Toggle(L("Gray out other windows"), isOn: $model.grayOthers)
                 HStack {
-                    Slider(value: $model.grayAmount, in: 0...1, step: 0.05) { Text("Grayscale strength") }
+                    Slider(value: $model.grayAmount, in: 0...1, step: 0.05) { Text(L("Grayscale strength")) }
                     Text("\(Int((model.grayAmount * 100).rounded()))%")
                         .monospacedDigit().frame(width: 44, alignment: .trailing)
                 }
                 .disabled(!model.grayOthers)
             } header: {
-                Text("Grayscale")
+                Text(L("Grayscale"))
             } footer: {
-                Text("0% keeps full color; 100% makes other windows black and white. The focused window stays in color.")
+                Text(L("0% keeps full color; 100% makes other windows black and white. The focused window stays in color."))
             }
         }
         .formStyle(.grouped)
@@ -265,9 +285,9 @@ struct AppsTab: View {
 
     var body: some View {
         Form {
-            AppList(title: "Float", help: "Their windows are never tiled.", ids: $model.float)
-            AppList(title: "Tile", help: "Tiled even without a fullscreen button.", ids: $model.tile)
-            AppList(title: "Ignore", help: "tess never touches them (EdgeMark's panel, for one).", ids: $model.ignore)
+            AppList(title: L("Float"), help: L("Their windows are never tiled."), ids: $model.float)
+            AppList(title: L("Tile"), help: L("Tiled even without a fullscreen button."), ids: $model.tile)
+            AppList(title: L("Ignore"), help: L("tess never touches them (EdgeMark's panel, for one)."), ids: $model.ignore)
         }
         .formStyle(.grouped)
     }
@@ -302,13 +322,13 @@ struct AppList: View {
                 }
             }
             HStack {
-                TextField("bundle id, e.g. com.apple.Preview", text: $typed)
+                TextField(L("bundle id, e.g. com.apple.Preview"), text: $typed)
                     .labelsHidden()
                     .font(.body.monospaced())
                     .onSubmit(addTyped)
-                Button("Add", action: addTyped).disabled(typed.isEmpty)
+                Button(L("Add"), action: addTyped).disabled(typed.isEmpty)
             }
-            Menu("Add Running App") {
+            Menu(L("Add Running App")) {
                 ForEach(NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
                     .compactMap { app in app.bundleIdentifier.map { (id: $0, name: app.localizedName ?? $0) } }
                     .filter { !ids.contains($0.id) }.sorted { $0.name < $1.name }, id: \.id) { app in
@@ -333,7 +353,7 @@ struct KeysTab: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            SwiftUI.Picker("Mode", selection: $model.mode) {
+            SwiftUI.Picker(L("Mode"), selection: $model.mode) {
                 ForEach(model.modes.keys.sorted(), id: \.self) { Text($0).tag($0) }
             }
             .pickerStyle(.segmented)
@@ -345,7 +365,7 @@ struct KeysTab: View {
                         Image(systemName: keyOK && commandOK ? "checkmark.circle" : "exclamationmark.circle")
                             .foregroundStyle(keyOK && commandOK ? Color.secondary : Color.red)
                         TextField("alt-shift-h", text: $row.key).font(.body.monospaced()).frame(width: 200)
-                        TextField("command", text: $row.value).font(.body.monospaced())
+                        TextField(L("command"), text: $row.value).font(.body.monospaced())
                         Button { rows.wrappedValue.removeAll { $0.id == row.id } } label: { Image(systemName: "minus.circle") }
                             .buttonStyle(.borderless)
                     }
@@ -353,9 +373,9 @@ struct KeysTab: View {
                 }
             }
             HStack {
-                Button("Add Binding") { rows.wrappedValue.append(.init(key: "", value: "")) }
+                Button(L("Add Binding")) { rows.wrappedValue.append(.init(key: "", value: "")) }
                 Spacer()
-                Text("Keys like alt-shift-h or cmd-alt-ctrl-shift-g; commands as in `tess default-config`.")
+                Text(LocalizedStringKey(L("Keys like alt-shift-h or cmd-alt-ctrl-shift-g; commands as in `tess default-config`.")))
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

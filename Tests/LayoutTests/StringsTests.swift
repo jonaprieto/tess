@@ -72,4 +72,7 @@ private func phrases() throws -> Set<String> {
     #expect(Language.first(of: ["nb-NO"]) == .en)
     #expect(try Config.load(Data(#"{"language": "es"}"#.utf8)).language == .es)
     #expect(throws: ParseError.self) { try Config.load(Data(#"{"language": "fr"}"#.utf8)) }
+    var edited = Config.defaults.raw
+    edited.language = "es"
+    #expect(try Config.load(Config.file(for: edited)).language == .es)
 }

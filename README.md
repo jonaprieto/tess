@@ -231,6 +231,10 @@ shows once from it, and a browser left out is not read.
 New windows open on an empty screen when there is one, and Settings and a mode's keys show
 on the screen with the fewest windows; `"empty_screens": false` turns that off.
 
+`"language": "es"` (or Settings → General) puts tess in Spanish, and `"en"` in English. Left
+out, it follows macOS: the first of its languages tess speaks, else English. Commands, config
+keys, `tess --help`, `tess tree` and the logs stay in English.
+
 ## Command line
 
 `tess <command>` runs any command a key can, for example `tess focus left` or

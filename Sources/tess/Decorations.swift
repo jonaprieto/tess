@@ -46,7 +46,7 @@ final class Decorations {
         panels.forEach { $0.orderOut(nil) }
     }
 
-    private static func panel() -> NSPanel { Panels.overlay(level: .floating) }
+    private static func panel() -> NSPanel { Panels.overlay(level: .floating, missionControl: .transient) }
 }
 
 final class DecorationView: NSView {

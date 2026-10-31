@@ -11,7 +11,7 @@ final class Grayscale {
     func show(_ screens: [(frame: CGRect, hole: CGRect?)], amount: Double) {
         guard available else { return }
         while panels.count < screens.count, let backdrop = Self.backdrop() {
-            let p = Panels.overlay(level: NSWindow.Level(rawValue: NSWindow.Level.normal.rawValue + 1))
+            let p = Panels.overlay(level: NSWindow.Level(rawValue: NSWindow.Level.normal.rawValue + 1), missionControl: .transient)
             let host = NSView()
             host.wantsLayer = true
             host.layer?.addSublayer(backdrop)

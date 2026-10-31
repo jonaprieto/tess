@@ -38,3 +38,37 @@ import Testing
     #expect(tiler.grayScreens(focused: 1, in: stack).compactMap(\.hole) == [actual, actual])
     #expect(tiler.targets[1] == nil)
 }
+
+/// An app that keeps its own size, with other apps' snapshots arriving between its answers.
+@MainActor
+@Test func onlyTheAppsOwnReportEndsARefusal() throws {
+    _ = NSApplication.shared
+    let tiler = Tiler()
+    tiler.starting = false
+    let pid = getpid()
+    let worker = AppWorker(.current, onSnapshot: { _, _, _ in }, onDrag: { _ in })
+    defer { worker.stop() }
+    tiler.workers[pid] = worker
+    tiler.world.monitors = [Monitor(id: "A", frame: CGRect(x: 0, y: 0, width: 1200, height: 800))]
+    tiler.world.insert(1)
+    let target = try #require(tiler.targets[1])
+    func report(_ frame: CGRect) {
+        tiler.snapshot(pid, [WinInfo(id: 1, pid: pid, frame: frame, title: "", standard: true, fullscreenButton: true,
+                                     nativeFullscreen: false)], nil)
+    }
+    let kept = CGRect(x: target.minX, y: target.minY, width: 668, height: target.height)
+    report(kept)
+    for _ in 1...3 {
+        tiler.apply()
+        tiler.apply()
+        report(kept)
+    }
+    tiler.apply()
+    #expect(tiler.refused.contains(1))
+    #expect(tiler.writes[1]?.tries == 3)
+    tiler.apply()
+    #expect(tiler.refused.contains(1))
+    report(target)
+    tiler.apply()
+    #expect(!tiler.refused.contains(1))
+}

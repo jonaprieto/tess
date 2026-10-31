@@ -34,6 +34,9 @@ final class Tiler {
     /// fought forever: three tries per target, reset once the window matches.
     var writes: [WindowID: (target: CGRect, tries: Int)] = [:]
 
+    /// Windows whose frame in `infos` is the one tess wrote, until their app reports its own.
+    var assumed: Set<WindowID> = []
+
     /// Snapshots during the first 2 s only collect; then the layout is rebuilt from where
     /// windows are, so a restart keeps it.
     var starting = true
@@ -324,6 +327,7 @@ final class Tiler {
         if infos[id] != nil { Events.record("window.close", describe(id).merging(["why": why]) { $1 }) }
         infos[id] = nil
         writes[id] = nil
+        assumed.remove(id)
         offSpace.remove(id)
         unlistedSince[id] = nil
         autoFloated.remove(id)
@@ -382,6 +386,7 @@ final class Tiler {
         }
         for info in list {
             infos[info.id] = info
+            assumed.remove(info.id)
             if offSpace.remove(info.id) != nil { Events.record("window.back", describe(info.id)) }
             unlistedSince[info.id] = nil
         }
@@ -634,8 +639,10 @@ final class Tiler {
         for (id, target) in targets where !offSpace.contains(id) && infos[id]?.nativeFullscreen != true {
             guard let info = infos[id], let worker = workers[info.pid] else { continue }
             if info.frame.isNear(target) {
-                writes[id] = (target, 0)
-                refused.remove(id)
+                if !assumed.contains(id) {
+                    writes[id] = (target, 0)
+                    refused.remove(id)
+                }
                 continue
             }
             var w = writes[id] ?? (target, 0)
@@ -644,7 +651,10 @@ final class Tiler {
                 if refused.insert(id).inserted {
                     Log.write("window \(id) keeps its own size (\(info.frame), wanted \(target))")
                     Events.record("frame.refused", describe(id).merging(["wanted": target.json]) { $1 })
-                    toast("\(appName(id)) did not accept its tile. Try enlarging it or floating the window.", seconds: 5)
+                    // Only about the window in use: one further back has nothing to act on.
+                    if id == world.focused {
+                        toast("\(appName(id)) did not accept its tile. Try enlarging it or floating the window.", seconds: 5)
+                    }
                 }
                 continue
             }
@@ -653,6 +663,7 @@ final class Tiler {
             worker.setFrame(id, target)
             // Assume it lands; the next snapshot says otherwise if not.
             infos[id]?.frame = target
+            assumed.insert(id)
         }
     }
 

@@ -7,10 +7,21 @@ import Layout
 /// just above normal windows, redrawn after each layout pass. In jump
 /// mode the letters grow, since they are then the keys.
 final class Decorations {
-  struct Window {
+  struct Window: Equatable {
     var frame: CGRect
     var label: Character?
     var focused: Bool
+  }
+
+  /// What is on screen, so that nothing is redrawn when it would come
+  /// out the same.
+  struct Drawn: Equatable {
+    var screens: [CGRect]
+    var windows: [Window]
+    var tabs: [CGRect]
+    var tabLetters: [Character]
+    var jumping, all: Bool
+    var active: Int?
   }
 
   private var panels: [NSPanel] = []

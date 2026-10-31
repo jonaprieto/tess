@@ -231,7 +231,7 @@ final class Tiler {
   /// The mode before the current one, for `mode back`.
   var modeBefore = "main"
 
-  var drawn: [String] = []
+  var drawn: Decorations.Drawn?
 
   /// Layout changes, oldest first; the last `undone` of them were
   /// undone.
@@ -1217,7 +1217,7 @@ final class Tiler {
           NSColor(srgbRed: $0[0], green: $0[1], blue: $0[2], alpha: 1)
         }
         ?? .systemOrange
-      drawn = []  // redrawn in the new color
+      drawn = nil  // redrawn in the new color
       Events.record("config", ["ok": true])
       if announce { toast(L("config reloaded")) }
     } catch {

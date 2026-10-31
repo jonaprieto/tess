@@ -128,8 +128,8 @@ extension Tiler {
     let all = config.windowLabels == .always || labelsAreKeys
     guard config.windowLabels != .off, !paused, !starting, drag == nil
     else {
-      if !drawn.isEmpty { decorations.hide() }
-      drawn = []
+      if drawn != nil { decorations.hide() }
+      drawn = nil
       return
     }
     // Focus is only marked while its app is in front: with tess's own
@@ -147,16 +147,12 @@ extension Tiler {
     }
     let screens = world.monitors.map(\.frame)
     let active = screens.count > 1 ? world.activeMonitor : nil
-    let signature =
-      screens.map { "\($0)" }
-      + windows.map {
-        "\($0.frame)\($0.label.map(String.init) ?? "")\($0.focused)"
-      }
-      + tabs.map { "\($0.frame)\($0.label)" } + [
-        "\(labelsAreKeys)", "\(all)", "\(active ?? -1)"
-      ]
-    guard signature != drawn else { return }
-    drawn = signature
+    let now = Decorations.Drawn(
+      screens: screens, windows: windows, tabs: tabs.map(\.frame),
+      tabLetters: tabs.map(\.label),
+      jumping: labelsAreKeys, all: all, active: active)
+    guard now != drawn else { return }
+    drawn = now
     decorations.update(
       screens: screens, windows: windows, tabs: tabs,
       jumping: labelsAreKeys, all: all, active: active)

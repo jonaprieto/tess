@@ -33,7 +33,7 @@ You need macOS 27 on Apple Silicon.
 
 ```sh
 brew tap jonaprieto/tap
-brew trust --formula jonaprieto/tap/tess
+brew trust --formula jonaprieto/tap/tess jonaprieto/tap/folio
 brew install jonaprieto/tap/tess
 brew services start tess   # now and at login
 ```

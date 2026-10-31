@@ -73,6 +73,36 @@ import Testing
     #expect(!tiler.refused.contains(1))
 }
 
+/// Slack closed with its button keeps the window; picked again, it comes back as one tess knows.
+@MainActor
+@Test func aWindowPickedBackGoesWhereItWasAskedAndNotWhereItWas() throws {
+    _ = NSApplication.shared
+    let tiler = Tiler()
+    tiler.starting = false
+    let pid = getpid()
+    let worker = AppWorker(.current, onSnapshot: { _, _, _ in }, onDrag: { _ in })
+    defer { worker.stop() }
+    tiler.workers[pid] = worker
+    tiler.world.monitors = [Monitor(id: "A", frame: CGRect(x: 0, y: 0, width: 1200, height: 800))]
+    tiler.world.insert(1)
+    tiler.world.insert(2)
+    let frames = tiler.world.frames(inner: 0, outer: 0)
+    func info(_ id: WindowID, _ frame: CGRect) -> WinInfo {
+        WinInfo(id: id, pid: pid, frame: frame, title: "", standard: true, fullscreenButton: true, nativeFullscreen: false)
+    }
+    let tiled = [info(1, try #require(frames[1])), info(2, try #require(frames[2]))]
+    tiler.snapshot(pid, tiled, nil)
+    tiler.seen.insert(5)
+    tiler.placing = (pid, .replace(2), Date().addingTimeInterval(3))
+    // Windows of the app that are already tiled are not the one it is waiting for.
+    tiler.snapshot(pid, tiled, nil)
+    #expect(tiler.placing != nil)
+    // It comes back over window 1, where it was when it closed.
+    tiler.snapshot(pid, tiled + [info(5, try #require(frames[1]))], nil)
+    #expect(tiler.world.monitors[0].lanes.map(\.windows) == [[1], [5, 2]])
+    #expect(tiler.placing == nil)
+}
+
 /// Leaving fullscreen, the border would hang where the window was until it gets there.
 @MainActor
 @Test func aWindowOnItsWayHasNoBorderUntilItsAppReports() {

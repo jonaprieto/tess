@@ -211,11 +211,26 @@ extension Tiler {
     /// first, so macOS switches there, and is focused once it has.
     func use(_ id: WindowID, _ choice: Picker.Choice) {
         let away = offSpace.contains(id) || infos[id] == nil
-        if away, let pid = infos[id]?.pid ?? unseen[id] { NSRunningApplication(processIdentifier: pid)?.activate() }
+        if away, let pid = infos[id]?.pid ?? unseen[id], let app = NSRunningApplication(processIdentifier: pid) {
+            // Not listed by its app, it is mostly one closed with its button and kept for later.
+            // Only opening the app asks for it back, as a click on its Dock icon does; activating
+            // leaves an app with nothing to show.
+            if infos[id] == nil, let url = app.bundleURL {
+                NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+            } else {
+                app.activate()
+            }
+        }
         guard infos[id] != nil else {
-            // Known only to the window server: place it once its app has listed it, if ever.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-                if self?.infos[id] != nil { self?.use(id, choice) }
+            // Known only to the window server: its place is waiting for when its app lists it, if
+            // ever, however long that takes, and a jump gets it a moment to.
+            if case .place(let spot) = choice, let pid = unseen[id] {
+                placing = (pid, spot, Date().addingTimeInterval(8))
+                workers[pid]?.expectWindow()
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                    if self?.infos[id] != nil { self?.use(id, choice) }
+                }
             }
             return
         }

@@ -155,6 +155,11 @@ final class Tiler {
         }
     }
 
+    /// A window picked while its app was not listing it (closed with its button, kept by the
+    /// app): the app's next window goes here, not where it was. By app, as one may show another
+    /// window when asked for that one.
+    var placing: (pid: pid_t, spot: Spot, until: Date)?
+
     /// Windows the picker listed from the window server only, with their app.
     var unseen: [WindowID: pid_t] = [:]
 
@@ -436,6 +441,12 @@ final class Tiler {
                     world.monitors[p.m].fullscreen = info.id
                     Events.record("window.fullscreen", describe(info.id).merging(["how": "instead of macOS fullscreen"]) { $1 })
                 }
+                continue
+            }
+            if let p = placing, p.pid == pid, Date() < p.until, !world.contains(info.id), kind(info) != .skip {
+                placing = nil
+                world.place(info.id, p.spot)
+                Events.record("window.open", describe(info.id).merging(["how": "picked back"]) { $1 })
                 continue
             }
             switch kind(info) {

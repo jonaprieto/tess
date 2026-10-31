@@ -54,7 +54,7 @@ final class Overlay {
         let content = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
         for (i, download) in downloads.enumerated() {
             let y = height - CGFloat(i + 1) * 82
-            let label = NSTextField(labelWithString: "\(download.status ?? "Downloading…")\n\(download.title)")
+            let label = NSTextField(labelWithString: "\(download.status ?? L("Downloading…"))\n\(download.title)")
             label.font = .systemFont(ofSize: 14, weight: .medium)
             label.maximumNumberOfLines = 2
             label.lineBreakMode = .byTruncatingMiddle
@@ -64,7 +64,7 @@ final class Overlay {
                 let progress = NSProgressIndicator(frame: NSRect(x: 18, y: y + 10, width: width - 36, height: 12))
                 progress.style = .bar
                 progress.isIndeterminate = true
-                progress.setAccessibilityLabel("Downloading \(download.title)")
+                progress.setAccessibilityLabel(L("Downloading \(download.title)"))
                 content.addSubview(progress)
                 progress.startAnimation(nil)
             }
@@ -282,17 +282,17 @@ final class ModeSheet: NSView {
     private static let pad: CGFloat = 18
 
     init(name: String, bindings: [KeySpec: [Command]], letters: Bool = false) {
-        title = name == "tess" ? "tess mode" : "\(name.prefix(1).uppercased())\(name.dropFirst()) mode"
+        title = L("\(Command.modeName(name)) mode")
         super.init(frame: .zero)
         var groups: [Command.Group: [Row]] = [:]
-        if letters { groups[.focus] = [Row(cap: "Letter", label: "Go to that window or tab", order: (-1, ""))] }
+        if letters { groups[.focus] = [Row(cap: L("Letter"), label: L("Go to that window or tab"), order: (-1, ""))] }
         for (key, commands) in bindings {
             if commands == [.mode("main")] || commands == [.mode("back")] {
                 back.append(key.symbol)
                 continue
             }
             // Entering the mode again locks it on (one_shot).
-            let label = commands == [.mode(name)] ? "Lock" : Command.label(of: commands)
+            let label = commands == [.mode(name)] ? L("Lock") : Command.label(of: commands)
             guard let label, let first = commands.first(where: { $0.label != nil }) else { continue }
             groups[first.group, default: []].append(Row(cap: key.symbol, label: label, order: Self.order(first, label)))
         }
@@ -306,7 +306,7 @@ final class ModeSheet: NSView {
     init(title: String, rows: [(String, String)], back: [String]) {
         self.title = title
         super.init(frame: .zero)
-        columns = [("Keys", rows.enumerated().map { Row(cap: $0.element.0, label: $0.element.1, order: ($0.offset, "")) })]
+        columns = [(L("Keys"), rows.enumerated().map { Row(cap: $0.element.0, label: $0.element.1, order: ($0.offset, "")) })]
         self.back = back
         frame.size = fittingSize
     }
@@ -370,7 +370,7 @@ final class ModeSheet: NSView {
                 keycap(cap, NSRect(x: bx, y: y - 2, width: w, height: 19))
                 bx += w + 5
             }
-            ("back to tiling" as NSString).draw(at: NSPoint(x: bx + 4, y: y - 1), withAttributes: [
+            (L("back to tiling") as NSString).draw(at: NSPoint(x: bx + 4, y: y - 1), withAttributes: [
                 .font: Self.labelFont, .foregroundColor: NSColor.secondaryLabelColor,
             ])
         }

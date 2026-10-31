@@ -22,10 +22,10 @@ extension Command {
 
         public var title: String {
             switch self {
-            case .focus: "Focus"
-            case .move: "Move"
-            case .layout: "Layout"
-            case .more: "More"
+            case .focus: L("Focus")
+            case .move: L("Move")
+            case .layout: L("Layout")
+            case .more: L("More")
             }
         }
     }
@@ -33,53 +33,74 @@ extension Command {
     /// Plain words for the overlay and menus; nil for what is not worth showing.
     public var label: String? {
         switch self {
-        case .focus(let d): "Focus \(d.rawValue)"
-        case .move(let d): "Move \(d.rawValue)"
+        case .focus(.left): L("Focus left")
+        case .focus(.right): L("Focus right")
+        case .focus(.up): L("Focus up")
+        case .focus(.down): L("Focus down")
+        case .move(.left): L("Move left")
+        case .move(.right): L("Move right")
+        case .move(.up): L("Move up")
+        case .move(.down): L("Move down")
         case .resize(let a, let px):
-            a == .width ? (px < 0 ? "Narrower" : "Wider") : (px < 0 ? "Shorter" : "Taller")
-        case .grow(let px): px < 0 ? "Smaller" : "Bigger"
-        case .balance: "Balance"
-        case .flip: "Columns ↔ rows"
-        case .accordion: "Accordion"
-        case .arrange(let a): a.rawValue.capitalized
-        case .fullscreen: "Fullscreen"
-        case .float: "Float"
-        case .close: "Close window"
-        case .focusMonitor(let n): "Screen \(n)"
-        case .cycleMonitor(let s): s > 0 ? "Next screen" : "Previous screen"
-        case .cycleWindow(let s): s > 0 ? "Next window" : "Previous window"
-        case .volume(.level(let n)): "Volume \(n)%"
-        case .volume(.step(let n)): n >= 0 ? "Louder" : "Quieter"
-        case .volume(.mute): "Mute"
-        case .volume(.unmute): "Unmute"
-        case .wifi(let on): on.map { $0 ? "Wi-Fi on" : "Wi-Fi off" } ?? "Wi-Fi on or off"
-        case .caffeine(let m): m == 0 ? "Let the Mac sleep" : m.map { "Keep awake for \($0) min" } ?? "Keep awake"
-        case .speedtest: "Speed test"
-        case .moveToMonitor(let n): "Move to screen \(n)"
+            a == .width ? (px < 0 ? L("Narrower") : L("Wider")) : (px < 0 ? L("Shorter") : L("Taller"))
+        case .grow(let px): px < 0 ? L("Smaller") : L("Bigger")
+        case .balance: L("Balance")
+        case .flip: L("Columns ↔ rows")
+        case .accordion: L("Accordion")
+        case .arrange(.halves): L("Halves")
+        case .arrange(.columns): L("Columns")
+        case .arrange(.rows): L("Rows")
+        case .arrange(.grid): L("Grid")
+        case .fullscreen: L("Fullscreen")
+        case .float: L("Float")
+        case .close: L("Close window")
+        case .focusMonitor(let n): L("Screen \(n)")
+        case .cycleMonitor(let s): s > 0 ? L("Next screen") : L("Previous screen")
+        case .cycleWindow(let s): s > 0 ? L("Next window") : L("Previous window")
+        case .volume(.level(let n)): L("Volume \(n)%")
+        case .volume(.step(let n)): n >= 0 ? L("Louder") : L("Quieter")
+        case .volume(.mute): L("Mute")
+        case .volume(.unmute): L("Unmute")
+        case .wifi(let on): on.map { $0 ? L("Wi-Fi on") : L("Wi-Fi off") } ?? L("Wi-Fi on or off")
+        case .caffeine(let m): m == 0 ? L("Let the Mac sleep") : m.map { L("Keep awake for \($0) min") } ?? L("Keep awake")
+        case .speedtest: L("Speed test")
+        case .moveToMonitor(let n): L("Move to screen \(n)")
         case .exec(let line):
-            line.hasPrefix("open -a ") ? "Open \(line.dropFirst(8))" : "Run \(line)"
-        case .reload: "Reload config"
-        case .terminal: "New terminal"
-        case .mode(let m): m == "main" || m == "back" ? "Back" : m == "tess" ? "tess mode" : "\(m.prefix(1).uppercased())\(m.dropFirst()) mode"
-        case .retile: "Re-tile"
-        case .rescue: "Rescue windows"
-        case .pause: "Pause"
-        case .pick: "Picker"
-        case .closeReplace: "Close, pick a replacement"
-        case .clearMonitor: "Clear this screen"
-        case .settings: "Settings"
-        case .tutorial: "Getting Started"
-        case .jump: "Jump to a window"
-        case .click: "Click by label"
-        case .showAll: "Show all apps"
-        case .undo: "Undo"
-        case .redo: "Redo"
+            line.hasPrefix("open -a ") ? L("Open \(line.dropFirst(8))") : L("Run \(line)")
+        case .reload: L("Reload config")
+        case .terminal: L("New terminal")
+        case .mode(let m): m == "main" || m == "back" ? L("Back") : L("\(Command.modeName(m)) mode")
+        case .retile: L("Re-tile")
+        case .rescue: L("Rescue windows")
+        case .pause: L("Pause")
+        case .pick: L("Picker")
+        case .closeReplace: L("Close, pick a replacement")
+        case .clearMonitor: L("Clear this screen")
+        case .settings: L("Settings")
+        case .tutorial: L("Getting Started")
+        case .jump: L("Jump to a window")
+        case .click: L("Click by label")
+        case .showAll: L("Show all apps")
+        case .undo: L("Undo")
+        case .redo: L("Redo")
         case .zen: "Zen"
-        case .zenBreak: "Break"
-        case .focusWindow: "Go to a window"
-        case .swapWith: "Swap windows"
-        case .focusTab: "Go to a tab"
+        case .zenBreak: L("Break")
+        case .focusWindow: L("Go to a window")
+        case .swapWith: L("Swap windows")
+        case .focusTab: L("Go to a tab")
         case .tree, .nop, .debugMap, .state, .clickKey: nil
+        }
+    }
+
+    /// A mode's name in the menu bar and on its sheet: tess's own in words, one from the config
+    /// as it is written there.
+    public static func modeName(_ mode: String) -> String {
+        switch mode {
+        case "main": L("Main")
+        case "resize": L("Resize")
+        case "jump": L("Jump")
+        case "tess": "tess"
+        default: mode.prefix(1).uppercased() + mode.dropFirst()
         }
     }
 

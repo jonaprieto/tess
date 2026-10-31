@@ -2,6 +2,10 @@
   <img src="assets/hero.svg" alt="tess: keyboard-first tiling for macOS that never hides a window" width="100%">
 </p>
 
+<p align="center">
+  <a href="https://github.com/jonaprieto/tess/actions/workflows/ci.yml"><img src="https://github.com/jonaprieto/tess/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
+</p>
+
 tess keeps your Mac's windows in order. Every window gets its own place on the screen, and
 any of them is one keypress away. Open an app and it finds a spot, close one and the others
 fill the gap. There are no virtual workspaces, so a crash, a hang or an unplugged screen

@@ -575,10 +575,11 @@ final class Tiler {
                     forget(id, "closed while on another Space")
                 }
             }
-            // Nothing in the layout without a window behind it, and writes refused earlier
-            // get another three tries.
+            // Nothing in the layout without a window behind it.
             for id in world.tiled + Array(world.floating) where infos[id] == nil && !offSpace.contains(id) { world.remove(id) }
-            writes = [:]
+            // Writes refused earlier get another three tries, rarely: each makes the app lay
+            // itself out again, and most refusals are a minimum size that will not change.
+            if all || sweeps % 60 == 0 { writes = [:] }
             scheduleApply()
         }
         let front = NSWorkspace.shared.frontmostApplication?.processIdentifier

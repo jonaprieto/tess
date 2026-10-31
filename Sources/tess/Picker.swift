@@ -33,7 +33,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     /// tess commands, as the CLI and the config take them.
     case command([Command])
     /// Text typed into an app after a shortcut, from a `keys:` verb
-    /// (`slack michael`).
+    /// (`slack alex`).
     case keys(KeysVerb, text: String)
     /// A shell line run in the terminal app, from a `run:` verb
     /// (`brew install fzf`).

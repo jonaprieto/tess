@@ -48,12 +48,14 @@ These keys are enough for your first day:
 | `⌘Space` or `⌥Space` | Open the picker |
 | `⌥T` | Letters on every window; press one to go there |
 | `⌥H` `⌥J` `⌥K` `⌥L` | Focus the window left, down, up or right |
-| `⌥⇧H` `⌥⇧J` `⌥⇧K` `⌥⇧L` | Move the window |
+| `⌥⇧H` `⌥⇧J` `⌥⇧K` `⌥⇧L` | Swap the window with the one that way |
 | `⌘⇧=` and `⌘⇧-` | Make it bigger or smaller |
-| `⌥⇧0` | Even everything out |
+| `⌥⇧0` | Make everything even |
 | `⌥Return` | Fullscreen, without leaving your Space |
 | `⌥F` | Click by label |
 | `⌥⇧C` | Close the window |
+| `⌥⇧Z` | Zen on or off |
+| `⌥⇧W` | Keep the Mac awake, or let it sleep |
 
 If Spotlight owns `⌘Space`, turn its shortcut off in System Settings → Keyboard → Keyboard
 Shortcuts → Spotlight, or use `⌥Space`. While a mode is on, its keys show on screen, so
@@ -76,7 +78,8 @@ make install   # build, sign, start at login and after a crash; links ~/.local/b
 make test
 ```
 
-`make install` also installs Folio through Homebrew if it is missing.
+`make install` also installs [Folio](https://github.com/jonaprieto/folio) through Homebrew if it
+is missing.
 
 To remove it: `brew services stop tess && brew uninstall tess`, or `make uninstall`.
 
@@ -90,8 +93,8 @@ the terminal app, and every binary each feature uses in the service's PATH, with
 install what is missing. It changes no settings, and missing required checks return exit
 code 1. Rerun it after granting Accessibility.
 
-Homebrew installs Folio for book and paper search. `brew install ripgrep fzf` adds search
-inside files and better file ranking.
+Homebrew installs [Folio](https://github.com/jonaprieto/folio) for book and paper search.
+`brew install ripgrep fzf` adds search inside files and better file ranking.
 
 </details>
 
@@ -106,11 +109,14 @@ to that screen, and `shift` and a digit sends your window there. It lasts one co
 for fullscreen, `u` to undo, `z` for Zen, `t` for a terminal, `x` to close a window and pick
 what fills its place.
 
+Not sure where to go? Hold `⌥` on its own for 3 seconds and the letters appear. Press one with
+`⌥` still down to go there, or let go to carry on as you were.
+
 ## Find anything
 
 <img src="assets/picker.svg" alt="The picker: find a window, tab or app, then choose where it goes on a map of your screens" width="100%">
 
-Type a few letters, in any order: `slack michael` finds "Michael - Heliax - Slack". Enter on
+Type a few letters, in any order: `report budget` finds "Budget report - Numbers". Enter on
 a window, tab or app shows a map of your screens:
 
 - A letter puts it in that window's place. A new window shares the place, so the rest of
@@ -123,7 +129,8 @@ The first word can also be a verb:
 - `cd ~/folder`, `code ~/folder`: open the folder in iTerm or VS Code, with tab completion.
 - `f name`: files by name. `rg text`: text inside files.
 - `web text`: browser tabs, bookmarks and history. An address opens directly.
-- `book title author`, `paper title author`: find, download to `~/Downloads` and open.
+- `book title author`, `paper title author`: find with
+  [Folio](https://github.com/jonaprieto/folio), download to `~/Downloads` and open.
 - `slack name`: jump to that channel or person.
 - `chat text`, `claude text`: start a ChatGPT or Claude chat with that text.
 - `brew install fzf`: run it in your terminal.
@@ -167,7 +174,7 @@ app.
 
 That renames the file search, adds a Google verb, opens a file in VS Code by name, and runs
 whatever is typed. `web` also has `brave`, and `f` also has `file`. Books and papers use
-[folio](https://github.com/jonaprieto/folio), with arXiv first for papers.
+[Folio](https://github.com/jonaprieto/folio), with arXiv first for papers.
 
 </details>
 
@@ -182,7 +189,7 @@ sits behind others.
 
 <img src="assets/zen.svg" alt="Zen: the focused window fills its screen and the others go dark, with a pomodoro timer" width="100%">
 
-Zen (`z` in tess mode, `tess zen`, or the menu) is a pomodoro that means it. For 25 minutes
+Zen (`⌥⇧Z`, `z` in tess mode, `tess zen`, or the menu) is a pomodoro that means it. For 25 minutes
 the focused window fills its screen and the others go dark, with a countdown in the menu bar.
 Then comes a 5 minute break: every screen goes black with the time left, and no key or click
 gets through until it is over. `break` starts one now, and the menu counts the breaks you
@@ -191,8 +198,8 @@ took today.
 ## Arrange with the menu or the mouse
 
 Click the menu bar item for pictures of your screen as halves, columns, rows, a grid or
-fullscreen; click one to arrange it. Below them are your last ten layout changes: click one
-to undo it and everything after it, or an undone one to redo up to it.
+fullscreen; click one to arrange it. History holds your last ten layout changes: click one to
+undo it and everything after it, or an undone one to redo up to it.
 
 Drag a tiled window and where it will land shows in orange. Drop it on another window's left
 or right edge to split beside it, on its top or bottom edge to stack with it, or on its
@@ -201,7 +208,7 @@ middle to swap the two.
 `⌥⇧A` brings every app back: each running app with no window in sight gets one, and every
 screen is laid out with them.
 
-The menu also has Keep Awake, which stops your Mac sleeping and shows a yellow dot in the menu
+`⌥⇧W`, or Keep Awake in the menu, stops your Mac sleeping and shows a yellow dot in the menu
 bar until you turn it off, and the picker reaches volume, Wi-Fi and a speed test.
 
 <details>
@@ -213,7 +220,10 @@ not attached stay with your apps.
 Focus and move:
 
 - `alt-h/j/k/l` focus, `alt-n/p` the next or previous window (every screen, then the floating
-  ones), `alt-shift-h/j/k/l` move.
+  ones).
+- `alt-shift-h/j/k/l` swap the window with the one that way, on this screen or the next, so the
+  tiling keeps its shape. To change the tiling itself, drag a window, use the picker, or
+  `alt-slash`.
 - `alt-1/2/3` go to a screen, `alt-shift-1/2/3` send the window there, `alt-tab` and
   `alt-shift-tab` the next or previous screen.
 - `alt-shift-backspace` sends every window on this screen to the next one.
@@ -230,6 +240,7 @@ Everything else:
 
 - `alt-t` tess mode, `alt-space` and `cmd-space` the picker, `alt-f` click mode.
 - `alt-shift-a` show all apps, `alt-shift-c` close the window, `alt-shift-r` reload the config.
+- `alt-shift-z` Zen, `alt-shift-w` keep the Mac awake or let it sleep.
 - `cmd-h` and `cmd-alt-h` do nothing, so no window gets hidden by accident.
 
 In tess mode, on top of the same actions without a modifier: `t` a terminal window, `x` close
@@ -259,7 +270,7 @@ within tess, so the window never leaves for a Space of its own.
 
 Jump mode (`tess jump`, or a key bound to `jump`) is tess mode's letters without its other
 keys. What is hidden behind another window gets no letter. Letters are the ones tess mode
-leaves free (`d q e y i o p c n m` by default), windows first, and a window keeps its letter
+leaves free (`d q e y i o c m` by default), windows first, and a window keeps its letter
 while it lives.
 
 Outside jump mode the focused window keeps a thin border and, with more than one screen, the
@@ -316,6 +327,54 @@ Under `overlay`:
   from 0 to 1 (0.8 by default).
 - `"all_screens": false` shows a mode's keys only on the screen in use, once `empty_screens`
   is off.
+
+</details>
+
+<details>
+<summary>Get macOS behavior back</summary>
+
+tess takes over a few things macOS does. In `~/.config/tess/config.json`, `null` gives a key
+back; run `tess reload` after editing.
+
+Hide apps with `⌘H` and `⌘⌥H`. tess turns these off so no window leaves the layout by accident:
+
+```json
+{"modes": {"main": {"cmd-h": null, "cmd-alt-h": null}}}
+```
+
+tess has no key to hide a single window. `⌘M` minimizes it as usual, `⌥⇧Space` floats it and
+`⌥⇧C` closes it.
+
+Spotlight on `⌘Space`. Remove the key in every mode, then turn its shortcut back on in System
+Settings. The picker stays on `⌥Space`:
+
+```json
+{"modes": {"main": {"cmd-space": null}, "tess": {"cmd-space": null}, "resize": {"cmd-space": null}}}
+```
+
+Type with `⌥`. `⌥N` starts an ñ on many layouts, and tess uses it for the next window. The same
+works for any key an app or your typing needs, such as `alt-tab`:
+
+```json
+{"modes": {"main": {"alt-n": null}}}
+```
+
+Zoom in apps with `⌘+`, which is `⌘⇧=`. Resizing stays on `⌥⇧=` and `⌥⇧-`:
+
+```json
+{"modes": {"main": {"cmd-shift-equal": null, "cmd-shift-minus": null}}}
+```
+
+Let an app be. `float` keeps its windows out of the tiling, and `ignore` hands the app back to
+macOS entirely, its own fullscreen included. Both lists replace the defaults, so keep what you
+still want; `tess default-config` prints them:
+
+```json
+{"ignore": ["io.github.ender-wang.EdgeMark", "com.example.app"]}
+```
+
+Everything for a while. Pause Tiling in the menu, or `tess pause`, stops tiling and releases
+every key, the only way to get macOS's own `⌘Tab` back. Resume the same way.
 
 </details>
 

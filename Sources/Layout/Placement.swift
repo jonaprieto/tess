@@ -252,8 +252,8 @@ extension World {
   }
 }
 
-/// `fuzzyScore` with the query's words in any order: "slack michael"
-/// finds "Michael - Slack". Each word must match; the whole query in
+/// `fuzzyScore` with the query's words in any order: "slack alex"
+/// finds "Alex - Slack". Each word must match; the whole query in
 /// order scores as one when that is higher.
 public func fuzzyWords(_ query: String, _ text: String) -> Int? {
   let words = query.split(whereSeparator: \.isWhitespace)

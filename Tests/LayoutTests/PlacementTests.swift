@@ -282,9 +282,9 @@ func
 }
 
 @Test func wordsMatchInAnyOrder() {
-  let title = "Brave Browser Michael (DM) - Heliax - Slack"
-  #expect(fuzzyScore("slack michael", title) == nil)
-  #expect(fuzzyWords("slack michael", title) != nil)
+  let title = "Brave Browser Alex (DM) - Acme - Slack"
+  #expect(fuzzyScore("slack alex", title) == nil)
+  #expect(fuzzyWords("slack alex", title) != nil)
   #expect(fuzzyWords("slack zebra", title) == nil)
   // One word is plain fuzzy matching.
   #expect(fuzzyWords("slk", title) == fuzzyScore("slk", title))
@@ -293,10 +293,8 @@ func
 
 @Test func titlesSplitIntoPartsWithoutTheAppsName() {
   #expect(
-    titleParts(
-      "Michael (DM) - Heliax - 1 new item - Slack", app: "Slack") == [
-        "Michael (DM)", "Heliax", "1 new item"
-      ])
+    titleParts("Alex (DM) - Acme - 1 new item - Slack", app: "Slack")
+      == ["Alex (DM)", "Acme", "1 new item"])
   #expect(
     titleParts("Blog — vveiln ✨ - Brave", app: "Brave Browser") == [
       "Blog", "vveiln ✨"

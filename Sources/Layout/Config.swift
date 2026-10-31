@@ -480,6 +480,8 @@ public struct Config: Equatable, Sendable {
           "alt-r": "mode resize",
           "alt-f": "click",
           "alt-shift-a": "show-all",
+          "alt-shift-z": "zen",
+          "alt-shift-w": "caffeine",
           "alt-shift-semicolon": "retile",
           "alt-space": "pick",
           "cmd-space": "pick",

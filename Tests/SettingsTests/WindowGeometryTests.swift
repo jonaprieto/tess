@@ -72,3 +72,28 @@ import Testing
     tiler.apply()
     #expect(!tiler.refused.contains(1))
 }
+
+/// Leaving fullscreen, the border would hang where the window was until it gets there.
+@MainActor
+@Test func aWindowOnItsWayHasNoBorderUntilItsAppReports() {
+    _ = NSApplication.shared
+    let tiler = Tiler()
+    tiler.world.monitors = [Monitor(id: "A", frame: CGRect(x: 0, y: 0, width: 1200, height: 800))]
+    tiler.world.insert(1)
+    let frame = CGRect(x: 10, y: 10, width: 400, height: 780)
+    tiler.infos[1] = WinInfo(id: 1, pid: 1, frame: frame, title: "", standard: true, fullscreenButton: true, nativeFullscreen: false)
+    let stack = [(id: WindowID(1), frame: frame)]
+    tiler.assumed.insert(1)
+    #expect(tiler.decorationWindows(in: stack, focused: 1, all: false).isEmpty)
+    tiler.assumed.remove(1)
+    #expect(tiler.decorationWindows(in: stack, focused: 1, all: false).count == 1)
+
+    // The app says it is there and the window server does not, yet.
+    let behind = [(id: WindowID(1), frame: CGRect(x: 40, y: 60, width: 300, height: 400))]
+    tiler.landing[1] = Date().addingTimeInterval(1)
+    #expect(tiler.decorationWindows(in: behind, focused: 1, all: false).isEmpty)
+    #expect(tiler.decorationWindows(in: stack, focused: 1, all: false).count == 1)
+    // Not waited for forever: a border where the window really is beats none.
+    tiler.landing[1] = Date().addingTimeInterval(-1)
+    #expect(tiler.decorationWindows(in: behind, focused: 1, all: false).first?.frame == behind[0].frame)
+}

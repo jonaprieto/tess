@@ -37,6 +37,12 @@ final class Tiler {
     /// Windows whose frame in `infos` is the one tess wrote, until their app reports its own.
     var assumed: Set<WindowID> = []
 
+    /// Windows just written and until when they are waited for: the window server gets there
+    /// after the app says so, up to 200 ms later here, with no event to say it did.
+    var landing: [WindowID: Date] = [:]
+
+    var landingCheck = false
+
     /// Snapshots during the first 2 s only collect; then the layout is rebuilt from where
     /// windows are, so a restart keeps it.
     var starting = true
@@ -328,6 +334,7 @@ final class Tiler {
         infos[id] = nil
         writes[id] = nil
         assumed.remove(id)
+        landing[id] = nil
         offSpace.remove(id)
         unlistedSince[id] = nil
         autoFloated.remove(id)
@@ -586,6 +593,8 @@ final class Tiler {
         for (pid, w) in workers {
             if w.app.isTerminated { untrack(pid) } else if everything || pid == front { w.scheduleRefresh() }
         }
+        // A window can also change with no event at all, and a border left behind stays there.
+        refreshOverlays()
     }
 
 
@@ -665,6 +674,7 @@ final class Tiler {
             // Assume it lands; the next snapshot says otherwise if not.
             infos[id]?.frame = target
             assumed.insert(id)
+            landing[id] = Date().addingTimeInterval(1.5)
         }
     }
 

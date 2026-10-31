@@ -43,10 +43,17 @@ extension Tiler {
         } ?? false }
     }
 
+    /// A window on its way has no outline: its app has not reported the frame tess wrote, or
+    /// the window server has not got to what the app reported.
+    func inTransit(_ id: WindowID, at frame: CGRect) -> Bool {
+        assumed.contains(id) || (landing[id].map { Date() < $0 } == true && infos[id]?.frame.isNear(frame) == false)
+    }
+
     /// Outlines use the window server's bounds, never an optimistic resize or a clipped tile.
     func decorationWindows(in stack: [(id: WindowID, frame: CGRect)], focused: WindowID?, all: Bool) -> [Decorations.Window] {
         (all ? visibleWindows(stack) : shownWindows).compactMap { id in
-            guard all || id == focused, let frame = stack.first(where: { $0.id == id })?.frame else { return nil }
+            guard all || id == focused, let frame = stack.first(where: { $0.id == id })?.frame, !inTransit(id, at: frame)
+            else { return nil }
             return Decorations.Window(frame: frame, label: all ? labels[id] : nil, focused: id == focused)
         }
     }
@@ -56,6 +63,16 @@ extension Tiler {
         let stack = windowStack
         refreshDecorations(in: stack)
         refreshGray(in: stack)
+        // Until what was written has landed, nothing says it did.
+        landing = landing.filter { id, until in
+            Date() < until && stack.first { $0.id == id }.map { inTransit(id, at: $0.frame) } ?? false
+        }
+        guard !landing.isEmpty, !landingCheck else { return }
+        landingCheck = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.landingCheck = false
+            self?.refreshOverlays()
+        }
     }
 
     /// Borders and letters on every visible window, tab letters and numbers on every screen

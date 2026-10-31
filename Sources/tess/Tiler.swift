@@ -148,7 +148,12 @@ final class Tiler {
     var closeReplacing = false
 
     /// An app opened from the picker: its first new window goes to `spot`.
-    var pending: (bundle: String, spot: Spot, until: Date)?
+    var pending: (bundle: String, spot: Spot, until: Date)? {
+        didSet {
+            guard let bundle = pending?.bundle else { return }
+            workers.values.first { $0.app.bundleIdentifier == bundle }?.expectWindow()
+        }
+    }
 
     /// Windows the picker listed from the window server only, with their app.
     var unseen: [WindowID: pid_t] = [:]
@@ -247,7 +252,10 @@ final class Tiler {
                 if let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication { body(app) }
             }
         }
-        onApp(NSWorkspace.didLaunchApplicationNotification) { [weak self] in self?.track($0) }
+        onApp(NSWorkspace.didLaunchApplicationNotification) { [weak self] app in
+            self?.track(app)
+            self?.workers[app.processIdentifier]?.expectWindow()
+        }
         onApp(NSWorkspace.didTerminateApplicationNotification) { [weak self] in self?.untrack($0.processIdentifier) }
         for name in [NSWorkspace.didActivateApplicationNotification, NSWorkspace.didHideApplicationNotification,
                      NSWorkspace.didUnhideApplicationNotification] {

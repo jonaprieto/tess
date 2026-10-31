@@ -30,6 +30,9 @@ final class AppWorker {
     private var resend = false
     /// tess's own frame writes fire moved and resized; until then they wait for one refresh.
     private var quietUntil: CFAbsoluteTime = 0
+    /// A window is on its way: until then, or until there are more than this many, keep looking.
+    private var expectedUntil: CFAbsoluteTime = 0
+    private var expectedOver = 0
 
     // Frame writes waiting for the worker thread; a newer one for the same window replaces it.
     private let lock = NSLock()
@@ -121,6 +124,16 @@ final class AppWorker {
         }
     }
 
+    /// A window is about to show (the app is starting, or was asked for one). Looked for rather
+    /// than waited for: macOS rarely reports a new window as created, only once it has focus.
+    func expectWindow() {
+        perform { [self] in
+            expectedUntil = CFAbsoluteTimeGetCurrent() + 8
+            expectedOver = sent?.infos.count ?? 0
+            scheduleRefresh(after: 0)
+        }
+    }
+
     /// The app came forward (a click on its window, cmd-tab): its focused window may be the
     /// one it had, which tess's focus has to hear even though nothing in the app changed.
     func activated() {
@@ -141,7 +154,7 @@ final class AppWorker {
         var infos: [WinInfo] = []
         // An app busy past the AX timeout answers nothing: that is not every window closing.
         guard let list = axApp.elementsIfRead(kAXWindowsAttribute) else {
-            scheduleRefresh(after: 1)
+            scheduleRefresh(after: CFAbsoluteTimeGetCurrent() < expectedUntil ? 0.05 : 1)
             return
         }
         let previous = Dictionary((sent?.infos ?? []).map { ($0.id, $0) }) { a, _ in a }
@@ -190,6 +203,11 @@ final class AppWorker {
         }
         windows = seen
         traits = traits.filter { seen[$0.key] != nil }
+        if infos.count > expectedOver {
+            expectedUntil = 0
+        } else if CFAbsoluteTimeGetCurrent() < expectedUntil {
+            scheduleRefresh(after: 0.05)
+        }
         let focused = axApp.element(kAXFocusedWindowAttribute)?.windowID
         if !resend, let sent, sent.infos == infos, sent.focused == focused { return }
         sent = (infos, focused)

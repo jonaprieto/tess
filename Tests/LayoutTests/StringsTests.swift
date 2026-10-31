@@ -38,7 +38,8 @@ private func phrases() throws -> Set<String> {
     for case let url as URL in sources! where url.pathExtension == "swift" && url.lastPathComponent != "Spanish.swift" {
         let source = try String(contentsOf: url, encoding: .utf8)
         var rest = source.startIndex..<source.endIndex
-        while let call = source.range(of: "L(\"", range: rest) {
+        // The formatter puts a phrase too long for its line on the next one.
+        while let call = source.range(of: #"L\(\s*""#, options: .regularExpression, range: rest) {
             rest = call.upperBound..<source.endIndex
             let before = call.lowerBound == source.startIndex ? " " : source[source.index(before: call.lowerBound)]
             if !before.isLetter, !before.isNumber, before != "." { found.insert(key(in: source, from: call.upperBound)) }

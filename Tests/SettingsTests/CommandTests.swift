@@ -142,3 +142,373 @@ private func tiler(_ ids: [WindowID], focused: WindowID? = nil)
   #expect((Usage.memory([me])[me] ?? 0) > 0)
   #expect((Usage.memory([999_999])[999_999] ?? 0) == 0)
 }
+
+/// Runs a line as the CLI would, history included.
+@MainActor
+private func run(_ t: Tiler, _ line: String) throws -> String {
+  t.run(try Command.parse(line), source: "test")
+}
+
+@MainActor
+private func lanes(_ t: Tiler, _ m: Int = 0) -> [[WindowID]] {
+  t.world.monitors[m].lanes.map(\.windows)
+}
+
+/// Two screens off the real ones, with 1 and 2 on the first and 3 on
+/// the second.
+@MainActor
+private func twoScreens() -> Tiler {
+  let t = tiler([1, 2], focused: 1)
+  var second = Monitor(
+    id: "B", frame: screen.offsetBy(dx: screen.width + 100, dy: 0))
+  second.lanes = [Lane([3])]
+  t.world.monitors.append(second)
+  t.infos[3] = WinInfo(
+    id: 3, pid: 1, frame: .zero, title: "", standard: true,
+    fullscreenButton: true, nativeFullscreen: false)
+  return t
+}
+
+@MainActor
+@Test func undoAndRedoWalkTheHistory() throws {
+  let t = tiler([1, 2], focused: 1)
+  #expect(t.undo().hasPrefix("error: "))
+  #expect(t.redo().hasPrefix("error: "))
+  #expect(try run(t, "swap-with 2") == "")
+  #expect(lanes(t) == [[2], [1]])
+  #expect(t.undo() == "")
+  #expect(lanes(t) == [[1], [2]])
+  #expect(t.redo() == "")
+  #expect(lanes(t) == [[2], [1]])
+}
+
+@MainActor
+@Test func aNewChangeDropsWhatWasUndone() throws {
+  let t = tiler([1, 2], focused: 1)
+  _ = try run(t, "swap-with 2")
+  #expect(t.undo() == "")
+  _ = try run(t, "flip")
+  #expect(t.redo().hasPrefix("error: "))
+}
+
+@MainActor
+@Test func theSameChangeRepeatedIsOneStep() throws {
+  let t = tiler([1, 2], focused: 1)
+  let start = t.world.monitors[0].lanes
+  _ = try run(t, "resize width 40")
+  _ = try run(t, "resize width 40")
+  #expect(t.history.count == 1)
+  #expect(t.world.monitors[0].lanes != start)
+  #expect(t.undo() == "")
+  #expect(t.world.monitors[0].lanes == start)
+}
+
+@MainActor
+@Test func theHistoryKeepsTheLastTenChanges() throws {
+  let t = tiler([1, 2], focused: 1)
+  for _ in 0..<6 {
+    _ = try run(t, "flip")
+    _ = try run(t, "accordion")
+  }
+  #expect(t.history.count == 10)
+}
+
+@MainActor
+@Test func aChangeThatChangesNothingIsNotRemembered() throws {
+  let t = tiler([1], focused: 1)
+  _ = try run(t, "focus right")
+  #expect(t.history.isEmpty)
+}
+
+@MainActor
+@Test func focusAndMoveFollowTheLanes() throws {
+  let t = tiler([1, 2, 3], focused: 1)
+  #expect(try run(t, "focus right") == "")
+  #expect(t.world.focused == 2)
+  #expect(try run(t, "focus next") == "")
+  #expect(t.world.focused == 3)
+  #expect(try run(t, "focus prev") == "")
+  #expect(t.world.focused == 2)
+  #expect(try run(t, "move right") == "")
+  #expect(lanes(t) == [[1], [3], [2]])
+  #expect(t.world.focused == 2)
+}
+
+@MainActor
+@Test func flipAndAccordionTurnOnAndOff() throws {
+  let t = tiler([1, 2], focused: 1)
+  _ = try run(t, "flip")
+  #expect(t.world.monitors[0].rows)
+  _ = try run(t, "flip")
+  #expect(!t.world.monitors[0].rows)
+  _ = try run(t, "accordion")
+  #expect(t.world.monitors[0].lanes[0].accordion)
+}
+
+@MainActor
+@Test func fullscreenIsAToggleAndTakesAFloatingWindowAlong() throws {
+  let t = tiler([1, 2], focused: 1)
+  _ = try run(t, "fullscreen")
+  #expect(t.world.monitors[0].fullscreen == 1)
+  _ = try run(t, "fullscreen")
+  #expect(t.world.monitors[0].fullscreen == nil)
+  t.world.toggleFloating(1)
+  t.world.focused = 1
+  _ = try run(t, "fullscreen")
+  #expect(!t.world.floating.contains(1))
+  #expect(t.world.monitors[0].fullscreen == 1)
+}
+
+@MainActor
+@Test func floatingAWindowAndBack() throws {
+  let t = tiler([1, 2], focused: 1)
+  #expect(try run(t, "float") == "")
+  #expect(t.world.floating.contains(1))
+  #expect(try run(t, "float") == "")
+  #expect(!t.world.floating.contains(1))
+  #expect(t.world.contains(1))
+}
+
+@MainActor
+@Test func screensAreReachedByNumberAndInTurn() throws {
+  let t = twoScreens()
+  #expect(try run(t, "focus-screen 2") == "")
+  #expect(t.world.activeMonitor == 1)
+  #expect(t.world.focused == 3)
+  #expect(try run(t, "focus-screen next") == "")
+  #expect(t.world.activeMonitor == 0)
+}
+
+@MainActor
+@Test func aWindowMovesToAnotherScreen() throws {
+  let t = twoScreens()
+  #expect(try run(t, "move-to-screen 2") == "")
+  #expect(lanes(t, 0) == [[2]])
+  #expect(lanes(t, 1).flatMap { $0 }.sorted() == [1, 3])
+}
+
+@MainActor
+@Test func windowsOnAnotherSpaceWearNoLetter() {
+  let t = tiler([1, 2], focused: 1)
+  t.offSpace.insert(2)
+  #expect(t.labeledWindows == [1])
+}
+
+@MainActor
+@Test func cmdTabGoesToALetterAtOnce() throws {
+  let t = tiler([1, 2], focused: 1)
+  t.onCmdTab(.open(back: false))
+  let label = try #require(
+    t.switcher.cards.first { $0.target == .window(2) }?.label)
+  let code = try #require(Hotkeys.codes[String(label)])
+  t.onCmdTab(.letter(UInt16(code)))
+  #expect(t.switcher.cards.isEmpty)
+  #expect(t.world.focused == 2)
+}
+
+@MainActor
+@Test func aLetterNoCardWearsDoesNothing() throws {
+  let t = tiler([1], focused: 1)
+  t.onCmdTab(.open(back: false))
+  t.onCmdTab(.letter(UInt16.max))
+  #expect(!t.switcher.cards.isEmpty)
+  t.onCmdTab(.cancel)
+}
+
+@MainActor
+@Test func backwardsCmdTabStartsAtTheEnd() {
+  let t = tiler([1, 2], focused: 1)
+  t.onCmdTab(.open(back: true))
+  #expect(t.switcher.pick == t.switcher.cards.last?.target)
+  t.onCmdTab(.cancel)
+}
+
+@MainActor
+@Test func aDropSaysWhereTheWindowGoes() {
+  let t = tiler([1, 2], focused: 1)
+  let name = t.appName(2)
+  #expect(t.caption(.stay) == L("Back in place"))
+  #expect(t.caption(.screen(1)) == L("Screen 2"))
+  #expect(t.caption(.swap(2)) == L("Swap with \(name)"))
+  #expect(t.caption(.lane(2, after: true)) == L("Right of \(name)"))
+  #expect(t.caption(.lane(2, after: false)) == L("Left of \(name)"))
+  #expect(t.caption(.stack(2, after: true)) == L("Below \(name)"))
+  t.world.monitors[0].rows = true
+  #expect(t.caption(.lane(2, after: true)) == L("Below \(name)"))
+  #expect(t.caption(.stack(2, after: false)) == L("Left of \(name)"))
+}
+
+@MainActor
+@Test func aSpotReadsAsAPlace() {
+  let t = tiler([1], focused: 1)
+  #expect(t.describe(.here) == L("here"))
+  #expect(t.describe(.monitor(1)) == L("on screen 2"))
+  #expect(t.describe(.float) == L("floating"))
+}
+
+@MainActor
+@Test func aWindowForgottenLeavesTheLayout() {
+  let t = tiler([1, 2], focused: 1)
+  t.forget(1)
+  #expect(t.infos[1] == nil)
+  #expect(!t.world.contains(1))
+}
+
+@MainActor
+@Test func aNewWindowIsAdoptedWhereItIs() {
+  let t = tiler([1], focused: 1)
+  let info = WinInfo(
+    id: 2, pid: 1,
+    frame: CGRect(
+      x: screen.midX, y: screen.minY, width: 900, height: 1000),
+    title: "", standard: true, fullscreenButton: true,
+    nativeFullscreen: false)
+  t.infos[2] = info
+  t.adopt([info])
+  #expect(t.world.contains(2))
+  #expect(lanes(t).flatMap { $0 }.sorted() == [1, 2])
+}
+
+private func item(_ kind: Picker.Kind) -> Picker.Item {
+  Picker.Item(
+    kind: kind, title: "", detail: "", icon: nil, search: "")
+}
+
+@MainActor
+@Test func aPickedPlaceIsOneStepOfTheHistory() {
+  let t = tiler([1, 2, 3], focused: 1)
+  let start = lanes(t)
+  t.use(3, .place(.replace(1)))
+  #expect(lanes(t) != start)
+  #expect(t.history.count == 1)
+  #expect(t.undo() == "")
+  #expect(lanes(t) == start)
+}
+
+@MainActor
+@Test func aJumpOnlyMovesFocus() {
+  let t = tiler([1, 2], focused: 1)
+  t.use(2, .jump)
+  #expect(t.world.focused == 2)
+  #expect(t.history.isEmpty)
+  #expect(lanes(t) == [[1], [2]])
+}
+
+@MainActor
+@Test func aWindowItsAppHasNotListedWaitsForItsPlace() {
+  let t = tiler([1], focused: 1)
+  // A pid nobody has, so no real app comes forward.
+  t.unseen[9] = 999_999
+  t.use(9, .place(.here))
+  #expect(t.placing?.pid == 999_999)
+  #expect(t.placing?.spot == .here)
+  #expect(!t.world.contains(9))
+}
+
+@MainActor
+@Test func pickingAWindowJumpsThereAndACommandRuns() {
+  let t = tiler([1, 2], focused: 1)
+  t.picked(item(.window(2)), .jump)
+  #expect(t.world.focused == 2)
+  t.picked(item(.command([.swapWith(1)])), .jump)
+  #expect(lanes(t) == [[2], [1]])
+}
+
+@MainActor
+@Test func aReportOfMacOSMovesFocus() {
+  let t = tiler([1, 2], focused: 1)
+  t.syncFocus(2)
+  #expect(t.world.focused == 2)
+  t.syncFocus(9)
+  #expect(t.world.focused == 2)
+}
+
+@MainActor
+@Test func macOSIsOverruledOnceThenBelieved() {
+  let t = tiler([1, 2], focused: 1)
+  t.focus(1)
+  t.syncFocus(2)
+  #expect(t.world.focused == 1)
+  #expect(t.intent?.reasserted == true)
+  t.syncFocus(2)
+  #expect(t.world.focused == 2)
+}
+
+@MainActor
+@Test func aFloatingWindowsScreenBecomesTheActiveOne() {
+  let t = twoScreens()
+  t.world.toggleFloating(3)
+  t.infos[3]?.frame = t.world.monitors[1].frame.insetBy(
+    dx: 50, dy: 50)
+  t.syncFocus(3)
+  #expect(t.world.activeMonitor == 1)
+}
+
+@MainActor
+@Test func nothingTakesFocusWhileThePickerIsOpen() {
+  let t = tiler([1, 2], focused: 1)
+  t.picking = true
+  t.focus(2)
+  #expect(t.intent == nil)
+}
+
+@MainActor
+@Test func rebuildingReadsTheLayoutOffTheScreen() {
+  let t = tiler([1, 2], focused: 1)
+  let half = CGSize(width: 800, height: 1000)
+  t.infos[1]?.frame = CGRect(
+    origin: CGPoint(x: screen.midX, y: screen.minY), size: half)
+  t.infos[2]?.frame = CGRect(origin: screen.origin, size: half)
+  t.writes[1] = (.zero, 1)
+  t.rebuild()
+  #expect(lanes(t) == [[2], [1]])
+  #expect(t.writes[1] == nil)
+}
+
+@MainActor
+@Test func theMapDrawsFullscreenAndRibbonsFlat() {
+  let t = tiler([1, 2, 3, 4, 5], focused: 1)
+  let flat = t.pickerMap().windows.map(\.frame)
+  t.world.monitors[0].fullscreen = 1
+  #expect(t.pickerMap().windows.map(\.frame) == flat)
+  t.world.monitors[0].fullscreen = nil
+  t.world.monitors[0].ribbon = true
+  #expect(t.pickerMap().windows.map(\.frame) == flat)
+}
+
+@MainActor
+@Test func anAccordionIsDrawnAsRowsOnTheMap() {
+  let t = tiler([1], focused: 1)
+  t.infos[2] = t.infos[1]
+  t.world.monitors[0].lanes = [Lane([1, 2])]
+  t.world.monitors[0].lanes[0].accordion = true
+  let rows = t.pickerMap().windows.map(\.frame)
+  #expect(rows.count == 2)
+  #expect(rows[0].height == rows[1].height)
+  #expect(rows[1].minY == rows[0].maxY)
+}
+
+@MainActor
+@Test func theMapWarnsOnlyAboutWindowsThatKeptTheirSize() {
+  let t = tiler([1, 2, 3], focused: 1)
+  #expect(t.pickerMap(for: item(.window(3))).hereWarning == nil)
+  // Window 2 keeps 1500 wide, more than any place here gives it.
+  t.refused = [2]
+  t.writes[2] = (CGRect(x: 0, y: 0, width: 300, height: 900), 3)
+  t.infos[2]?.frame = CGRect(x: 0, y: 0, width: 1500, height: 900)
+  let map = t.pickerMap(for: item(.window(3)))
+  // Swapping 3 with 2 moves 2; swapping it with 1 leaves 2 alone.
+  #expect(map.replaceWarnings[2] != nil)
+  #expect(map.replaceWarnings[1] == nil)
+}
+
+@MainActor
+@Test func thePickerOffersTessCommandsOnceSomethingIsTyped() {
+  let t = tiler([1], focused: 1)
+  let commands = t.pickerItems().filter {
+    if case .command = $0.kind { return $0.quiet }
+    return false
+  }
+  #expect(!commands.isEmpty)
+  #expect(commands.allSatisfy { !$0.title.isEmpty })
+}

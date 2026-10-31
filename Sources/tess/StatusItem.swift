@@ -242,6 +242,15 @@ final class StatusItem: NSObject, NSMenuDelegate {
         } ?? L("awake until turned off")
       } ?? L("keep the Mac awake")
     menu.addItem(cup)
+    let ribbon = item(
+      L("Ribbon"), "rectangle.split.3x1", #selector(toggleRibbon),
+      for: .ribbon)
+    ribbon.state =
+      tiler.world.monitors[safe: tiler.world.activeMonitor]?.ribbon
+        == true ? .on : .off
+    ribbon.subtitle = L(
+      "columns keep their width and run past the screen")
+    menu.addItem(ribbon)
     menu.addItem(
       item(
         L("Settings…"), "gearshape", #selector(openSettings),
@@ -479,6 +488,9 @@ final class StatusItem: NSObject, NSMenuDelegate {
   }
   @objc private func toggleCaffeine() {
     _ = tiler.run([.caffeine(nil)], source: "menu")
+  }
+  @objc private func toggleRibbon() {
+    _ = tiler.run([.ribbon], source: "menu")
   }
   @objc private func clear() {
     _ = tiler.run([.clearMonitor], source: "menu")

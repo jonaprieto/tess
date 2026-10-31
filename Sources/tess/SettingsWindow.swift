@@ -65,6 +65,7 @@ final class SettingsModel {
   var inactiveBorderColor: Color
   var selectionColor: Color
   var emptyScreens: Bool
+  var ribbon: Bool
   var windowLabels: Config.LabelMode
   /// A language code; nil is macOS's.
   var language: String?
@@ -104,6 +105,7 @@ final class SettingsModel {
     selectionColor = color(
       config.selectionColor, fallback: .systemOrange)
     emptyScreens = raw.emptyScreens ?? true
+    ribbon = raw.ribbon ?? false
     windowLabels = raw.overlay?.windowLabels ?? .jump
     language = raw.language
     float = raw.float ?? []
@@ -148,6 +150,7 @@ final class SettingsModel {
     }
     r.overlay = overlay
     r.emptyScreens = emptyScreens
+    r.ribbon = ribbon
     r.language = language
     r.float = float
     r.tile = tile
@@ -187,6 +190,7 @@ final class SettingsModel {
 
   func revert() {
     let fresh = SettingsModel(raw: original, save: saveRaw)
+    ribbon = fresh.ribbon
     (
       inner, outer, overlayAllScreens, grayOthers, emptyScreens,
       windowLabels, float, tile, ignore, verbs, modes
@@ -282,6 +286,16 @@ struct GeneralTab: View {
         Text(
           L(
             "New windows open on an empty screen when there is one; Settings and a mode's keys show on the screen with the fewest windows."
+          )
+        )
+        .foregroundStyle(.secondary)
+      }
+      Section {
+        Toggle(L("Ribbon on every screen"), isOn: $model.ribbon)
+      } footer: {
+        Text(
+          L(
+            "Columns keep their width and run past the screen: the view scrolls to the window in use, and the rest wait along the bottom with their title bars showing."
           )
         )
         .foregroundStyle(.secondary)

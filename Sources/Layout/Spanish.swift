@@ -68,6 +68,8 @@ let spanish: [String: String] = [
   "Close, pick a replacement": "Cerrar y elegir un reemplazo",
   "Colors": "Colores",
   "Columns": "Columnas",
+  "Columns keep their width and run past the screen: the view scrolls to the window in use, and the rest wait along the bottom with their title bars showing.":
+    "Las columnas conservan su ancho y siguen más allá de la pantalla: la vista se desplaza a la ventana en uso, y las demás esperan abajo con su barra de título a la vista.",
   "Columns ↔ rows": "Columnas ↔ filas",
   "Config error": "Error de configuración",
   "Configuration parses": "La configuración es válida",
@@ -194,6 +196,7 @@ let spanish: [String: String] = [
   "Resume Tiling": "Reanudar tiling",
   "Revert": "Revertir",
   "Ribbon": "Cinta",
+  "Ribbon on every screen": "Cinta en todas las pantallas",
   "Right of %@": "A la derecha de %@",
   "Rows": "Filas",
   "Run %@": "Ejecutar %@",
@@ -294,6 +297,8 @@ let spanish: [String: String] = [
   "bundle id, e.g. com.apple.Preview":
     "bundle id, por ejemplo com.apple.Preview",
   "columns": "columnas",
+  "columns keep their width and run past the screen":
+    "las columnas conservan su ancho y siguen más allá de la pantalla",
   "command": "comando",
   "config reloaded": "configuración recargada",
   "config.json has an error, fix it or delete it first: %@":

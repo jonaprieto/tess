@@ -1,4 +1,5 @@
 import AppKit
+import Synchronization
 import Layout
 
 /// cmd-tab through tess. An event tap on a thread of its own (a busy
@@ -15,21 +16,20 @@ final class CmdTab {
   }
 
   /// Off while tess is paused: cmd-tab is macOS's again.
-  // ponytail: a Bool written on main and read on the tap's thread; a
-  // lock if it grows.
-  nonisolated(unsafe) static var enabled = true
+  static let enabled = Atomic<Bool>(true)
 
   /// Zen's break: every key and click stops here.
-  nonisolated(unsafe) static var blocking = false {
-    didSet {
-      if blocking != oldValue, let clicks {
-        CGEvent.tapEnable(tap: clicks, enable: blocking)
-      }
-    }
+  static let blocking = Atomic<Bool>(false)
+
+  static func block(_ on: Bool) {
+    guard blocking.exchange(on, ordering: .relaxed) != on, let clicks
+    else { return }
+    CGEvent.tapEnable(tap: clicks, enable: on)
   }
 
   /// Clicks and scrolling, on only during a break: the rest of the
   /// time each one would stop at this thread on its way to every app.
+  // Written once on the tap's thread, before any break can start.
   nonisolated(unsafe) private static var clicks: CFMachPort?
 
   private let onKey: (Key) -> Void
@@ -77,7 +77,8 @@ final class CmdTab {
       .otherMouseDown, .otherMouseUp,
       .scrollWheel
     ]) {
-      CGEvent.tapEnable(tap: clicks, enable: Self.blocking)
+      CGEvent.tapEnable(
+        tap: clicks, enable: Self.blocking.load(ordering: .relaxed))
       Self.clicks = clicks
     }
     CFRunLoopRun()
@@ -94,12 +95,14 @@ final class CmdTab {
       if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
       // Only ever back on: turning a tap off lands here too, so
       // turning it off from here would never end.
-      if Self.blocking, let clicks = Self.clicks {
+      if Self.blocking.load(ordering: .relaxed),
+        let clicks = Self.clicks
+      {
         CGEvent.tapEnable(tap: clicks, enable: true)
       }
       return pass
     }
-    if Self.blocking { return nil }
+    if Self.blocking.load(ordering: .relaxed) { return nil }
     guard type == .keyDown || type == .keyUp || type == .flagsChanged
     else { return pass }
     let flags = e.flags,
@@ -122,7 +125,8 @@ final class CmdTab {
     }
     if optionAlone, type == .keyDown { send(.typed) }
     if !open {
-      guard Self.enabled, code == 48, flags.contains(.maskCommand),
+      guard Self.enabled.load(ordering: .relaxed), code == 48,
+        flags.contains(.maskCommand),
         !flags.contains(.maskAlternate),
         !flags.contains(.maskControl)
       else { return pass }

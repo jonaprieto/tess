@@ -406,7 +406,7 @@ extension Tiler {
 
   func setPaused(_ p: Bool) {
     paused = p
-    CmdTab.enabled = !p
+    CmdTab.enabled.store(!p, ordering: .relaxed)
     if p {
       hotkeys.unregisterAll()
       overlay.hideMode()

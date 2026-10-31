@@ -104,7 +104,7 @@ extension Tiler {
   /// click gets through until it ends.
   func refreshVeil() {
     let resting = zen != nil && !zenWorking && !paused
-    CmdTab.blocking = resting
+    CmdTab.block(resting)
     guard zen != nil, !paused else { return veil.show([]) }
     if resting {
       return veil.show(

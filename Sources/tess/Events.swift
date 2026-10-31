@@ -15,6 +15,7 @@ enum Events {
   /// the main thread.
   private static let queue = DispatchQueue(
     label: "tess.events", qos: .utility)
+  // The queue only.
   nonisolated(unsafe) private static var handle: FileHandle?
   nonisolated(unsafe) private static var written = 0
   private static let time: ISO8601DateFormatter = {

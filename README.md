@@ -2,22 +2,71 @@
   <img src="assets/hero.svg" alt="tess: keyboard-first tiling for macOS that never hides a window" width="100%">
 </p>
 
-A keyboard-first tiling window manager for macOS 27 that never hides a window. Each screen
-is a row of columns, each column a stack or an accordion. There are no virtual workspaces,
-so a crash, a hang or an unplugged screen cannot strand a window off-screen.
+tess keeps your Mac's windows in order. Every window gets its own place on the screen, and
+any of them is one keypress away. Open an app and it finds a spot, close one and the others
+fill the gap. There are no virtual workspaces, so a crash, a hang or an unplugged screen
+cannot strand a window off-screen.
 
-## Install
+## Why tess
 
-macOS 27 on Apple Silicon.
-Any standard Mac keyboard works, including the laptop keyboard. No NuPhy keyboard,
-keyboard software or Hyper key is required. Homebrew installs Folio with Tess for book/paper searches.
+- Windows arrange themselves. A new one takes a place, its neighbors make room, and an app
+  that needs a minimum size gets it.
+- One key reaches any window. `⌥T` puts a letter on every window and browser tab; press the
+  letter and you are there.
+- `⌘Space` finds anything: windows on every Space, browser tabs, apps, files, bookmarks,
+  books and papers. It also does arithmetic and runs commands and Shortcuts.
+- You choose where things open. Pick a window or app and a map of your screens lets you put
+  it exactly where you want, in one key.
+- `⌘Tab` shows windows, not just apps, as cards with their screen, memory use and how long
+  they have been open.
+- `⌥F` clicks without the mouse: everything clickable in the front window gets a label.
+- Zen gives you 25 minutes on one window with the other screens dark, then a real 5 minute
+  break.
+- Every layout change can be undone, the mouse works too, and any Mac keyboard will do, the
+  laptop's included.
+- It speaks English and Spanish, follows your light or dark theme, and uses next to no CPU
+  at rest.
+
+## Get started
+
+You need macOS 27 on Apple Silicon.
 
 ```sh
 brew tap jonaprieto/tap
 brew trust --formula jonaprieto/tap/tess
 brew install jonaprieto/tap/tess
 brew services start tess   # now and at login
-cp -R "$(brew --prefix tess)/tess.app" /Applications/   # optional: open it from Finder or Spotlight
+```
+
+macOS asks once for Accessibility. Then take the short walkthrough with `tess tutorial`,
+which you can repeat any time from the menu bar. It rearranges nothing.
+
+These keys are enough for your first day:
+
+| Key | What it does |
+| --- | --- |
+| `⌘Space` or `⌥Space` | Open the picker |
+| `⌥T` | Letters on every window; press one to go there |
+| `⌥H` `⌥J` `⌥K` `⌥L` | Focus the window left, down, up or right |
+| `⌥⇧H` `⌥⇧J` `⌥⇧K` `⌥⇧L` | Move the window |
+| `⌘⇧=` and `⌘⇧-` | Make it bigger or smaller |
+| `⌥⇧0` | Even everything out |
+| `⌥Return` | Fullscreen, without leaving your Space |
+| `⌥F` | Click by label |
+| `⌥⇧C` | Close the window |
+
+If Spotlight owns `⌘Space`, turn its shortcut off in System Settings → Keyboard → Keyboard
+Shortcuts → Spotlight, or use `⌥Space`. While a mode is on, its keys show on screen, so
+there is nothing to memorize.
+
+<details>
+<summary>Open it from Finder, build from source, or uninstall</summary>
+
+To open tess from Finder or Spotlight, copy the app. It opens Settings, or starts tess again
+after Quit.
+
+```sh
+cp -R "$(brew --prefix tess)/tess.app" /Applications/
 ```
 
 From source:
@@ -27,250 +76,297 @@ make install   # build, sign, start at login and after a crash; links ~/.local/b
 make test
 ```
 
-`make install` also installs Folio through Homebrew if it is missing. `rg` (ripgrep) and
-`fzf` are optional: `brew install ripgrep fzf` enables content search and better file ranking.
-Run `tess doctor` to see which binaries are found in the service's PATH, which are missing,
-their features and install commands. It also checks macOS, Accessibility, configuration and
-the configured terminal app. It changes no settings; missing required checks return exit code 1.
-The source installer runs this check after starting Tess; rerun it after granting Accessibility.
+`make install` also installs Folio through Homebrew if it is missing.
 
-Both **Doctor…** and **Tutorial…** are available from Tess's menu bar icon. Doctor opens a
-selectable, scrollable report with a **Run Again** button.
+To remove it: `brew services stop tess && brew uninstall tess`, or `make uninstall`.
 
-New here? Run `tess tutorial`, choose **Tutorial…** in the menu bar, or type
-`tutorial` in the picker. The repeatable walkthrough explains the keys, window placement,
-search and query recall, with a button to try the picker. It does not rearrange windows for you.
+</details>
 
-tess.app in Applications (Finder, Spotlight) opens Settings, or starts tess again after Quit.
-macOS asks once for Accessibility. To remove it: `brew services stop tess && brew uninstall tess`,
-or `make uninstall`.
+<details>
+<summary>Something not working? Run tess doctor</summary>
 
-## Keys
+`tess doctor`, or Doctor… in the menu bar, checks macOS, Accessibility, your configuration,
+the terminal app, and every binary each feature uses in the service's PATH, with how to
+install what is missing. It changes no settings, and missing required checks return exit
+code 1. Rerun it after granting Accessibility.
 
-Every default key is on any Mac keyboard; `alt` is ⌥ Option.
+Homebrew installs Folio for book and paper search. `brew install ripgrep fzf` adds search
+inside files and better file ranking.
 
-- `alt-h/j/k/l` focus, `alt-n/p` the next or previous window (every screen, then the
-  floating ones), `alt-shift-h/j/k/l` move, `alt-1/2/3` go to a screen,
-  `alt-shift-1/2/3` send the window there, `alt-tab` next screen.
-- `alt-enter` fullscreen within tess, `alt-slash` columns or rows, `alt-shift-slash`
-  accordion, `alt-shift-minus/equal` (or `cmd-shift-minus/equal`) smaller or bigger, wider
-  in columns and taller in rows (the other way for windows stacked in the only column), `alt-shift-0` balance,
-  `alt-shift-space` float, `alt-r` resize mode.
+</details>
+
+## Jump to any window
+
+<img src="assets/jump.svg" alt="Jump mode: a letter on every window, a number on every screen" width="100%">
+
+`⌥T` is tess mode. Every window and tab in sight wears a letter, every screen its number, and
+the letter takes you there. `shift` and a letter swaps that window with yours, a digit goes
+to that screen, and `shift` and a digit sends your window there. It lasts one command; press
+`⌥T` twice to keep it on until `esc`, with every action on a plain key: `h`, `shift-h`, `f`
+for fullscreen, `u` to undo, `z` for Zen, `t` for a terminal, `x` to close a window and pick
+what fills its place.
+
+## Find anything
+
+<img src="assets/picker.svg" alt="The picker: find a window, tab or app, then choose where it goes on a map of your screens" width="100%">
+
+Type a few letters, in any order: `slack michael` finds "Michael - Heliax - Slack". Enter on
+a window, tab or app shows a map of your screens:
+
+- A letter puts it in that window's place. A new window shares the place, so the rest of
+  your layout stays as it was; one already tiled swaps with it.
+- `⌥` and a letter puts it beside that window, Enter next to the focused one, and a digit on
+  that screen. `g` just goes there, and `f` floats it.
+
+The first word can also be a verb:
+
+- `cd ~/folder`, `code ~/folder`: open the folder in iTerm or VS Code, with tab completion.
+- `f name`: files by name. `rg text`: text inside files.
+- `web text`: browser tabs, bookmarks and history. An address opens directly.
+- `book title author`, `paper title author`: find, download to `~/Downloads` and open.
+- `slack name`: jump to that channel or person.
+- `chat text`, `claude text`: start a ChatGPT or Claude chat with that text.
+- `brew install fzf`: run it in your terminal.
+
+It also computes `2 * (3 + 4)`, lists your Shortcuts, offers Sleep, Lock Screen, Log Out,
+Restart and Shut Down, and runs any tess command on the window you had focused. It remembers
+your last 100 queries on this Mac; Tab brings them back.
+
+<details>
+<summary>Picker details: warnings, Do Not Disturb, plain-language search and custom verbs</summary>
+
+Amber keys and "may not fit" warnings mark destinations that would squeeze a window below a
+size it kept after refusing a resize. The choice stays available, and unknown size limits are
+not predicted.
+
+Bookmarks and browser history only show after `web`, so they never crowd out a window or an
+app. A matching recent query appears below the results as you type. Tab fills it in, or
+recalls the latest query in an empty field; folder completion takes priority, and Escape
+saves nothing.
+
+Focus has no API, so Do Not Disturb comes from a shortcut: one made in the Shortcuts app with
+its Set Focus action, named "Do Not Disturb", is then `do not` away in the picker.
+
+With `"jev": true` the picker also asks [TypeSafe](https://typesafe.ai)'s Jev what the text
+means, after a short pause in typing, so plain words (`the standup call`, `send this to the
+other screen`) and typos find their window, tab, app or command. It sends the typed text, the
+focused window and the titles of windows, tabs, apps and commands to TypeSafe's API, never
+browser history, with `TYPESAFE_API_KEY` from the environment or the login shell. Off by
+default.
+
+Verbs are config, merged key by key. A value is an app (`cd`), a link with `%s` (`chat`), one
+of tess's searches (`search:files`, `search:text`, `search:books`, `search:papers`,
+`search:history`), `keys:App:shortcut` (`slack`), which brings the app forward, presses the
+shortcut and types the text, or `run:` and a command with `%s` (`brew`), run in the `terminal`
+app.
+
+```json
+{"verbs": {"f": null, "find": "search:files", "g": "https://www.google.com/search?q=%s",
+           "vs": "keys:Visual Studio Code:cmd-p", "sh": "run:%s"}}
+```
+
+That renames the file search, adds a Google verb, opens a file in VS Code by name, and runs
+whatever is typed. `web` also has `brave`, and `f` also has `file`. Books and papers use
+[folio](https://github.com/jonaprieto/folio), with arXiv first for papers.
+
+</details>
+
+## Switch with ⌘Tab
+
+`⌘Tab` shows a card for every window, and for each running app with none, with its screen,
+memory use and how long it has been open. Tab steps through them, a card's letter goes
+straight there, and the window you are about to land on is outlined on screen, even when it
+sits behind others.
+
+## Focus with Zen
+
+<img src="assets/zen.svg" alt="Zen: the focused window fills its screen and the others go dark, with a pomodoro timer" width="100%">
+
+Zen (`z` in tess mode, `tess zen`, or the menu) is a pomodoro that means it. For 25 minutes
+the focused window fills its screen and the others go dark, with a countdown in the menu bar.
+Then comes a 5 minute break: every screen goes black with the time left, and no key or click
+gets through until it is over. `break` starts one now, and the menu counts the breaks you
+took today.
+
+## Arrange with the menu or the mouse
+
+Click the menu bar item for pictures of your screen as halves, columns, rows, a grid or
+fullscreen; click one to arrange it. Below them are your last ten layout changes: click one
+to undo it and everything after it, or an undone one to redo up to it.
+
+Drag a tiled window and where it will land shows in orange. Drop it on another window's left
+or right edge to split beside it, on its top or bottom edge to stack with it, or on its
+middle to swap the two.
+
+`⌥⇧A` brings every app back: each running app with no window in sight gets one, and every
+screen is laid out with them.
+
+The menu also has Keep Awake, which stops your Mac sleeping and shows a yellow dot in the menu
+bar until you turn it off, and the picker reaches volume, Wi-Fi and a speed test.
+
+<details>
+<summary>All default keys</summary>
+
+`alt` is ⌥ Option. `tess default-config` prints every binding, and keys for screens that are
+not attached stay with your apps.
+
+Focus and move:
+
+- `alt-h/j/k/l` focus, `alt-n/p` the next or previous window (every screen, then the floating
+  ones), `alt-shift-h/j/k/l` move.
+- `alt-1/2/3` go to a screen, `alt-shift-1/2/3` send the window there, `alt-tab` and
+  `alt-shift-tab` the next or previous screen.
 - `alt-shift-backspace` sends every window on this screen to the next one.
-- `alt-shift-semicolon` re-tiles from where the windows are now.
-- `alt-t` is tess mode: the same actions without a modifier (`h`, `shift-h`, `1`, `f`, `a`,
-  `v`, ...), plus `t` for a terminal window, `x` to close the window and pick what fills its
-  place, `w` to bring back lost windows, `s` to re-tile, `r` for resize mode. Every window
-  and tab shows a letter, and the letter goes there. It lasts one command; `alt-t` again
-  keeps it on until esc.
-- `cmd-space` opens the picker in any mode when available; `alt-space` is also available in
-  main, tess and resize modes. If Spotlight owns `cmd-space`, disable its shortcut in
-  System Settings → Keyboard → Keyboard Shortcuts → Spotlight to free it for tess.
-- `alt-shift-a` (or `show all` in the picker) shows all apps: each running app with no window
-  in sight gets one back (as its Dock icon would) and every screen is laid out with them, as
-  columns or a grid.
-- `alt-f` is click mode, in tess mode too: everything clickable in the window in front gets a
-  label (Slack's channels and DMs, a page's links and buttons); typing one clicks it, esc
-  leaves.
 
-A keyboard with programmable keys can optionally send Hyper (⌃⌥⇧⌘) +T, +G and +R,
-and bind those in the config. These are optional aliases, not requirements:
+Layout:
+
+- `alt-enter` fullscreen within tess, `alt-slash` columns or rows, `alt-shift-slash` accordion.
+- `alt-shift-minus/equal` (or `cmd-shift-minus/equal`) smaller or bigger: wider in columns and
+  taller in rows, or the other way for windows stacked in the only column.
+- `alt-shift-0` balance, `alt-shift-space` float, `alt-r` resize mode (`h/l` width, `j/k`
+  height), `alt-shift-semicolon` re-tile from where the windows are now.
+
+Everything else:
+
+- `alt-t` tess mode, `alt-space` and `cmd-space` the picker, `alt-f` click mode.
+- `alt-shift-a` show all apps, `alt-shift-c` close the window, `alt-shift-r` reload the config.
+- `cmd-h` and `cmd-alt-h` do nothing, so no window gets hidden by accident.
+
+In tess mode, on top of the same actions without a modifier: `t` a terminal window, `x` close
+the window and pick what fills its place, `w` bring back lost windows, `s` re-tile, `r` resize
+mode, `b` balance, `f` fullscreen, `a` accordion, `v` columns or rows, `space` float, `u` and
+`shift-u` undo and redo, `z` Zen.
+
+A keyboard with programmable keys can also send Hyper (⌃⌥⇧⌘) and bind it. This is optional:
 
 ```json
 {"modes": {"main": {"cmd-alt-ctrl-shift-t": "mode tess", "cmd-alt-ctrl-shift-g": "pick", "cmd-alt-ctrl-shift-r": "jump"},
            "tess": {"cmd-alt-ctrl-shift-t": "mode tess", "cmd-alt-ctrl-shift-g": "pick"}}}
 ```
 
-Windows can also be moved with the mouse: drag a tiled one and where it will land shows in
-orange as you drag. Over another window, or the gap beside it, its left or right edge splits
-beside it, its top or bottom edge stacks with it, and its middle swaps the two. Over its own
-place it stays; over an empty part of another screen it goes to that screen.
+</details>
 
-Fullscreen within tess (`alt-enter`) fills the screen edge to edge in front of its other
-windows until `alt-enter` again, or another window there takes focus or opens; it survives
-a restart. A floating window joins the tiling to go fullscreen, and moving or resizing one
-says it floats. macOS fullscreen (the green button, or a video's or call's own fullscreen)
-becomes fullscreen within tess, so the window never leaves for a Space of its own.
+<details>
+<summary>How windows, fullscreen and jump mode behave</summary>
 
-The menu bar item names the mode that is on. Clicking it shows pictures of the screen's
-windows as halves (the focused one left, the rest stacked right), columns, rows, a grid or
-fullscreen, but for the one they are in already: clicking one arranges them so (also
-`tess halves`, `columns`, `rows`, `grid`). Below, the
-last ten layout changes (keys, CLI, menu and picker): clicking one undoes it and everything
-after it, clicking an undone one redoes up to it. In tess mode `u` undoes and `shift-u`
-redoes.
+Each screen is a row of columns, each column a stack or an accordion.
 
-While a mode is on, its keys show on screen. Keys for screens that are not attached are not
-shown and stay with apps. `tess default-config` prints every binding.
+Fullscreen within tess fills the screen edge to edge in front of its other windows until
+`alt-enter` again, or another window there takes focus or opens, and it survives a restart. A
+floating window joins the tiling to go fullscreen, and moving or resizing one says it floats.
+macOS fullscreen (the green button, or a video's or call's own fullscreen) becomes fullscreen
+within tess, so the window never leaves for a Space of its own.
 
-## Jump mode
+Jump mode (`tess jump`, or a key bound to `jump`) is tess mode's letters without its other
+keys. What is hidden behind another window gets no letter. Letters are the ones tess mode
+leaves free (`d q e y i o p c n m` by default), windows first, and a window keeps its letter
+while it lives.
 
-<img src="assets/jump.svg" alt="Jump mode: a letter on every window, a number on every screen" width="100%">
-
-tess mode (`alt-t`) shows these letters and takes them as keys; jump mode (`tess jump`, or a
-key bound to `jump`) is the same without tess mode's other keys.
-
-Every window in sight shows a border and a letter in its middle, every tab in sight (Brave,
-iTerm, any app with a tab bar) a letter, every screen its number in the bottom-left corner.
-What is hidden behind another window gets no letter. Letters are the ones tess mode leaves
-free (`d q e y i o p c n m` by default), windows first; a window keeps its letter while it
-lives.
-
-- letter: focus that window or tab; shift+letter: swap the window with the focused one.
-- digit: focus that screen; shift+digit: send the focused window there.
-- esc: leave.
-
-Outside jump mode the focused window keeps its border and, with more than one screen, the
-active screen an outline. With `"overlay": {"window_labels": "always"}` every label stays on
-screen all the time; `"off"` shows none. `"overlay": {"border_color": "#ff8000"}` colors
-the borders and highlights instead of the macOS accent color.
-Settings → Appearance has color controls for focused borders and highlights, inactive borders,
-and selection/drag outlines (`overlay.border_color`, `inactive_border_color`, and `selection_color`,
-each a `#rrggbb` value).
+Outside jump mode the focused window keeps a thin border and, with more than one screen, the
+active screen a faint outline. The border steps aside while its window moves, and both hide
+during Mission Control.
 
 Every window but the focused one shows in black and white at 80%, so the eye goes to the one
-in use; `"overlay": {"gray_others": false}` (or Settings) turns it off. It is off while
-another app or Zen is in front.
-Settings → Appearance also adjusts grayscale strength from 0% to 100%
-(`"overlay": {"gray_amount": 0.8}` is the default).
+in use. It is off while another app or Zen is in front.
 
-## Zen
+Minimum sizes are learned the first time an app refuses a size, then applied before anything
+moves, so a window lands once. A resize stops there, and the others keep the space tiled.
 
-<img src="assets/zen.svg" alt="Zen: the focused window fills its screen and the others go dark, with a pomodoro timer" width="100%">
+</details>
 
-Zen (`z` in tess mode, `tess zen`, or the menu) is a pomodoro: for 25 minutes the focused
-window fills its screen and the other screens go dark, then a 5 minute break: every screen
-goes black with the time left, and no key or click gets through until it is over. Then work
-again, until Zen is turned off. The menu bar counts down.
-`break` (in the picker too) starts the break now, turning Zen on if it is off; the menu
-counts the breaks taken today.
-Clicking a dark screen focuses what is under it, and Zen follows.
+## Make it yours
 
-## Picker
-
-Type to filter windows (on every Space), Brave and Safari tabs, and apps; once you type, also
-Sleep, Lock Screen, Log Out, Restart and Shut Down (the last three ask first). Bookmarks and
-browser history only after `web` (below), so they never crowd out a window or an app.
-Arithmetic like `2 * (3 + 4)` shows its result on top, and Enter copies it. Enter on a
-window, tab or app shows a map of every screen to choose where it goes:
-
-- letter or shift+letter: swap with that window; alt+letter: go beside it.
-- enter: next to the focused window; digit: that screen; `g`: just go there; `f`: float.
-
-Amber keys and “may not fit” warnings mark destinations that would squeeze a window below
-a size it kept after refusing a resize. Choices remain available; unknown size limits are
-not predicted.
-
-Words match in any order: `slack michael` finds "Michael - Heliax - Slack".
-The picker remembers the last 100 confirmed queries on this Mac, across restarts. A matching
-recent query appears below the results as you type; Tab fills it in (or recalls the latest
-query when the field is empty). Folder completion still takes priority. Escape saves nothing.
-
-Your Shortcuts are listed too, once you type, and Enter runs one. Focus has no API, so Do
-Not Disturb comes from a shortcut: one made in the Shortcuts app with its Set Focus action,
-named "Do Not Disturb", is then `do not` away in the picker.
-
-With `"jev": true` the picker also asks [TypeSafe](https://typesafe.ai)'s Jev what the text
-means, after a short pause in typing, so plain words (`the standup call`, `send this to the
-other screen`) and typos find their window, tab, app or command, which moves to the top. It
-sends the typed text, the focused window and the titles of windows, tabs, apps and commands
-to TypeSafe's API, never browser history, with `TYPESAFE_API_KEY` from the environment or
-the login shell. Off by default.
-
-Any command `tess` takes on the command line works there too: `balance`, `zen`,
-`move-to-screen 2`, `resize width +100`. It shows on top, and Enter runs it on the window
-that had focus.
-
-The first word can also be a verb:
-
-- `cd ~/folder`, `code ~/folder`: open the folder in iTerm or VS Code (tab completes).
-- `chat text`, `claude text`: a new ChatGPT (in the browser) or Claude (the app) chat with
-  that text. A verb whose value is a link with `%s` puts the text there.
-- `file name` (or `f name`): files by name only (Spotlight, ranked by fzf), no tabs or
-  history; `rg text`: text in files.
-- `book title author`, `paper title author`: find with [folio](https://github.com/jonaprieto/folio)
-  (papers also on arXiv first), download to `~/Downloads` and open. The selected title stays
-  visible with an activity bar while downloading, followed by “Opening” or an error.
-
-- `web text` (or `brave text`): only browser tabs, bookmarks and history; an address
-  (`github.com/anoma`) also shows on top to open.
-- `slack name`: Slack in front, its ⌘K switcher open with the name typed; Enter there goes
-  to that channel or person.
-- `brew install fzf`: runs `brew install fzf` in the terminal (iTerm opens a new tab),
-  which stays on a shell to read the output or answer a prompt.
-
-Verbs are config, merged key by key: a value is an app (`cd`), a link with `%s` (`chat`),
-one of tess's searches (`search:files`, `search:text`, `search:books`, `search:papers`,
-`search:history`), `keys:App:shortcut` (`slack`), which brings the app forward, presses the
-shortcut and types the text (`"vs": "keys:Visual Studio Code:cmd-p"` would open a file there
-by name), or `run:` and a command with `%s` (`brew`), run in the `terminal` app (`"sh":
-"run:%s"` runs whatever is typed).
-`{"verbs": {"f": null, "find": "search:files", "g": "https://www.google.com/search?q=%s"}}`
-renames the file search and adds a Google verb.
-
-## Settings
-
-Settings in the menu bar item (or `tess settings`) edits gaps, overlays, labels, picker verbs,
-app lists and key bindings. It writes only what differs from the defaults to
-`~/.config/tess/config.json`, which layers on top of the built-in config: lists replace,
-bindings merge per key, and `null` removes a default binding. A config only needs what you
-change, for example:
+Settings in the menu bar, or `tess settings`, edits gaps, colors, labels, language, picker
+verbs, app lists and keys. It saves only what differs from the defaults to
+`~/.config/tess/config.json`, so a config holds just what you change:
 
 ```json
-{"gaps": {"inner": 6}, "terminal": "Ghostty", "modes": {"main": {"alt-s": "exec open -a Slack", "cmd-h": null}}}
+{"gaps": {"inner": 6}, "terminal": "Ghostty", "language": "es",
+ "modes": {"main": {"alt-s": "exec open -a Slack", "cmd-h": null}}}
 ```
 
-`float` lists apps that never tile, `tile` apps that always do, `ignore` apps tess leaves
-alone (EdgeMark is there by default). `terminal` is the app `t` in tess mode opens. `"one_shot": []`
-keeps tess mode on until esc.
+<details>
+<summary>Config reference</summary>
 
-`history` lists the browsers whose bookmarks and history the picker reads, first one first
-(`["com.brave.Browser", "com.apple.Safari"]` by default): it wins ties, a page both have
-shows once from it, and a browser left out is not read.
+The config layers on top of the built-in one: lists replace, bindings and verbs merge per key,
+and `null` removes a default.
 
-New windows open on an empty screen when there is one, and Settings and a mode's keys show
-on the screen with the fewest windows; `"empty_screens": false` turns that off.
+- `float` lists apps that never tile, `tile` apps that always do, and `ignore` apps tess
+  leaves alone (EdgeMark is there by default).
+- `terminal` is the app `t` in tess mode opens. `"one_shot": []` keeps tess mode on until esc.
+- `history` lists the browsers whose bookmarks and history the picker reads, first one first
+  (`["com.brave.Browser", "com.apple.Safari"]` by default). The first wins ties, a page both
+  have shows once from it, and a browser left out is not read.
+- `"empty_screens": false` stops new windows going to an empty screen, and Settings and a
+  mode's keys to the screen with the fewest windows.
+- `"language": "es"` or `"en"`. Left out, tess follows macOS: the first of its languages it
+  speaks, else English. Commands, config keys, `tess --help`, `tess tree` and the logs stay in
+  English.
+- `"jev": true` turns on plain-language search in the picker.
 
-`"language": "es"` (or Settings → General) puts tess in Spanish, and `"en"` in English. Left
-out, it follows macOS: the first of its languages tess speaks, else English. Commands, config
-keys, `tess --help`, `tess tree` and the logs stay in English.
+Under `overlay`:
 
-## Command line
+- `"window_labels"`: `"jump"` by default, `"always"` keeps every label on screen, `"off"` shows
+  none.
+- `"border_color"`, `"inactive_border_color"` and `"selection_color"`: `#rrggbb` values for
+  focused borders and highlights, inactive borders, and selection and drag outlines. The accent
+  color is the default, and a color that would not read in the current theme is adjusted for
+  text and thin lines.
+- `"gray_others": false` turns off the black and white, and `"gray_amount"` sets its strength
+  from 0 to 1 (0.8 by default).
+- `"all_screens": false` shows a mode's keys only on the screen in use, once `empty_screens`
+  is off.
+
+</details>
+
+<details>
+<summary>Command line</summary>
 
 `tess <command>` runs any command a key can, for example `tess focus left` or
-`tess move-to-screen 2`. Also:
+`tess move-to-screen 2`, and typed in the picker they work too. Also:
 
 - `tess tree`: screens, columns and windows, and what is not tiled.
 - `tess state`: the model and the machine as JSON.
+- `tess halves`, `columns`, `rows`, `grid`: arrange this screen.
 - `tess rescue`: bring back windows that are mostly off-screen.
 - `tess pause`: stop tiling until run again (also in the menu).
 - `tess undo`, `tess redo`: the last layout change.
-- `tess volume 30` (or `+10`, `-10`, `mute`, `unmute`), `tess wifi` (`on`, `off`, or the
-  other way round), `tess caffeine` (keeps the Mac awake until run again; `caffeine 60` for
-  an hour, `caffeine off`). A yellow dot in the menu bar says the Mac is being kept
-  awake, and the menu has it as Keep Awake.
-  `tess speedtest`: download and upload speed and latency, with macOS's own
-  `networkQuality`, in about 20 seconds. Typed in the picker these work too, and they take
-  keys like any command.
-- `tess zen`: Zen on or off; `tess break`: Zen's break now.
+- `tess volume 30` (or `+10`, `-10`, `mute`, `unmute`).
+- `tess wifi` (`on`, `off`, or the other way round).
+- `tess caffeine`: keep the Mac awake until run again. `caffeine 60` for an hour, `caffeine off`.
+- `tess speedtest`: download and upload speed and latency, with macOS's own `networkQuality`,
+  in about 20 seconds.
+- `tess zen`: Zen on or off. `tess break`: Zen's break now.
+- `tess doctor`, `tess tutorial`, `tess settings`.
 - `tess reload`, `tess default-config`, `tess --version`.
 
-## Permissions
+</details>
 
-Accessibility, asked at first start. Automation for Brave and Safari, asked the first time
-the picker reads tabs. Browser history also needs Full Disk Access (System Settings, Privacy
-& Security) for the tess binary: `$(brew --prefix)/opt/tess/bin/tess` from Homebrew, or
+<details>
+<summary>Permissions, logs and privacy</summary>
+
+Accessibility is asked at first start. Automation for Brave and Safari is asked the first time
+the picker reads tabs. Browser history also needs Full Disk Access (System Settings, Privacy &
+Security) for the tess binary: `$(brew --prefix)/opt/tess/bin/tess` from Homebrew, or
 `~/tess/build/tess` from source. Without it the picker still lists tabs and Brave bookmarks.
 Log Out, Restart and Shut Down may ask once for Automation of loginwindow.
 
-## Logs
+Logs stay on this Mac, and picker queries are not recorded.
 
 - `~/Library/Logs/tess/events.jsonl`: one JSON object per line for everything that changes:
-  apps and windows opening and closing, focus, every command and where it came from (key,
-  CLI, menu, picker), the layout after it, screens, Spaces, modes, picks and config reloads.
-  A snapshot of the model and the machine is written at start, on screen changes and every
-  ten minutes. Rotated at 20 MB. It stays on this Mac; picker queries are not recorded.
+  apps and windows opening and closing, focus, every command and where it came from, the layout
+  after it, screens, Spaces, modes, picks and config reloads. A snapshot of the model and the
+  machine is written at start, on screen changes and every ten minutes. Rotated at 20 MB.
 - `~/Library/Logs/tess.log`: short human-readable notes.
 
-Limits: macOS Spaces other than native fullscreen are not modeled; an app with a minimum
-size can overlap its neighbor.
+</details>
+
+<details>
+<summary>Good to know</summary>
+
+- macOS Spaces other than native fullscreen are not modeled.
+- macOS shows a new window where its app puts it before tess can move it, for a blink.
+- An app's minimum size is learned once per run of tess, so that first placement moves twice.
+- Windows can overlap when the minimum sizes on a screen do not all fit.
+
+</details>

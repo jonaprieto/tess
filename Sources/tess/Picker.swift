@@ -533,9 +533,11 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         place(size)
         map.frame = NSRect(x: 0, y: 44, width: size.width, height: size.height - 44)
         footer.frame = NSRect(x: 24, y: 12, width: size.width - 48, height: 18)
-        footer.stringValue = "Letter Swap     ⌥ Letter Beside     ↵ Here     1–\(max(model.monitors.count, 1)) Screen     G Go     F Float     Esc Back"
+        // A screen to choose only when there is a choice.
+        let screens = model.monitors.count
+        footer.stringValue = "Letter Swap     ⌥ Letter Beside     ↵ Here\(screens > 1 ? "     1–\(screens) Screen" : "")     G Go     F Float     Esc Back"
         if let warning = model.hereWarning {
-            footer.stringValue = "↵ here: ⚠ \(warning) may not fit      letter swap      ⌥ letter beside      number screen      g go      f float      esc back"
+            footer.stringValue = "↵ here: ⚠ \(warning) may not fit      letter swap      ⌥ letter beside\(screens > 1 ? "      number screen" : "")      g go      f float      esc back"
         }
         for v in [magnifier, field, divider, list] as [NSView] { v.isHidden = true }
         map.isHidden = false

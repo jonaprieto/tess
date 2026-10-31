@@ -132,9 +132,9 @@ extension Tiler {
         let exits = registerJump()
         refreshTabs()
         // A cheat sheet like any mode's, for as long as jump mode lasts.
-        let n = max(world.monitors.count, 1)
-        overlay.showSheet("Jump", rows: [("Letter", "Go to that window or tab"), ("⇧ Letter", "Swap that window with the focused one"),
-                                         ("1–\(n)", "Go to that screen"), ("⇧ 1–\(n)", "Move the focused window there")],
+        let n = world.monitors.count
+        let screens = n > 1 ? [("1–\(n)", "Go to that screen"), ("⇧ 1–\(n)", "Move the focused window there")] : []
+        overlay.showSheet("Jump", rows: [("Letter", "Go to that window or tab"), ("⇧ Letter", "Swap that window with the focused one")] + screens,
                           back: exits.map(\.symbol), on: modeScreens)
         onChange()
     }

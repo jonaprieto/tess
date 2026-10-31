@@ -136,6 +136,19 @@ public func jumpKeys(
   return (keys, exits)
 }
 
+/// Jump mode's keys while Option is held down: its letters and
+/// digits, with Option. Without shift, which would no longer be
+/// Option alone, or a key to leave: letting go does that.
+public func heldKeys(_ keys: [KeySpec: [Command]]) -> [KeySpec:
+  [Command]]
+{
+  Dictionary(
+    uniqueKeysWithValues: keys.filter {
+      $0.key.mods.isEmpty && $0.key.key.count == 1
+    }
+    .map { (KeySpec(key: $0.key.key, mods: [.alt]), $0.value) })
+}
+
 /// `bindings` without the keys for screens past `screens`: they
 /// neither show nor take the key from apps.
 public func forScreens(

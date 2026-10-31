@@ -213,6 +213,34 @@ extension Tiler {
   }
 
 
+  /// Option down on its own for 3 s, as if unsure where to go, shows
+  /// the letters. Letting go of it leaves them, so a finger resting
+  /// on the key costs nothing.
+  func holdOption(_ down: Bool) {
+    optionHold?.cancel()
+    optionHold = nil
+    if down {
+      let hold = DispatchWorkItem { [weak self] in
+        self?.startHeldJump()
+      }
+      optionHold = hold
+      DispatchQueue.main.asyncAfter(
+        deadline: .now() + 3, execute: hold)
+    } else if jumpHeld {
+      jumpHeld = false
+      if jumping { setMode(jumpReturn) }
+    }
+  }
+
+  func startHeldJump() {
+    guard mode == "main", !paused, !picking, !starting,
+      clickTargets.isEmpty, switcher.cards.isEmpty,
+      NSEvent.pressedMouseButtons == 0
+    else { return }
+    jumpHeld = true
+    startJump()
+  }
+
   /// Every window's letter becomes a key (shift swaps with it), every
   /// tab's letter and every screen's number too (shift moves there);
   /// one use, or esc, goes back to the mode jump started from (main
@@ -233,13 +261,18 @@ extension Tiler {
         ("1–\(n)", L("Go to that screen")),
         ("⇧ 1–\(n)", L("Move the focused window there"))
       ] : []
-    overlay.showSheet(
-      L("Jump"),
-      rows: [
+    let rows =
+      [
         (L("Letter"), L("Go to that window or tab")),
         (L("⇧ Letter"), L("Swap that window with the focused one"))
-      ] + screens,
-      back: exits.map(\.symbol), on: modeScreens)
+      ] + screens
+    // Held, shift is out and letting go is the way back.
+    overlay.showSheet(
+      L("Jump"),
+      rows: jumpHeld
+        ? rows.enumerated().filter { $0.offset % 2 == 0 }.map(
+          \.element) : rows,
+      back: jumpHeld ? ["⌥"] : exits.map(\.symbol), on: modeScreens)
     onChange()
   }
 
@@ -251,7 +284,7 @@ extension Tiler {
       labels: labels, windows: labeledWindows, tabs: tabLetters,
       screens: world.monitors.count,
       back: [.mode(jumpReturn)])
-    let failed = hotkeys.register(keys)
+    let failed = hotkeys.register(jumpHeld ? heldKeys(keys) : keys)
     if !failed.isEmpty {
       Log.write("jump: could not register \(failed)")
     }

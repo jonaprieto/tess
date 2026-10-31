@@ -99,6 +99,10 @@ extension Tiler {
       else { return }
       switcher.close()
       go(card.target)
+    case .option(let down): holdOption(down)
+    case .typed:
+      optionHold?.cancel()
+      optionHold = nil
     case .cancel:
       switcher.close()
     case .release:

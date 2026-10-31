@@ -11,7 +11,7 @@ import Layout
 final class CmdTab {
   enum Key {
     case open(back: Bool), step(back: Bool), letter(UInt16), cancel,
-      release
+      release, option(Bool), typed
   }
 
   /// Off while tess is paused: cmd-tab is macOS's again.
@@ -36,6 +36,7 @@ final class CmdTab {
   // The tap's thread only.
   private var tap: CFMachPort?
   private var open = false
+  private var optionAlone = false
 
   init(_ onKey: @escaping (Key) -> Void) {
     self.onKey = onKey
@@ -105,12 +106,21 @@ final class CmdTab {
       code = e.getIntegerValueField(.keyboardEventKeycode),
       back = flags.contains(.maskShift)
     if type == .flagsChanged {
+      let alone =
+        flags.intersection([
+          .maskAlternate, .maskCommand, .maskControl, .maskShift
+        ]) == .maskAlternate
+      if alone != optionAlone {
+        optionAlone = alone
+        send(.option(alone))
+      }
       if open, !flags.contains(.maskCommand) {
         open = false
         send(.release)
       }
       return pass
     }
+    if optionAlone, type == .keyDown { send(.typed) }
     if !open {
       guard Self.enabled, code == 48, flags.contains(.maskCommand),
         !flags.contains(.maskAlternate),

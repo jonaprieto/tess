@@ -228,6 +228,12 @@ final class Tiler {
 
   var jumpReturn = "main"
 
+  /// Option alone on its way to showing the letters, and jump mode
+  /// opened that way, which lasts as long as Option is down.
+  var optionHold: DispatchWorkItem?
+
+  var jumpHeld = false
+
   /// The mode before the current one, for `mode back`.
   var modeBefore = "main"
 

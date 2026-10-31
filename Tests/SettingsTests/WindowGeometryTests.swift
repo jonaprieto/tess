@@ -142,6 +142,29 @@ import Testing
   #expect(tiler.placing == nil)
 }
 
+/// Letting Option go in time, or typing with it, must leave nothing
+/// behind.
+@MainActor
+@Test func holdingOptionOnlyCountsAlone() {
+  _ = NSApplication.shared
+  let tiler = Tiler()
+  tiler.starting = false
+  tiler.holdOption(true)
+  #expect(tiler.optionHold != nil)
+  tiler.holdOption(false)
+  #expect(tiler.optionHold == nil)
+
+  tiler.holdOption(true)
+  tiler.onCmdTab(.typed)
+  #expect(tiler.optionHold == nil)
+
+  // Not over the picker, or from another mode.
+  tiler.picking = true
+  tiler.startHeldJump()
+  #expect(tiler.mode == "main")
+  #expect(!tiler.jumpHeld)
+}
+
 /// Leaving fullscreen, the border would hang where the window was
 /// until it gets there.
 @MainActor

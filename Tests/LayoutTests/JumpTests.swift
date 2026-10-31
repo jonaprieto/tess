@@ -39,6 +39,29 @@ import Testing
   )
 }
 
+@Test func heldKeysAreLettersAndDigitsWithOption() {
+  let (keys, _) = jumpKeys(
+    labels: [1: "d"], windows: [1], tabs: ["q"], screens: 2,
+    back: [.mode("main")])
+  let held = heldKeys(keys)
+  #expect(
+    held[KeySpec(key: "d", mods: [.alt])] == [
+      .focusWindow(1), .mode("main")
+    ])
+  #expect(
+    held[KeySpec(key: "q", mods: [.alt])] == [
+      .focusTab(0), .mode("main")
+    ])
+  #expect(
+    held[KeySpec(key: "2", mods: [.alt])] == [
+      .focusMonitor(2), .mode("main")
+    ])
+  // Shift would read as letting go of Option alone, and Esc has
+  // letting go instead.
+  #expect(
+    held.keys.allSatisfy { $0.mods == [.alt] && $0.key.count == 1 })
+}
+
 @Test func labelsStayWithTheirWindows() {
   var l = stableLabels([:], windows: [1, 2, 3], alphabet: "asd")
   #expect(l == [1: "a", 2: "s", 3: "d"])

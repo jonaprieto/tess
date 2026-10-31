@@ -11,15 +11,14 @@ final class StatusItem: NSObject, NSMenuDelegate {
     init(_ tiler: Tiler) {
         self.tiler = tiler
         super.init()
-        refresh()
-    }
-
-    func refresh() {
+        let menu = NSMenu()
+        menu.delegate = self
+        fill(menu)
+        item.menu = menu
         refreshIcon()
-        refreshMenu()
     }
 
-    /// Rebuilt each time it opens, so the header's counts are current.
+    /// Rebuilt each time it opens and not before: about 4 ms, which a mode change should not wait for.
     func menuNeedsUpdate(_ menu: NSMenu) { fill(menu) }
 
     /// Cheap enough to run on every layout or focus change.
@@ -116,13 +115,6 @@ final class StatusItem: NSObject, NSMenuDelegate {
         image.isTemplate = false
         image.accessibilityDescription = "tess"
         return image
-    }
-
-    private func refreshMenu() {
-        let menu = NSMenu()
-        menu.delegate = self
-        fill(menu)
-        item.menu = menu
     }
 
     private func fill(_ menu: NSMenu) {

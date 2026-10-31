@@ -29,7 +29,7 @@ func serve() -> Never {
     app.setActivationPolicy(.accessory)
     let tiler = Tiler()
     let status = StatusItem(tiler)
-    tiler.onChange = { status.refresh() }
+    tiler.onChange = { status.refreshIcon() }
     tiler.onLayout = { status.refreshIcon() }
     do {
         try Socket.serve { line in
@@ -43,13 +43,13 @@ func serve() -> Never {
     func begin() {
         status.waitingForAccess = false
         tiler.start(restartedAfterHang: hung)
-        status.refresh()
+        status.refreshIcon()
     }
     if AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) {
         begin()
     } else {
         status.waitingForAccess = true
-        status.refresh()
+        status.refreshIcon()
         Log.write("waiting for Accessibility access")
         Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { t in
             guard AXIsProcessTrusted() else { return }

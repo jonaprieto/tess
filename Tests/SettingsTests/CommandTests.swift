@@ -512,3 +512,140 @@ private func item(_ kind: Picker.Kind) -> Picker.Item {
   #expect(!commands.isEmpty)
   #expect(commands.allSatisfy { !$0.title.isEmpty })
 }
+
+@MainActor
+@Test func aWindowOnItsWayHasNoOutline() {
+  let t = tiler([1], focused: 1)
+  let here = CGRect(x: 0, y: 0, width: 400, height: 300)
+  let there = here.offsetBy(dx: 300, dy: 0)
+  t.infos[1]?.frame = here
+  #expect(!t.inTransit(1, at: here))
+  t.assumed.insert(1)
+  #expect(t.inTransit(1, at: here))
+  t.assumed = []
+  t.landing[1] = Date().addingTimeInterval(1)
+  #expect(t.inTransit(1, at: there))
+  #expect(!t.inTransit(1, at: here))
+  t.landing[1] = Date().addingTimeInterval(-1)
+  #expect(!t.inTransit(1, at: there))
+}
+
+@MainActor
+@Test func windowsUnderAnothersFullscreenAreNotShown() {
+  let t = tiler([1, 2], focused: 1)
+  #expect(t.shownWindows == [1, 2])
+  t.world.monitors[0].fullscreen = 2
+  #expect(t.shownWindows == [2])
+}
+
+@MainActor
+@Test func onlyTheFocusedWindowGetsAnOutlineUntilLettersAreUp() {
+  let t = tiler([1, 2], focused: 1)
+  t.labels = [1: "a", 2: "b"]
+  let left = CGRect(x: 0, y: 0, width: 400, height: 300)
+  let stack = [
+    (id: WindowID(1), frame: left),
+    (id: WindowID(2), frame: left.offsetBy(dx: 500, dy: 0))
+  ]
+  let focused = t.decorationWindows(in: stack, focused: 1, all: false)
+  #expect(focused.count == 1)
+  #expect(focused.first?.focused == true)
+  #expect(focused.first?.label == nil)
+  let all = t.decorationWindows(in: stack, focused: 1, all: true)
+  #expect(all.count == 2)
+  #expect(Set(all.compactMap(\.label)) == ["a", "b"])
+}
+
+@MainActor
+@Test func aWindowUnderAnotherIsNotVisible() {
+  let t = tiler([1, 2], focused: 1)
+  let r = CGRect(x: 0, y: 0, width: 400, height: 300)
+  #expect(
+    t.visibleWindows([
+      (id: WindowID(2), frame: r), (id: WindowID(1), frame: r)
+    ]) == [2])
+}
+
+@MainActor
+@Test func theDebugMapIsAnImageOfTheLayout() throws {
+  let t = tiler([1, 2, 3], focused: 1)
+  t.world.monitors[0].lanes[1].accordion = true
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("tess-map-\(UUID()).png").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  #expect(t.execute(.debugMap(path)) == path)
+  let image = try #require(NSImage(contentsOfFile: path))
+  #expect(image.size.width > 0)
+  #expect(
+    t.execute(.debugMap("/no/such/folder/map.png"))
+      .hasPrefix("error: "))
+}
+
+@MainActor
+@Test func cmdTabPrefersWhatWasRecentlyInFront() throws {
+  let t = tiler([1], focused: 1)
+  let all = t.windowlessApps(besides: [])
+  #expect(!all.contains { $0.processIdentifier == getpid() })
+  let app = try #require(all.last)
+  t.recentApps = [app.processIdentifier]
+  #expect(
+    t.windowlessApps(besides: []).first?.processIdentifier
+      == app.processIdentifier)
+  #expect(
+    !t.windowlessApps(besides: [app.processIdentifier]).contains {
+      $0.processIdentifier == app.processIdentifier
+    })
+}
+
+@MainActor
+@Test func aShortTitleWinsOverTheTitleSplitUp() {
+  let t = tiler([1], focused: 1)
+  #expect(t.shortTitle("Inbox", app: "Mail") == "Inbox")
+  t.shortTitles["Inbox"] = "Mail in"
+  #expect(t.shortTitle("Inbox", app: "Mail") == "Mail in")
+}
+
+@MainActor
+@Test func theTreeSaysWhatIsSpecialAboutAWindow() {
+  let t = tiler([1, 2, 3], focused: 1)
+  t.world.monitors[0].lanes[1].accordion = true
+  t.world.monitors[0].fullscreen = 1
+  t.refused = [2]
+  t.world.toggleFloating(3)
+  t.world.focused = 1
+  let tree = t.tree()
+  #expect(tree.contains("<- focused"))
+  #expect(tree.contains(" fullscreen"))
+  #expect(tree.contains("(keeps its own size)"))
+  #expect(tree.contains("accordion"))
+  #expect(tree.contains("floating"))
+  t.world.monitors[0].rows = true
+  #expect(t.tree().contains("row 1"))
+}
+
+@MainActor
+@Test func balancingUndoesAResize() {
+  let t = tiler([1, 2], focused: 1)
+  let even = t.world.frames(
+    inner: t.config.inner, outer: t.config.outer)
+  _ = t.run([.resize(.width, 100)], source: "test")
+  #expect(
+    t.world.frames(inner: t.config.inner, outer: t.config.outer)
+      != even)
+  _ = t.run([.balance], source: "test")
+  #expect(
+    t.world.frames(inner: t.config.inner, outer: t.config.outer)
+      == even)
+}
+
+@MainActor
+@Test func growingTakesRoomFromTheNeighbors() {
+  let t = tiler([1, 2], focused: 1)
+  let was = t.world.frames(
+    inner: t.config.inner, outer: t.config.outer)
+  _ = t.run([.grow(100)], source: "test")
+  let now = t.world.frames(
+    inner: t.config.inner, outer: t.config.outer)
+  #expect(now[1, default: .zero].width > was[1, default: .zero].width)
+  #expect(now[2, default: .zero].width < was[2, default: .zero].width)
+}

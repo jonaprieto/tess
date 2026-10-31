@@ -26,6 +26,17 @@ extension Tiler {
     }
 
 
+    /// A resize stops at what a window keeps: without this the layout would go on taking room
+    /// from it on paper and handing it to a neighbor, which would grow underneath.
+    func holdMinimums(_ was: World) {
+        world.respect(windowMinimums, inner: config.inner, outer: config.outer)
+        let old = was.frames(inner: config.inner, outer: config.outer)
+        if world.frames(inner: config.inner, outer: config.outer).allSatisfy({ old[$0.key]?.isNear($0.value) == true }) {
+            toast(L("no room left"))
+        }
+    }
+
+
     func execute(_ c: Command) -> String {
         if paused, ![.pause, .tree, .reload, .tutorial].contains(c) { return "error: \(L("paused"))" }
         Log.write("command: \(c)")
@@ -40,8 +51,14 @@ extension Tiler {
         switch c {
         case .focus(let d): world.focus(d); flash = true
         case .move(let d): world.move(d); flash = true
-        case .resize(let a, let px): world.resize(a, by: px)
-        case .grow(let px): world.grow(by: px)
+        case .resize(let a, let px):
+            let was = world
+            world.resize(a, by: px)
+            holdMinimums(was)
+        case .grow(let px):
+            let was = world
+            world.grow(by: px)
+            holdMinimums(was)
         case .balance: world.balance()
         case .arrange(let a): world.arrange(a)
         case .flip:

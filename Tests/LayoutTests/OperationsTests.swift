@@ -40,6 +40,54 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] { w.monitors[m].lanes.map(\
     #expect(Command.grow(50).description == "grow +50")
 }
 
+@Test func eachWindowGetsWhatItKeepsFromTheOnesWithRoomToGive() {
+    var columns = world([[1], [2], [3]], focused: 1)
+    columns.respect([2: CGSize(width: 500, height: 0), 3: CGSize(width: 400, height: 0)], inner: 0, outer: 0)
+    let f = columns.frames(inner: 0, outer: 0)
+    #expect(f[2]?.width == 500)
+    #expect(f[3]?.width == 400)
+    #expect(f[1]?.width == 100)
+
+    var stack = world([[1, 2]], focused: 1)
+    stack.respect([1: CGSize(width: 0, height: 500)], inner: 0, outer: 0)
+    #expect(stack.frames(inner: 0, outer: 0)[1]?.height == 500)
+    #expect(stack.frames(inner: 0, outer: 0)[2]?.height == 300)
+
+    var rows = world([[1, 2], [3]], focused: 1)
+    rows.monitors[0].rows = true
+    rows.respect([1: CGSize(width: 700, height: 0), 3: CGSize(width: 0, height: 600)], inner: 0, outer: 0)
+    #expect(rows.frames(inner: 0, outer: 0)[1]?.width == 700)
+    #expect(rows.frames(inner: 0, outer: 0)[2]?.width == 300)
+    #expect(rows.frames(inner: 0, outer: 0)[3]?.height == 600)
+
+    // With gaps the windows still end up that size.
+    var gaps = world([[1, 2]], focused: 1)
+    gaps.respect([1: CGSize(width: 0, height: 500)], inner: 10, outer: 10)
+    #expect(gaps.frames(inner: 10, outer: 10)[1]?.height == 500)
+
+    // Nothing to do, or nothing that can be done: as it was.
+    var fine = world([[1], [2]], focused: 1)
+    fine.respect([1: CGSize(width: 300, height: 0)], inner: 0, outer: 0)
+    #expect(fine == world([[1], [2]], focused: 1))
+    var full = world([[1], [2]], focused: 1)
+    full.respect([1: CGSize(width: 700, height: 0), 2: CGSize(width: 700, height: 0)], inner: 0, outer: 0)
+    #expect(full == world([[1], [2]], focused: 1))
+}
+
+@Test func aResizeStopsAtWhatAWindowKeepsAndTheOtherOneStopsGrowing() {
+    let keeps = [WindowID(1): CGSize(width: 0, height: 350)]
+    var shrunk = world([[1, 2]], focused: 1)
+    shrunk.grow(by: -200)
+    shrunk.respect(keeps, inner: 0, outer: 0)
+    #expect(shrunk.frames(inner: 0, outer: 0)[1]?.height == 350)
+    #expect(shrunk.frames(inner: 0, outer: 0)[2]?.height == 450)
+
+    var other = world([[1, 2]], focused: 2)
+    other.grow(by: 200)
+    other.respect(keeps, inner: 0, outer: 0)
+    #expect(other.frames(inner: 0, outer: 0)[2]?.height == 450)
+}
+
 @Test func growGoesAlongTheSplitThereIs() {
     for rows in [false, true] {
         var w = world([[1, 2]], focused: 1)

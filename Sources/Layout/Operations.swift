@@ -150,6 +150,28 @@ extension World {
         resize(monitors[p.m].rows != (monitors[p.m].lanes.count == 1) ? .height : .width, by: px)
     }
 
+    /// Each window at least what `minimums` says it keeps (0 on an axis it gives way on), from the
+    /// lanes and windows that have room to give. A screen that cannot hold them all stays as it is.
+    public mutating func respect(_ minimums: [WindowID: CGSize], inner: Double, outer: Double) {
+        guard !minimums.isEmpty else { return }
+        for m in monitors.indices where monitors[m].fullscreen == nil {
+            let mon = monitors[m]
+            let area = mon.frame.insetBy(dx: outer, dy: outer)
+            let (along, across) = mon.rows ? (area.height, area.width) : (area.width, area.height)
+            func keeps(_ id: WindowID, along isAlong: Bool) -> Double {
+                let size = minimums[id] ?? .zero
+                return isAlong != mon.rows ? size.width : size.height
+            }
+            let lanes = floored(mon.lanes.map(\.size), mon.lanes.map { $0.windows.map { keeps($0, along: true) }.max() ?? 0 },
+                                whole: along - inner * Double(mon.lanes.count - 1))
+            for i in lanes.indices { monitors[m].lanes[i].size = lanes[i] }
+            for (l, lane) in mon.lanes.enumerated() where !lane.accordion {
+                monitors[m].lanes[l].sizes = floored(lane.sizes, lane.windows.map { keeps($0, along: false) },
+                                                     whole: across - inner * Double(lane.windows.count - 1))
+            }
+        }
+    }
+
     public mutating func balance() {
         guard monitors.indices.contains(activeMonitor) else { return }
         for i in monitors[activeMonitor].lanes.indices {
@@ -307,6 +329,24 @@ extension World {
 
 func mean(_ xs: [Double]) -> Double? {
     xs.isEmpty ? nil : xs.reduce(0, +) / Double(xs.count)
+}
+
+/// `weights` changed only as far as it takes for each part of `whole` to reach its floor: parts
+/// that would fall short get exactly that and the others share the rest in their proportions.
+/// As they are if no part falls short, or if the floors do not fit.
+func floored(_ weights: [Double], _ floors: [Double], whole: Double) -> [Double] {
+    let total = weights.reduce(0, +)
+    guard total > 0, floors.reduce(0, +) <= whole,
+          zip(weights, floors).contains(where: { $0 / total * whole < $1 - 1 }) else { return weights }
+    var pinned: Set<Int> = []
+    while true {
+        let free = whole - pinned.map { floors[$0] }.reduce(0, +)
+        let rest = weights.indices.filter { !pinned.contains($0) }
+        let share = rest.map { weights[$0] }.reduce(0, +)
+        let short = rest.filter { weights[$0] / share * free < floors[$0] }
+        if short.isEmpty { return weights.indices.map { pinned.contains($0) ? floors[$0] : weights[$0] / share * free } }
+        pinned.formUnion(short)
+    }
 }
 
 /// Weights as shares of 1, with entry `i` grown by `px` out of `extent` (kept within 5-95%)

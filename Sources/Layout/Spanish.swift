@@ -285,6 +285,7 @@ let spanish: [String: String] = [
     "muted": "silenciado",
     "no Wi-Fi here": "no hay Wi-Fi aquí",
     "no app named %@": "no hay una app llamada %@",
+    "no room left": "no queda espacio",
     "no tab %@": "no existe la pestaña %@",
     "no tiled or floating window focused": "ninguna ventana en tiling o flotante tiene el foco",
     "no tiled window focused": "ninguna ventana en tiling tiene el foco",

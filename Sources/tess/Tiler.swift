@@ -75,6 +75,18 @@ final class Tiler {
     /// Windows whose app refused the frame tess asked for (a minimum size, usually).
     var refused: Set<WindowID> = []
 
+    /// The size each app's windows were seen to keep, 0 on an axis they gave way on, so the layout
+    /// is right on the first write. Learned from refusals, which take most of a second to notice,
+    /// and forgotten by a re-tile, for an app that changed.
+    // ponytail: in memory, so each app is hit once per run of tess; keep it in defaults if that bites.
+    var minimums: [String: CGSize] = [:]
+
+    /// `minimums` for the windows there are.
+    var windowMinimums: [WindowID: CGSize] {
+        guard !minimums.isEmpty else { return [:] }
+        return infos.compactMapValues { bundle($0.pid).flatMap { minimums[$0] } }
+    }
+
     /// A window that leaves the AX list right after a Space or screen change went to another
     /// Space or is between screens; otherwise it was closed (apps often keep closed windows
     /// around, ordered out, so the window server list alone cannot tell).
@@ -605,6 +617,7 @@ final class Tiler {
         world.floating = Set(infos.values.filter { kind($0) == .float }.map(\.id))
         if let f = osFocused, world.contains(f) { world.focused = f }
         writes = [:]
+        minimums = [:]
         apply()
     }
 
@@ -645,6 +658,9 @@ final class Tiler {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.scheduleApply() }
             return
         }
+        // Before any write, so the first one is the last: found out afterwards, every window
+        // would move a second time.
+        world.respect(windowMinimums, inner: config.inner, outer: config.outer)
         // A window still leaving macOS fullscreen cannot be moved yet.
         for (id, target) in targets where !offSpace.contains(id) && infos[id]?.nativeFullscreen != true {
             guard let info = infos[id], let worker = workers[info.pid] else { continue }
@@ -662,7 +678,7 @@ final class Tiler {
                     Log.write("window \(id) keeps its own size (\(info.frame), wanted \(target))")
                     Events.record("frame.refused", describe(id).merging(["wanted": target.json]) { $1 })
                     // Only about the window in use: one further back has nothing to act on.
-                    if id == world.focused {
+                    if !makeRoom(id, keeps: info.frame, wanted: target), id == world.focused {
                         toast(L("\(appName(id)) did not accept its tile. Try enlarging it or floating the window."), seconds: 5)
                     }
                 }
@@ -676,6 +692,23 @@ final class Tiler {
             assumed.insert(id)
             landing[id] = Date().addingTimeInterval(1.5)
         }
+    }
+
+
+    /// A window kept a bigger size than its tile: that is now the minimum of its app's windows, and
+    /// the layout makes room so its neighbors do not end up underneath. False if it could not.
+    func makeRoom(_ id: WindowID, keeps frame: CGRect, wanted: CGRect) -> Bool {
+        let size = CGSize(width: frame.width > wanted.width + 1 ? frame.width : 0,
+                          height: frame.height > wanted.height + 1 ? frame.height : 0)
+        // What Zen or tess fullscreen asks of a window is not the layout's to change.
+        let was = world.frames(inner: config.inner, outer: config.outer)
+        guard size != .zero, was[id] == wanted, let app = infos[id].flatMap({ bundle($0.pid) }) else { return false }
+        let known = minimums[app] ?? .zero
+        minimums[app] = CGSize(width: max(known.width, size.width), height: max(known.height, size.height))
+        world.respect(windowMinimums, inner: config.inner, outer: config.outer)
+        guard world.frames(inner: config.inner, outer: config.outer) != was else { return false }
+        scheduleApply()
+        return true
     }
 
 

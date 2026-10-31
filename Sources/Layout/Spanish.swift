@@ -273,6 +273,7 @@ let spanish: [String: String] = [
   "Window, tab or app": "Ventana, pestaña o app",
   "Your keyboard is enough": "Tu teclado es suficiente",
   "a window": "una ventana",
+  "already even": "ya está equilibrado",
   "app": "app",
   "app (open)": "app (abierta)",
   "app name": "nombre de la app",

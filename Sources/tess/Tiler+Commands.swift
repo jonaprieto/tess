@@ -82,7 +82,15 @@ extension Tiler {
       let was = world
       world.grow(by: px)
       holdMinimums(was)
-    case .balance: world.balance()
+    case .balance:
+      let was = world.frames(inner: config.inner, outer: config.outer)
+      world.balance()
+      world.respect(
+        windowMinimums, inner: config.inner, outer: config.outer)
+      if world.frames(inner: config.inner, outer: config.outer) == was
+      {
+        toast(L("already even"))
+      }
     case .arrange(let a): world.arrange(a)
     case .flip:
       world.flip()

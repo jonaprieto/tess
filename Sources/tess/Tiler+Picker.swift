@@ -362,9 +362,9 @@ extension Tiler {
   }
 
 
-  /// Files: names from Spotlight, ranked by fzf when it is installed.
-  /// Text: file contents with ripgrep. Both under the home folder, in
-  /// the background, the previous one stopped.
+  /// Files: `Parse.fileSearch`. Text: file contents with ripgrep,
+  /// under the home folder. Both in the background, the previous one
+  /// stopped.
   func search(
     _ kind: PickerSearch, _ query: String,
     _ done: @escaping @MainActor @Sendable ([Picker.Item]) -> Void
@@ -375,10 +375,7 @@ extension Tiler {
     let script: String
     switch kind {
     case .files:
-      script = """
-        mdfind -onlyin "$HOME" -name "$1" 2>/dev/null | grep -v '/Library/' | head -n 500 |
-        { if command -v fzf >/dev/null; then fzf --filter "$1"; else cat; fi; } | head -n 60
-        """
+      script = Parse.fileSearch
     case .text:
       script = """
         cd "$HOME" && rg --line-number --no-heading --smart-case --max-count 1 --max-filesize 1M \

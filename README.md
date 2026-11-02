@@ -99,8 +99,9 @@ the terminal app, and every binary each feature uses in the service's PATH, with
 install what is missing. It changes no settings, and missing required checks return exit
 code 1. Rerun it after granting Accessibility.
 
-Homebrew installs [Folio](https://github.com/jonaprieto/folio) for book and paper search.
-`brew install ripgrep fzf` adds search inside files and better file ranking.
+Homebrew installs [Folio](https://github.com/jonaprieto/folio) for book and paper search and
+[fd](https://github.com/sharkdp/fd) for file search. `brew install ripgrep fzf` adds search
+inside files and better file ranking.
 
 </details>
 

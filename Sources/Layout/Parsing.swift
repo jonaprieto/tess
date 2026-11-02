@@ -5,8 +5,8 @@ import Foundation
 /// actions. tess's own picker searches, which a verb names as its
 /// value: `"file": "search:files"`.
 public enum PickerSearch: String, CaseIterable, Sendable {
-  /// File names (Spotlight), text in files (ripgrep), books and
-  /// papers (folio, papers also on arXiv).
+  /// File names (fd and Spotlight), text in files (ripgrep), books
+  /// and papers (folio, papers also on arXiv).
   case files, text, books, papers
   /// Only the pages the picker has from browsers (tabs, bookmarks,
   /// history), and an address to open when the text is one.
@@ -38,6 +38,16 @@ public struct KeysVerb: Equatable, Sendable {
 }
 
 public enum Parse {
+  /// File names for `$1`, ranked. fd walks the home folder, so what
+  /// is new shows at once; Spotlight answers for the rest of the Mac,
+  /// which takes half a minute to walk. fd ends a folder with a
+  /// slash, and the two agree on one spelling before merging.
+  public static let fileSearch = #"""
+    { command -v fd >/dev/null && fd -i -F -E Library -- "$1" "$HOME"; mdfind -name "$1"; } 2>/dev/null |
+    awk '{ sub(/\/$/, "") } !seen[$0]++' |
+    { if command -v fzf >/dev/null; then fzf --filter "$1" --scheme=path; else cat; fi; } | head -n 60
+    """#
+
   // MARK: arXiv
 
   public struct Paper: Equatable, Sendable {

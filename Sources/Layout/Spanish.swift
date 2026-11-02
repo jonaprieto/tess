@@ -321,6 +321,8 @@ let spanish: [String: String] = [
   "could not run it: %@": "no se pudo ejecutar: %@",
   "esc back": "esc volver",
   "f float": "f flotante",
+  "fast file search (Spotlight works without it)":
+    "búsqueda rápida de archivos (Spotlight funciona sin esto)",
   "file filtering": "filtrado de archivos",
   "file search": "búsqueda de archivos",
   "file-result ranking (Spotlight works without it)":

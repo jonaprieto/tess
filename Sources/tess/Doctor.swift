@@ -19,6 +19,10 @@ enum Doctor {
         name: "rg", feature: L("search inside files"),
         required: false, install: "brew install ripgrep"),
       Tool(
+        name: "fd",
+        feature: L("fast file search (Spotlight works without it)"),
+        required: false, install: "brew install fd"),
+      Tool(
         name: "fzf",
         feature: L(
           "file-result ranking (Spotlight works without it)"),
@@ -30,7 +34,7 @@ enum Doctor {
         ("/usr/bin/open", L("opening apps and documents")),
         ("/usr/bin/osascript", L("browser tabs and volume")),
         ("/usr/bin/mdfind", L("file search")),
-        ("/usr/bin/grep", L("file filtering")),
+        ("/usr/bin/awk", L("file filtering")),
         ("/usr/bin/head", L("search result limits")),
         ("/usr/bin/sqlite3", L("browser history")),
         ("/usr/bin/shortcuts", L("Apple Shortcuts")),

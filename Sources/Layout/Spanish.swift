@@ -61,6 +61,7 @@ let spanish: [String: String] = [
   "Browser Automation/Full Disk Access and network download availability are not tested.":
     "No se comprueban la automatización del navegador, el acceso total al disco ni la disponibilidad de descargas por red.",
   "Check for updates": "Buscar actualizaciones",
+  "Choose": "Elegir",
   "Choose where it goes": "Elige dónde va",
   "Clear This Screen": "Despejar esta pantalla",
   "Clear this screen": "Despejar esta pantalla",
@@ -86,6 +87,7 @@ let spanish: [String: String] = [
   "Esc Back": "Esc Volver",
   "Every window, always": "Todas las ventanas, siempre",
   "F Float": "F Flotante",
+  "File manager": "Gestor de archivos",
   "Find a window or app": "Encuentra una ventana o app",
   "Float": "Hacer flotante",
   "Floating": "Flotante",
@@ -242,6 +244,8 @@ let spanish: [String: String] = [
     "Servicio de Tess en marcha: inícialo con brew services start tess o make install",
   "Tess works with your laptop keyboard or any standard Mac keyboard. No NuPhy software, special layers or Hyper key is needed.\n\n⌘ means Command, ⌥ means Option, ⇧ means Shift, and ⌃ means Control.\n\nThis walkthrough changes no bindings or window layouts. Use Next and Back at your own pace.":
     "Tess funciona con el teclado de tu portátil o cualquier teclado Mac estándar. No necesitas software de NuPhy, capas especiales ni tecla Hyper.\n\n⌘ es Command, ⌥ es Option, ⇧ es Shift y ⌃ es Control.\n\nEste recorrido no cambia atajos ni la disposición de las ventanas. Usa Siguiente y Volver a tu ritmo.",
+  "The app the picker shows files in with ⌘↵ and opens folders with.":
+    "La app donde el selector muestra archivos con ⌘↵ y abre carpetas.",
   "The menu bar has Settings, Pause Tiling, Tutorial and Doctor.\n\nChoose Doctor to check permissions, configuration and the binaries each feature uses. You can also run tess doctor in a terminal. Missing optional tools do not stop window management.\n\nRun tess default-config to see the default bindings. Your overrides live in ~/.config/tess/config.json.":
     "La barra de menús tiene Ajustes, Pausar tiling, Tutorial y Diagnóstico.\n\nElige Diagnóstico para revisar permisos, configuración y los binarios que usa cada función. También puedes ejecutar tess doctor en una terminal. Si faltan herramientas opcionales, la gestión de ventanas sigue funcionando.\n\nEjecuta tess default-config para ver los atajos predeterminados. Tus cambios viven en ~/.config/tess/config.json.",
   "Their windows are never tiled.":
@@ -412,8 +416,8 @@ let spanish: [String: String] = [
   "with Homebrew, then tess restarts":
     "con Homebrew, y tess se reinicia",
   "zen off": "zen desactivado",
-  "↵ Choose     ⌘↵ Reveal in Finder     ↑↓ Navigate     ⇥ Complete     Esc Close":
-    "↵ Elegir     ⌘↵ Mostrar en Finder     ↑↓ Navegar     ⇥ Completar     Esc Cerrar",
+  "↵ Choose     ⌘↵ Reveal in %@     ↑↓ Navigate     ⇥ Complete     Esc Close":
+    "↵ Elegir     ⌘↵ Mostrar en %@     ↑↓ Navegar     ⇥ Completar     Esc Cerrar",
   "↵ Fill this place     ↑↓ Navigate     ⇥ Complete     Esc Leave empty":
     "↵ Llenar este lugar     ↑↓ Navegar     ⇥ Completar     Esc Dejar vacío",
   "↵ Here": "↵ Aquí",

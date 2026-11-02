@@ -298,6 +298,14 @@ import Testing
     ])
 }
 
+@Test func fileManagerDefaultsToFinderAndSurvivesASave() throws {
+  #expect(Config.defaults.fileManager == "Finder")
+  let c = try Config.load(Data(#"{"file_manager": "Strata"}"#.utf8))
+  #expect(c.fileManager == "Strata")
+  #expect(
+    try Config.load(Config.file(for: c.raw)).fileManager == "Strata")
+}
+
 @Test func appearanceSettingsValidateAndRoundTrip() throws {
   let data = Data(
     ##"{"overlay":{"gray_amount":0.35,"inactive_border_color":"#112233","selection_color":"#ff8000"}}"##

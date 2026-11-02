@@ -38,7 +38,7 @@ extension Tiler {
     }
     picker.open(
       pickerItems(), on: lookedAtFrame, fixed: fixed,
-      verbs: config.verbs, text: text
+      verbs: config.verbs, fileManager: config.fileManager, text: text
     ) { [weak self] item in
       self?.pickerMap(for: item)
         ?? Picker.Map(monitors: [], windows: [], labels: [:])
@@ -117,9 +117,13 @@ extension Tiler {
         "detail": item.detail, "where": how
       ])
     if case .reveal = choice, let path = item.kind.path {
-      NSWorkspace.shared.activateFileViewerSelecting([
-        URL(fileURLWithPath: path)
-      ])
+      if let app = otherFileManager {
+        openPath(path, with: app, choice)
+      } else {
+        NSWorkspace.shared.activateFileViewerSelecting([
+          URL(fileURLWithPath: path)
+        ])
+      }
       return
     }
     switch item.kind {
@@ -319,11 +323,29 @@ extension Tiler {
     }
   }
 
-  /// Opens a file with its default app; with a place, that app's next
-  /// window goes there.
+  /// The configured file manager, unless it is Finder: macOS opens
+  /// folders with that one and selects files in it on its own.
+  var otherFileManager: String? {
+    config.fileManager.caseInsensitiveCompare("Finder")
+      == .orderedSame
+      ? nil : config.fileManager
+  }
+
+
+  /// Opens a file with its default app, a folder with the file
+  /// manager; with a place, that app's next window goes there.
   @discardableResult
   func openFile(_ path: String, _ choice: Picker.Choice) -> Bool {
     let url = URL(fileURLWithPath: path)
+    let what = try? url.resourceValues(forKeys: [
+      .isDirectoryKey, .isPackageKey
+    ])
+    if let app = otherFileManager, what?.isDirectory == true,
+      what?.isPackage == false
+    {
+      openPath(path, with: app, choice)
+      return true
+    }
     if case .place(let spot) = choice,
       let app = NSWorkspace.shared.urlForApplication(toOpen: url),
       let b = Bundle(url: app)?.bundleIdentifier

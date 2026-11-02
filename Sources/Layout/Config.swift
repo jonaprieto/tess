@@ -26,6 +26,8 @@ public struct Config: Equatable, Sendable {
   public var verbs: [String: String] = [:]
   /// The app `terminal` opens a window of.
   public var terminal = "iTerm"
+  /// The app the picker shows files in and opens folders with.
+  public var fileManager = "Finder"
   /// The keys of a mode on every screen, rather than only the one
   /// being worked on.
   public var overlayAllScreens = true
@@ -153,6 +155,7 @@ public struct Config: Equatable, Sendable {
     public var jev: Bool?
     public var oneShot: [String]?
     public var terminal: String?
+    public var fileManager: String?
     public var language: String?
     public var ribbon: Bool?
     public var updateCheck: Bool?
@@ -160,6 +163,7 @@ public struct Config: Equatable, Sendable {
       case gaps, overlay, float, tile, ignore, history, verbs, modes,
         terminal, jev, language, ribbon
       case updateCheck = "update_check"
+      case fileManager = "file_manager"
       case emptyScreens = "empty_screens"
       case oneShot = "one_shot"
     }
@@ -243,6 +247,7 @@ public struct Config: Equatable, Sendable {
     r.updateCheck = top.updateCheck ?? base.updateCheck
     r.oneShot = top.oneShot ?? base.oneShot
     r.terminal = top.terminal ?? base.terminal
+    r.fileManager = top.fileManager ?? base.fileManager
     r.float = top.float ?? base.float
     r.tile = top.tile ?? base.tile
     r.ignore = top.ignore ?? base.ignore
@@ -286,6 +291,9 @@ public struct Config: Equatable, Sendable {
     if edited.oneShot != base.oneShot { o.oneShot = edited.oneShot }
     if edited.terminal != base.terminal {
       o.terminal = edited.terminal
+    }
+    if edited.fileManager != base.fileManager {
+      o.fileManager = edited.fileManager
     }
     if edited.float != base.float { o.float = edited.float }
     if edited.tile != base.tile { o.tile = edited.tile }
@@ -399,6 +407,7 @@ public struct Config: Equatable, Sendable {
       )
     }
     c.terminal = raw.terminal ?? "iTerm"
+    c.fileManager = raw.fileManager ?? "Finder"
     let modes = raw.modes ?? [:]
     guard modes["main"] != nil else {
       throw ParseError("config: modes.main is missing")
@@ -460,6 +469,7 @@ public struct Config: Equatable, Sendable {
                 "rg": "search:text", "book": "search:books", "paper": "search:papers", "slack": "keys:Slack:cmd-k",
                 "brew": "run:brew %s"},
       "terminal": "iTerm",
+      "file_manager": "Finder",
       "modes": {
         "main": {
           "alt-h": "focus left",

@@ -74,8 +74,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
   enum Choice {
     case place(Spot)
     case jump
-    /// cmd-enter: the file, folder or app shown in Finder instead of
-    /// opened.
+    /// cmd-enter: the file, folder or app shown in the file manager
+    /// instead of opened.
     case reveal
   }
 
@@ -135,6 +135,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
   private var monitor: Any?
   private var picked: Item?
   private var verbs: [String: String] = [:]
+  private var fileManager = "Finder"
   private let defaults: UserDefaults?
   private(set) var recentQueries: [String]
 
@@ -206,11 +207,12 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
   /// there (no step 2).
   func open(
     _ items: [Item], on screen: CGRect, fixed: Spot?,
-    verbs: [String: String], text: String = "",
-    map: @escaping (Item) -> Map
+    verbs: [String: String], fileManager: String = "Finder",
+    text: String = "", map: @escaping (Item) -> Map
   ) {
     self.items = items
     self.verbs = verbs
+    self.fileManager = fileManager
     self.fixed = fixed
     divider.layer?.backgroundColor = NSColor.separatorColor.cgColor
     field.placeholderAttributedString = NSAttributedString(
@@ -704,7 +706,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     footer.stringValue =
       fixed == nil
       ? L(
-        "↵ Choose     ⌘↵ Reveal in Finder     ↑↓ Navigate     ⇥ Complete     Esc Close"
+        "↵ Choose     ⌘↵ Reveal in \(fileManager)     ↑↓ Navigate     ⇥ Complete     Esc Close"
       )
       : L(
         "↵ Fill this place     ↑↓ Navigate     ⇥ Complete     Esc Leave empty"

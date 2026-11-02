@@ -361,6 +361,8 @@ and `null` removes a default.
 - `float` lists apps that never tile, `tile` apps that always do, and `ignore` apps tess
   leaves alone (EdgeMark is there by default).
 - `terminal` is the app `t` in tess mode opens. `"one_shot": []` keeps tess mode on until esc.
+- `file_manager` is the app the picker reveals files in (cmd-enter) and opens folders with:
+  `"Finder"` by default, or any app that takes a path, like `"Strata"`.
 - `history` lists the browsers whose bookmarks and history the picker reads, first one first
   (`["com.brave.Browser", "com.apple.Safari"]` by default). The first wins ties, a page both
   have shows once from it, and a browser left out is not read.

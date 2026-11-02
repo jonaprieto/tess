@@ -440,8 +440,16 @@ extension Tiler {
 
 
   func openSettings() {
+    let installed = apps()
+    let openers = Set(
+      NSWorkspace.shared.urlsForApplications(
+        toOpen: FileManager.default.homeDirectoryForCurrentUser
+      ).map(\.path))
     SettingsWindow.shared.show(
-      raw: config.raw, on: config.emptyScreens ? leastBusyFrame : nil
+      raw: config.raw, apps: installed.map(\.name),
+      folderApps: installed.filter { openers.contains($0.url.path) }
+        .map(\.name),
+      on: config.emptyScreens ? leastBusyFrame : nil
     ) { [weak self] raw in
       self?.saveSettings(raw)
     }

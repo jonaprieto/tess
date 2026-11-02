@@ -33,6 +33,33 @@ import Testing
 }
 
 @MainActor
+@Test func fileManagerFieldSavesAndBlankMeansFinder() {
+  let model = SettingsModel(raw: Config.defaultRaw) { _ in nil }
+  #expect(model.fileManager == "Finder")
+  model.fileManager = " Strata "
+  #expect(model.raw.fileManager == "Strata")
+  model.fileManager = ""
+  #expect(model.raw.fileManager == "Finder")
+  model.fileManager = "Strata"
+  model.revert()
+  #expect(model.fileManager == "Finder")
+}
+
+@MainActor
+@Test func fileManagerHasToBeInstalledHoweverItIsTyped() {
+  let model = SettingsModel(
+    raw: Config.defaultRaw, apps: ["Finder", "Strata"]
+  ) { _ in nil }
+  #expect(model.managerInstalled)
+  model.fileManager = "strata "
+  #expect(model.managerInstalled)
+  model.fileManager = "Strta"
+  #expect(!model.managerInstalled)
+  model.fileManager = ""
+  #expect(model.managerInstalled)
+}
+
+@MainActor
 @Test func savingAppearanceKeepsUnchangedSystemColorsDynamic() {
   let model = SettingsModel(raw: Config.defaultRaw) { _ in nil }
   model.grayAmount = 0

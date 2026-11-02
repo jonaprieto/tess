@@ -13,7 +13,8 @@ final class SettingsWindow {
   /// Opens on `screen` (AX coordinates) when given and not already
   /// open.
   func show(
-    raw: Config.Raw, on screen: CGRect?,
+    raw: Config.Raw, apps: [String], folderApps: [String],
+    on screen: CGRect?,
     save: @escaping (Config.Raw) -> String?
   ) {
     let w =
@@ -36,7 +37,8 @@ final class SettingsWindow {
     }
     w.contentView = NSHostingView(
       rootView: SettingsView(
-        model: SettingsModel(raw: raw, save: saved)))
+        model: SettingsModel(
+          raw: raw, apps: apps, folderApps: folderApps, save: saved)))
     if let screen, !w.isVisible {
       let f = Screens.flip(screen)
       w.setFrameOrigin(
@@ -69,6 +71,11 @@ final class SettingsModel {
   var emptyScreens: Bool
   var ribbon: Bool
   var updateCheck: Bool
+  var fileManager: String
+  /// What the file manager can be, and of those the ones that open
+  /// folders, which the window offers.
+  let apps: [String]
+  let folderApps: [String]
   var windowLabels: Config.LabelMode
   /// A language code; nil is macOS's.
   var language: String?
@@ -86,9 +93,15 @@ final class SettingsModel {
   private var original: Config.Raw
   private let saveRaw: (Config.Raw) -> String?
 
-  init(raw: Config.Raw, save: @escaping (Config.Raw) -> String?) {
+  init(
+    raw: Config.Raw, apps: [String] = ["Finder"],
+    folderApps: [String] = ["Finder"],
+    save: @escaping (Config.Raw) -> String?
+  ) {
     original = raw
     saveRaw = save
+    self.apps = apps
+    self.folderApps = folderApps
     inner = raw.gaps?.inner ?? 10
     outer = raw.gaps?.outer ?? 10
     overlayAllScreens = raw.overlay?.allScreens ?? true
@@ -110,6 +123,7 @@ final class SettingsModel {
     emptyScreens = raw.emptyScreens ?? true
     ribbon = raw.ribbon ?? false
     updateCheck = raw.updateCheck ?? true
+    fileManager = raw.fileManager ?? "Finder"
     windowLabels = raw.overlay?.windowLabels ?? .jump
     language = raw.language
     float = raw.float ?? []
@@ -121,6 +135,19 @@ final class SettingsModel {
     }
     verbs = rows(raw.verbs)
     modes = (raw.modes ?? [:]).mapValues(rows)
+  }
+
+  /// The file manager as it saves: a blank field is Finder.
+  var manager: String {
+    let name = fileManager.trimmingCharacters(in: .whitespaces)
+    return name.isEmpty ? "Finder" : name
+  }
+
+  /// Save is disabled until it is one `openPath` can find.
+  var managerInstalled: Bool {
+    apps.contains {
+      $0.caseInsensitiveCompare(manager) == .orderedSame
+    }
   }
 
   var raw: Config.Raw {
@@ -156,6 +183,7 @@ final class SettingsModel {
     r.emptyScreens = emptyScreens
     r.ribbon = ribbon
     r.updateCheck = updateCheck
+    r.fileManager = manager
     r.language = language
     r.float = float
     r.tile = tile
@@ -197,6 +225,7 @@ final class SettingsModel {
     let fresh = SettingsModel(raw: original, save: saveRaw)
     ribbon = fresh.ribbon
     updateCheck = fresh.updateCheck
+    fileManager = fresh.fileManager
     (
       inner, outer, overlayAllScreens, grayOthers, emptyScreens,
       windowLabels, float, tile, ignore, verbs, modes
@@ -252,10 +281,12 @@ struct SettingsView: View {
         Button(L("Save")) { model.save() }
           .keyboardShortcut("s")
           .buttonStyle(.borderedProminent)
-          .disabled(model.invalid > 0)
+          .disabled(model.invalid > 0 || !model.managerInstalled)
           .help(
             model.invalid > 0
-              ? L("\(model.invalid) key binding(s) need fixing") : "")
+              ? L("\(model.invalid) key binding(s) need fixing")
+              : model.managerInstalled
+                ? "" : L("no app named \(model.manager)"))
       }
       .padding()
     }
@@ -275,6 +306,32 @@ struct GeneralTab: View {
           Text("English").tag(String?.some("en"))
           Text("Español").tag(String?.some("es"))
         }
+      }
+      Section {
+        LabeledContent(L("File manager")) {
+          HStack {
+            TextField(
+              L("File manager"), text: $model.fileManager,
+              prompt: Text("Finder")
+            )
+            .labelsHidden()
+            Menu(L("Choose")) {
+              ForEach(model.folderApps, id: \.self) { app in
+                Button(app) { model.fileManager = app }
+              }
+            }
+            .fixedSize()
+          }
+        }
+      } footer: {
+        Text(
+          model.managerInstalled
+            ? L(
+              "The app the picker shows files in with ⌘↵ and opens folders with."
+            )
+            : L("no app named \(model.manager)")
+        )
+        .foregroundStyle(!model.managerInstalled ? .red : .secondary)
       }
       Section(L("Gaps")) {
         Stepper(value: $model.inner, in: 0...60, step: 2) {

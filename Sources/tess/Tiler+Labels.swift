@@ -53,6 +53,32 @@ extension Tiler {
     }
   }
 
+  /// What `id`'s app has in front of it that tess does not track,
+  /// like a preview panel. Asked of the window server: not every
+  /// panel shows in AX. Invisible helpers and slivers do not count.
+  func panels(over id: WindowID) -> [CGRect] {
+    guard let pid = infos[id]?.pid else { return [] }
+    let list =
+      CGWindowListCopyWindowInfo(
+        [.optionOnScreenAboveWindow, .excludeDesktopElements], id)
+      as? [[String: Any]] ?? []
+    return list.compactMap { w in
+      guard (w[kCGWindowLayer as String] as? Int) == 0,
+        (w[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value
+          == pid,
+        (w[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 1
+          > 0,
+        let other = (w[kCGWindowNumber as String] as? NSNumber)?
+          .uint32Value,
+        !world.contains(other),
+        let b = w[kCGWindowBounds as String] as? NSDictionary,
+        let r = CGRect(dictionaryRepresentation: b),
+        r.width >= 24, r.height >= 24
+      else { return nil }
+      return r
+    }
+  }
+
   /// The shown windows whose middle is not under another window, and
   /// those parked on a ribbon's strip, which keep a letter whichever
   /// of them macOS has in front.
@@ -141,11 +167,15 @@ extension Tiler {
     }
     // Focus is only marked while its app is in front: with tess's own
     // Settings or a window tess does not track in front, a border on
-    // the window behind it would cross that one.
+    // the window behind it would cross that one. So would one under
+    // a panel of its own app.
     let front = NSWorkspace.shared.frontmostApplication?
       .processIdentifier
-    let focused = world.focused.flatMap { id in
-      infos[id]?.pid == front ? id : nil
+    let focused = world.focused.flatMap { id -> WindowID? in
+      guard infos[id]?.pid == front else { return nil }
+      let frame = stack.first { $0.id == id }?.frame ?? .null
+      return panels(over: id).contains(where: frame.intersects)
+        ? nil : id
     }
     let windows = decorationWindows(
       in: stack, focused: focused, all: all)

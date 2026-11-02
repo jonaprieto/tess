@@ -21,7 +21,7 @@ import Testing
     tiler.decorationWindows(in: stack, focused: 1, all: false).first)
   #expect(border.frame == actual)
   #expect(
-    tiler.grayScreens(focused: 1, in: stack).first?.hole == actual)
+    tiler.grayScreens(focused: 1, in: stack).first?.holes == [actual])
   #expect(
     tiler.decorationWindows(in: [], focused: 1, all: false).isEmpty)
   #expect(tiler.grayScreens(focused: 1, in: []).isEmpty)
@@ -47,10 +47,41 @@ import Testing
     tiler.decorationWindows(in: stack, focused: 1, all: true).first)
   #expect(border.frame == actual)
   #expect(
-    tiler.grayScreens(focused: 1, in: stack).compactMap(\.hole) == [
-      actual, actual
+    tiler.grayScreens(focused: 1, in: stack).map(\.holes) == [
+      [actual], [actual]
     ])
   #expect(tiler.targets[1] == nil)
+}
+
+@MainActor
+@Test func aPanelOfTheFocusedAppStaysInColorWhereverItIs() {
+  _ = NSApplication.shared
+  let tiler = Tiler()
+  tiler.world.monitors = [
+    Monitor(
+      id: "A", frame: CGRect(x: 0, y: 0, width: 1000, height: 800)),
+    Monitor(
+      id: "B", frame: CGRect(x: 1000, y: 0, width: 1000, height: 800))
+  ]
+  let window = CGRect(x: 10, y: 10, width: 600, height: 700)
+  let panel = CGRect(x: 1100, y: 100, width: 400, height: 300)
+  let stack = [(id: WindowID(1), frame: window)]
+  #expect(
+    tiler.grayScreens(focused: 1, in: stack, panels: [panel])
+      .map(\.holes) == [[window], [panel]])
+}
+
+@MainActor
+@Test func overlappingHolesStayOutOfTheGray() {
+  let window = CGRect(x: 100, y: 100, width: 300, height: 300)
+  let panel = CGRect(x: 300, y: 200, width: 300, height: 300)
+  let mask = Grayscale.mask(
+    CGRect(x: 0, y: 0, width: 1000, height: 800),
+    holes: [window, panel])
+  #expect(mask.contains(CGPoint(x: 800, y: 600)))
+  #expect(!mask.contains(CGPoint(x: 150, y: 150)))
+  #expect(!mask.contains(CGPoint(x: 550, y: 450)))
+  #expect(!mask.contains(CGPoint(x: 350, y: 300)))
 }
 
 /// An app that keeps its own size, with other apps' snapshots

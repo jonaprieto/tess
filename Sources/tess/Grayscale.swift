@@ -6,13 +6,12 @@ import Layout
 /// just above normal windows and below tess's labels.
 @MainActor
 final class Grayscale {
-  private var panels: [(panel: NSPanel, hole: CGRect?)] = []
+  private var panels: [(panel: NSPanel, holes: [CGRect])] = []
   private let available = Grayscale.backdrop() != nil
 
-  /// Each screen's frame and the focused window's frame when it is on
-  /// that screen.
+  /// Each screen's frame and the windows on it that stay in color.
   func show(
-    _ screens: [(frame: CGRect, hole: CGRect?)], amount: Double
+    _ screens: [(frame: CGRect, holes: [CGRect])], amount: Double
   ) {
     guard available else { return }
     while panels.count < screens.count, let backdrop = Self.backdrop()
@@ -25,7 +24,7 @@ final class Grayscale {
       host.wantsLayer = true
       host.layer?.addSublayer(backdrop)
       p.contentView = host
-      panels.append((p, nil))
+      panels.append((p, []))
     }
     for n in panels.indices {
       let p = panels[n].panel
@@ -38,29 +37,33 @@ final class Grayscale {
       }
       let frame = Screens.flip(screen.frame)
       guard
-        p.frame != frame || panels[n].hole != screen.hole
+        p.frame != frame || panels[n].holes != screen.holes
           || !p.isVisible
       else { continue }
       p.setFrame(frame, display: false)
-      panels[n].hole = screen.hole
+      panels[n].holes = screen.holes
       guard let host = p.contentView else { continue }
       host.layer?.sublayers?.forEach { $0.frame = host.bounds }
-      // The whole screen minus the focused window, with its rounded
-      // corners.
-      let path = CGMutablePath()
-      path.addRect(host.bounds)
-      if let hole = screen.hole {
-        let local = Screens.flip(hole).offsetBy(
-          dx: -frame.minX, dy: -frame.minY)
-        path.addRoundedRect(
-          in: local, cornerWidth: 12, cornerHeight: 12)
-      }
       let mask = CAShapeLayer()
       mask.frame = host.bounds
-      mask.path = path
-      mask.fillRule = .evenOdd
+      mask.path = Self.mask(
+        host.bounds,
+        holes: screen.holes.map {
+          Screens.flip($0).offsetBy(dx: -frame.minX, dy: -frame.minY)
+        })
       host.layer?.mask = mask
       p.orderFrontRegardless()
+    }
+  }
+
+  /// `bounds` minus `holes`, which may overlap, each with a window's
+  /// rounded corners.
+  static func mask(_ bounds: CGRect, holes: [CGRect]) -> CGPath {
+    holes.reduce(CGPath(rect: bounds, transform: nil)) {
+      $0.subtracting(
+        CGPath(
+          roundedRect: $1, cornerWidth: 12, cornerHeight: 12,
+          transform: nil))
     }
   }
 
@@ -102,12 +105,13 @@ final class Grayscale {
 /// one of tess's own windows in front.
 extension Tiler {
   func grayScreens(
-    focused: WindowID, in stack: [(id: WindowID, frame: CGRect)]
-  ) -> [(frame: CGRect, hole: CGRect?)] {
+    focused: WindowID, in stack: [(id: WindowID, frame: CGRect)],
+    panels: [CGRect] = []
+  ) -> [(frame: CGRect, holes: [CGRect])] {
     guard let frame = stack.first(where: { $0.id == focused })?.frame
     else { return [] }
     return world.monitors.map {
-      ($0.frame, $0.frame.intersects(frame) ? frame : nil)
+      ($0.frame, ([frame] + panels).filter($0.frame.intersects))
     }
   }
 
@@ -119,6 +123,7 @@ extension Tiler {
         == info.pid
     else { return grayscale.hide() }
     grayscale.show(
-      grayScreens(focused: f, in: stack), amount: config.grayAmount)
+      grayScreens(focused: f, in: stack, panels: panels(over: f)),
+      amount: config.grayAmount)
   }
 }

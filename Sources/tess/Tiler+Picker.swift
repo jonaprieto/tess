@@ -557,7 +557,7 @@ extension Tiler {
     url: URL, name: String, bundleID: String?, icon: NSImage
   )] {
     if let c = appCache { return c.apps }
-    let scanned = Self.scanApps(ignoring: config.ignore)
+    let scanned = Self.scanApps()
     appCache = (scanned, Date(), Self.appFolderDates())
     return scanned
   }
@@ -567,13 +567,12 @@ extension Tiler {
   /// removed).
   func refreshApps() {
     refreshShortcuts()
-    let ignore = config.ignore
     let previous = appCache
     DispatchQueue.global(qos: .utility).async { [weak self] in
       let folders = Self.appFolderDates()
       let apps =
         previous.flatMap { $0.folders == folders ? $0.apps : nil }
-        ?? Self.scanApps(ignoring: ignore)
+        ?? Self.scanApps()
       DispatchQueue.main.async { [weak self] in
         self?.appCache = (apps, Date(), folders)
       }
@@ -589,7 +588,7 @@ extension Tiler {
   }
 
 
-  nonisolated static func scanApps(ignoring ignore: [String]) -> [(
+  nonisolated static func scanApps() -> [(
     url: URL, name: String, bundleID: String?, icon: NSImage
   )] {
     let fm = FileManager.default
@@ -609,7 +608,6 @@ extension Tiler {
         let url = URL(fileURLWithPath: dir).appendingPathComponent(
           entry)
         let id = Bundle(url: url)?.bundleIdentifier
-        if let id, ignore.contains(id) { continue }
         let name = (fm.displayName(atPath: url.path) as NSString)
           .deletingPathExtension
         let icon = NSWorkspace.shared.icon(forFile: url.path)

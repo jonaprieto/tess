@@ -124,7 +124,8 @@ Not sure where to go? Hold `⌥` on its own for 3 seconds and the letters appear
 <img src="assets/picker.svg" alt="The picker: find a window, tab or app, then choose where it goes on a map of your screens" width="100%">
 
 Type a few letters, in any order: `report budget` finds "Budget report - Numbers". Enter on
-a window, tab or app shows a map of your screens:
+a window, tab or app shows a map of your screens. Three letters also bring up files and
+folders, below the rest: fd walks your home folder and Spotlight covers the Mac.
 
 - A letter puts it in that window's place. A new window shares the place, so the rest of
   your layout stays as it was; one already tiled swaps with it.

@@ -117,7 +117,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     )?
   private var jevAsked: (String, Int)?
 
-  private let panel: KeyPanel
+  let panel: KeyPanel
   private let content = NSView()
   private let magnifier = NSImageView()
   private let field = NSTextField()
@@ -126,7 +126,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
   private let map = MapView()
   private let footer = NSTextField(labelWithString: "")
   private var items: [Item] = []
-  private var shown: [Item] = []
+  private(set) var shown: [Item] = []
   private var fixed: Spot?
   private var mapModel: (Item) -> Map = { _ in
     Map(monitors: [], windows: [], labels: [:])
@@ -415,6 +415,28 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     list.selected = 0
     list.needsDisplay = true
     askJev(q)
+    askFiles(q)
+  }
+
+  /// After a pause in typing, files below what already matched, so
+  /// the rows above and the selection stay put. Apps are listed
+  /// already.
+  private func askFiles(_ q: String) {
+    let generation = searchGeneration
+    guard q.count >= 3 else { return }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+      [weak self] in
+      guard let self, generation == self.searchGeneration, self.isOpen
+      else { return }
+      self.search(.files, q) { [weak self] found in
+        guard let self, generation == self.searchGeneration,
+          self.isOpen
+        else { return }
+        self.shown += found.filter { !$0.title.hasSuffix(".app") }
+        self.list.items = self.shown
+        self.list.needsDisplay = true
+      }
+    }
   }
 
   /// After a pause in typing, Jev's pick among windows, tabs,

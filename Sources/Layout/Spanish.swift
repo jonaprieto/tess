@@ -199,6 +199,7 @@ let spanish: [String: String] = [
   "Rescue Windows": "Rescatar ventanas",
   "Rescue windows": "Rescatar ventanas",
   "Resize": "Redimensionar",
+  "Restart tess": "Reiniciar tess",
   "Restart tess to finish": "Reinicia tess para terminar",
   "Restart…": "Reiniciar…",
   "Resume Tiling": "Reanudar tiling",
@@ -289,6 +290,8 @@ let spanish: [String: String] = [
   "Wider": "Más ancha",
   "Window, tab or app": "Ventana, pestaña o app",
   "Your keyboard is enough": "Tu teclado es suficiente",
+  "a newer build is on disk":
+    "hay una compilación más nueva en disco",
   "a window": "una ventana",
   "already even": "ya está equilibrado",
   "app": "app",

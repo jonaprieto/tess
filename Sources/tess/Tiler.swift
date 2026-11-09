@@ -249,6 +249,21 @@ final class Tiler {
 
   var updateChecked = Date.distantPast
 
+  /// The binary on disk changed since this tess started (a build
+  /// or an upgrade): what runs is not the latest.
+  var stale = false
+
+  let launchedBinary = Tiler.binaryDate()
+
+  nonisolated static func binaryDate() -> Date? {
+    Bundle.main.executablePath.flatMap {
+      try? FileManager.default.attributesOfItem(
+        atPath: URL(fileURLWithPath: $0).resolvingSymlinksInPath()
+          .path
+      )[.modificationDate] as? Date
+    }
+  }
+
   var updating = false
 
   /// launchd starts a tess that exited with an error, as after a
@@ -881,6 +896,10 @@ final class Tiler {
   func sweep(all: Bool = false) {
     sweeps += 1
     let everything = all || sweeps % 6 == 0
+    if !stale, Self.binaryDate() != launchedBinary {
+      stale = true
+      onChange()
+    }
     if let c = appCache, Date().timeIntervalSince(c.at) > 600 {
       refreshApps()
     }

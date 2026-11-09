@@ -29,7 +29,8 @@ final class StatusItem: NSObject, NSMenuDelegate {
   private var drawn:
     (
       world: World, mode: String, paused: Bool, waiting: Bool,
-      zen: String?, awake: Bool, language: Language, update: String?
+      zen: String?, awake: Bool, language: Language, update: String?,
+      stale: Bool
     )?
 
   /// Yellow: the menu bar's orange, green and purple dots are macOS's
@@ -40,6 +41,9 @@ final class StatusItem: NSObject, NSMenuDelegate {
 
   private static let updateDot = dot(
     .systemBlue, L("update available"))
+
+  private static let staleDot = dot(
+    .systemRed, L("a newer build is on disk"))
 
   private static func dot(_ color: NSColor, _ description: String)
     -> NSImage
@@ -66,11 +70,12 @@ final class StatusItem: NSObject, NSMenuDelegate {
     let now = (
       tiler.world, tiler.mode, tiler.paused, waitingForAccess,
       tiler.zenTitle, tiler.caffeine != nil, Strings.language,
-      tiler.update
+      tiler.update, tiler.stale
     )
     if let d = drawn, d.world == now.0, d.mode == now.1,
       d.paused == now.2, d.waiting == now.3, d.zen == now.4,
-      d.awake == now.5, d.language == now.6, d.update == now.7
+      d.awake == now.5, d.language == now.6, d.update == now.7,
+      d.stale == now.8
     {
       return
     }
@@ -93,9 +98,12 @@ final class StatusItem: NSObject, NSMenuDelegate {
           ofSize: 12, weight: .bold), .foregroundColor: color
       ])
     // A dot while caffeine keeps the Mac awake, so it is not left on
-    // by accident, and one while a newer version waits.
+    // by accident, one while a newer version waits, and one while a
+    // newer build waits on disk for a restart.
     for image in [
-      now.5 ? Self.awakeDot : nil, now.7 == nil ? nil : Self.updateDot
+      now.5 ? Self.awakeDot : nil,
+      now.7 == nil ? nil : Self.updateDot,
+      now.8 ? Self.staleDot : nil
     ].compactMap({ $0 }) {
       let dot = NSTextAttachment()
       dot.image = image
@@ -108,6 +116,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
       "tess: \(tiler.paused ? L("paused") : Command.modeName(tiler.mode))"
       + (now.5 ? L(", keeping the Mac awake") : "")
       + (now.7 == nil ? "" : L(", update available"))
+      + (now.8 ? ", " + L("a newer build is on disk") : "")
   }
 
   private var color: NSColor { Panels.readable(modeColor) }
@@ -220,6 +229,12 @@ final class StatusItem: NSObject, NSMenuDelegate {
         ? L("opens the release to install it")
         : L("with Homebrew, then tess restarts")
       menu.addItem(update)
+    }
+    if tiler.stale {
+      let restart = item(
+        L("Restart tess"), "arrow.clockwise", #selector(restart))
+      restart.subtitle = L("a newer build is on disk")
+      menu.addItem(restart)
     }
     if let error = tiler.configError {
       let e = NSMenuItem(
@@ -517,6 +532,9 @@ final class StatusItem: NSObject, NSMenuDelegate {
   }
   @objc private func update() {
     _ = tiler.run([.update], source: "menu")
+  }
+  @objc private func restart() {
+    if !tiler.restart() { tiler.toast(L("Restart tess to finish")) }
   }
   @objc private func clear() {
     _ = tiler.run([.clearMonitor], source: "menu")

@@ -1,8 +1,8 @@
 class Tess < Formula
   desc "Keyboard-first tiling window manager for macOS that never hides a window"
   homepage "https://github.com/jonaprieto/tess"
-  url "https://github.com/jonaprieto/tess/releases/download/v0.12.0/tess-0.12.0-macos-arm64.tar.gz"
-  sha256 "3a376329280e1db28742996ab26467913afc2f92517b122f55a7c3b131f3861e"
+  url "https://github.com/jonaprieto/tess/releases/download/v0.13.0/tess-0.13.0-macos-arm64.tar.gz"
+  sha256 "88dc28223c6ea1ff88c3af46347eba15b51cb8d7ea17edf9803a193b72f635d7"
   license "MIT"
 
   depends_on arch: :arm64

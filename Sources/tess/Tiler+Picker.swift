@@ -36,6 +36,11 @@ extension Tiler {
       Log.write("picker: ready in \(ms) ms")
       Events.record("picker", ["ready_ms": Int(ms)])
     }
+    // An app installed since the last scan shows now, not in ten
+    // minutes.
+    if let c = appCache, c.folders != Self.appFolderDates() {
+      appCache = nil
+    }
     picker.open(
       pickerItems(), on: lookedAtFrame, fixed: fixed,
       verbs: config.verbs, fileManager: config.fileManager, text: text
@@ -574,7 +579,7 @@ extension Tiler {
 
   /// Every app in the usual folders. Scanned off the main thread when
   /// tess starts and again every ten minutes, so opening the picker
-  /// never waits for the disk.
+  /// waits for the disk only after an app folder changed.
   func apps() -> [(
     url: URL, name: String, bundleID: String?, icon: NSImage
   )] {

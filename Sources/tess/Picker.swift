@@ -136,6 +136,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
   private var picked: Item?
   private var verbs: [String: String] = [:]
   private var fileManager = "Finder"
+  /// The running tess is older than its binary on disk.
+  var stale = false
   private let defaults: UserDefaults?
   private(set) var recentQueries: [String]
 
@@ -692,19 +694,30 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
 
   private func updateCompletion() {
     guard picked == nil else { return }
+    footer.textColor = Panels.quiet
+    footer.stringValue = hint
+    // Before typing: which tess this is, in red while a newer build
+    // waits on disk.
+    guard field.stringValue.isEmpty else { return }
+    if stale {
+      footer.textColor = .systemRed
+      footer.stringValue =
+        "tess \(tess.version) · " + L("a newer build is on disk")
+    } else {
+      footer.stringValue = "tess \(tess.version)     " + hint
+    }
+  }
+
+  private var hint: String {
     if shown.indices.contains(list.selected),
       case .open = shown[list.selected].kind
     {
-      footer.stringValue = L(
-        "⇥ complete folder: \(shown[list.selected].title)")
-      return
+      return L("⇥ complete folder: \(shown[list.selected].title)")
     }
     if let query = completion(for: field.stringValue) {
-      footer.stringValue = L("⇥ complete: \(query)")
-      return
+      return L("⇥ complete: \(query)")
     }
-    footer.stringValue =
-      fixed == nil
+    return fixed == nil
       ? L(
         "↵ Choose     ⌘↵ Reveal in \(fileManager)     ↑↓ Navigate     ⇥ Complete     Esc Close"
       )
@@ -768,6 +781,7 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
       x: 0, y: 44, width: size.width, height: size.height - 44)
     footer.frame = NSRect(
       x: 24, y: 12, width: size.width - 48, height: 18)
+    footer.textColor = Panels.quiet
     // A screen to choose only when there is a choice.
     let screens = model.monitors.count
     footer.stringValue =

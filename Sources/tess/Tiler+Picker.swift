@@ -41,6 +41,7 @@ extension Tiler {
     if let c = appCache, c.folders != Self.appFolderDates() {
       appCache = nil
     }
+    picker.stale = stale
     picker.open(
       pickerItems(), on: lookedAtFrame, fixed: fixed,
       verbs: config.verbs, fileManager: config.fileManager, text: text

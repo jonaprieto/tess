@@ -2,8 +2,6 @@ import AppKit
 import ApplicationServices
 import Layout
 
-let version = "0.12.0"
-
 let usage = """
   tess: a tiling window manager for macOS
 

@@ -3,7 +3,7 @@ LABEL := com.jonaprieto.tess
 AGENT := $(HOME)/Library/LaunchAgents/$(LABEL).plist
 BIN   := $(CURDIR)/build/tess
 APP   := /Applications/tess.app
-VERSION := $(shell sed -n 's/^let version = "\(.*\)"/\1/p' Sources/tess/main.swift)
+VERSION := $(shell sed -n 's/^let version = "\(.*\)"/\1/p' Sources/tess/Version.swift)
 # Signed with a certificate so macOS keeps the Accessibility grant across rebuilds; the
 # ad-hoc fallback ("-") changes with every build and loses it.
 SIGN ?= $(or $(shell security find-identity -v -p codesigning | grep -v REVOKED | grep -m1 -o '[0-9A-F]\{40\}'),-)

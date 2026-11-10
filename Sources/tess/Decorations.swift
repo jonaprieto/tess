@@ -81,6 +81,13 @@ final class DecorationView: NSView {
 
   override var isFlipped: Bool { true }
 
+  /// A window's corner on macOS 26 and later, measured at 17, plus
+  /// the point the border sits outside it, so the curves run
+  /// together.
+  // ponytail: one radius for every window; read it per window if an
+  // app's corners turn out different.
+  static let radius: CGFloat = 18
+
   override func draw(_ dirtyRect: NSRect) {
     func local(_ r: CGRect) -> CGRect {
       r.offsetBy(dx: -screen.minX, dy: -screen.minY)
@@ -98,7 +105,7 @@ final class DecorationView: NSView {
     for w in windows.sorted(by: { !$0.focused && $1.focused }) {
       let r = local(w.frame).insetBy(dx: -1, dy: -1)
       let path = NSBezierPath(
-        roundedRect: r, xRadius: 12, yRadius: 12)
+        roundedRect: r, xRadius: Self.radius, yRadius: Self.radius)
       path.lineWidth = w.focused ? 1.5 : 1
       (w.focused
         ? Panels.readable(Panels.accent).withAlphaComponent(0.75)

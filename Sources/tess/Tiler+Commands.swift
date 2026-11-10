@@ -41,14 +41,35 @@ extension Tiler {
   /// would go on taking room from it on paper and handing it to a
   /// neighbor, which would grow underneath.
   func holdMinimums(_ was: World) {
+    let tried = world
     world.respect(
       windowMinimums, inner: config.inner, outer: config.outer)
     let old = was.frames(inner: config.inner, outer: config.outer)
     if world.frames(inner: config.inner, outer: config.outer)
       .allSatisfy({ old[$0.key]?.isNear($0.value) == true })
     {
-      toast(L("no room left"))
+      // A minimum comes from one refusal, maybe while the app was
+      // busy: asked again, the apps there get to say no again.
+      if forgetMinimums(on: world.focused) {
+        world = tried
+      } else {
+        toast(L("no room left"))
+      }
     }
+  }
+
+  /// Forgets what the apps on `id`'s screen were seen to keep. False
+  /// if there was nothing to forget.
+  @discardableResult
+  func forgetMinimums(on id: WindowID?) -> Bool {
+    guard let m = id.flatMap(world.locate)?.m else { return false }
+    let apps = Set(
+      world.monitors[m].windows.compactMap {
+        infos[$0].flatMap { bundle($0.pid) }
+      })
+    let before = minimums.count
+    minimums = minimums.filter { !apps.contains($0.key) }
+    return minimums.count != before
   }
 
 

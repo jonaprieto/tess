@@ -171,6 +171,10 @@ final class Tiler {
   /// the button comes up.
   var drag: (id: WindowID, zone: DropZone?)?
 
+  /// Tiled windows the mouse is resizing from an edge: their next
+  /// snapshot, once the button is up, has the size they were given.
+  var resizing: Set<WindowID> = []
+
   /// The picker was opened by close-replace; cancelling it focuses
   /// what tess picked.
   var closeReplacing = false
@@ -494,7 +498,10 @@ final class Tiler {
       onSnapshot: { [weak self] pid, list, focused in
         self?.snapshot(pid, list, focused)
       },
-      onDrag: { [weak self] id in self?.dragging(id) })
+      onDrag: { [weak self] id in self?.dragging(id) },
+      onResize: { [weak self] id in
+        if self?.world.locate(id) != nil { self?.resizing.insert(id) }
+      })
     workers[pid] = worker
     DispatchQueue.global(qos: .utility).async { [weak self] in
       let icon = Icons.small(app.icon)
@@ -540,6 +547,7 @@ final class Tiler {
     unlistedSince[id] = nil
     autoFloated.remove(id)
     refused.remove(id)
+    resizing.remove(id)
     world.remove(id)
   }
 
@@ -646,6 +654,9 @@ final class Tiler {
     let known = seen
     seen.formUnion(listed)
     guard !starting, !paused else { return }
+    for info in list where resizing.remove(info.id) != nil {
+      resizedByHand(info.id, to: info.frame)
+    }
     var found: [WinInfo] = []
     for info in list {
       // macOS fullscreen takes a window to a Space of its own, out of
@@ -816,6 +827,22 @@ final class Tiler {
       scheduleApply()
     }
     check()
+  }
+
+
+  /// A tiled window was resized from an edge: the tiling follows, so
+  /// it is not put back.
+  func resizedByHand(_ id: WindowID, to frame: CGRect) {
+    let before = world
+    // What the hand asked for is what the apps there get asked.
+    forgetMinimums(on: id)
+    world.fit(id, to: frame, inner: config.inner, outer: config.outer)
+    if world != before {
+      remember("Resize", windowName(id), from: before)
+      Events.record("window.resized", describe(id))
+    }
+    writes[id] = nil
+    scheduleApply()
   }
 
 

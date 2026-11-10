@@ -18,6 +18,8 @@ final class AppWorker: @unchecked Sendable {
     @MainActor @Sendable (pid_t, [WinInfo], WindowID?) -> Void
   /// A window the mouse is moving (not resizing), as it moves.
   private let onDrag: @MainActor @Sendable (WindowID) -> Void
+  /// A window the mouse is resizing from an edge.
+  private let onResize: @MainActor @Sendable (WindowID) -> Void
 
   // Worker thread only.
   private var runLoop: CFRunLoop!
@@ -61,11 +63,13 @@ final class AppWorker: @unchecked Sendable {
       @escaping @MainActor @Sendable (
         pid_t, [WinInfo], WindowID?
       ) -> Void,
-    onDrag: @escaping @MainActor @Sendable (WindowID) -> Void
+    onDrag: @escaping @MainActor @Sendable (WindowID) -> Void,
+    onResize: @escaping @MainActor @Sendable (WindowID) -> Void
   ) {
     self.app = app
     self.onSnapshot = onSnapshot
     self.onDrag = onDrag
+    self.onResize = onResize
     let ready = DispatchSemaphore(value: 0)
     let thread = Thread { [unowned self] in self.run(ready) }
     thread.name = "tess.ax.\(app.processIdentifier)"
@@ -141,6 +145,13 @@ final class AppWorker: @unchecked Sendable {
       abs(frame.height - was.height) < 2
     {
       DispatchQueue.main.async { [onDrag] in onDrag(id) }
+    }
+    // Resized under the mouse, and not by tess, which never writes
+    // while the button is down.
+    if name == kAXResizedNotification, now >= quietUntil,
+      NSEvent.pressedMouseButtons & 1 != 0, let id = element.windowID
+    {
+      DispatchQueue.main.async { [onResize] in onResize(id) }
     }
     if (name == kAXMovedNotification
       || name == kAXResizedNotification) && now < quietUntil

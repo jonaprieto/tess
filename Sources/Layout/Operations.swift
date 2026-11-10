@@ -206,6 +206,35 @@ extension World {
     }
   }
 
+  /// Tiled window `id` was resized by hand to `frame`: the split next
+  /// to each edge it moved goes where that edge is now, and the
+  /// screen's own edges stay put. Not on a ribbon or in fullscreen.
+  public mutating func fit(
+    _ id: WindowID, to frame: CGRect, inner: Double, outer: Double
+  ) {
+    guard let p = locate(id), monitors[p.m].fullscreen == nil,
+      !monitors[p.m].ribbon,
+      let was = frames(inner: inner, outer: outer)[id]
+    else { return }
+    let mon = monitors[p.m]
+    let area = tileArea(p.m, inner: inner, outer: outer)
+    func range(_ r: CGRect, along: Bool) -> (lo: Double, hi: Double) {
+      along != mon.rows ? (r.minX, r.maxX) : (r.minY, r.maxY)
+    }
+    let (along, across) =
+      mon.rows ? (area.height, area.width) : (area.width, area.height)
+    let lanes = moved(
+      mon.lanes.map(\.size), at: p.l, whole: along, gap: inner,
+      from: range(was, along: true), to: range(frame, along: true))
+    for i in lanes.indices { monitors[p.m].lanes[i].size = lanes[i] }
+    if !mon.lanes[p.l].accordion {
+      monitors[p.m].lanes[p.l].sizes = moved(
+        mon.lanes[p.l].sizes, at: p.w, whole: across, gap: inner,
+        from: range(was, along: false), to: range(frame, along: false)
+      )
+    }
+  }
+
   public mutating func balance() {
     guard monitors.indices.contains(activeMonitor) else { return }
     for i in monitors[activeMonitor].lanes.indices {
@@ -454,6 +483,31 @@ func grown(
       ? sizes[j] / rest * (1 - share)
       : (1 - share) / Double(sizes.count - 1)
   }
+}
+
+/// Weights as shares of 1 after part `i` of `whole` went from `old`
+/// to `new`: its start moves the split before it, its end the split
+/// after it, and no part ends up under 5%. An edge with no split
+/// (the screen's) stays where it was.
+func moved(
+  _ weights: [Double], at i: Int, whole: Double, gap: Double,
+  from old: (lo: Double, hi: Double), to new: (lo: Double, hi: Double)
+) -> [Double] {
+  let total = weights.reduce(0, +)
+  let avail = whole - gap * Double(weights.count - 1)
+  guard weights.count > 1, total > 0, avail > 0 else {
+    return weights
+  }
+  var len = weights.map { $0 / total * avail }
+  let least = avail * 0.05
+  func shift(_ d: Double, from j: Int) {
+    let d = min(max(d, least - len[i]), len[j] - least)
+    len[j] -= d
+    len[i] += d
+  }
+  if i > 0 { shift(old.lo - new.lo, from: i - 1) }
+  if i < len.count - 1 { shift(new.hi - old.hi, from: i + 1) }
+  return len.map { $0 / avail }
 }
 
 extension World {

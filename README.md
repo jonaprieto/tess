@@ -212,7 +212,8 @@ undo it and everything after it, or an undone one to redo up to it.
 
 Drag a tiled window and where it will land shows in orange. Drop it on another window's left
 or right edge to split beside it, on its top or bottom edge to stack with it, or on its
-middle to swap the two.
+middle to swap the two. Drag a tiled window's edge to resize it: the window next to that edge
+gives or takes the room, and undo puts it back.
 
 `⌥⇧A` brings every app back: each running app with no window in sight gets one, and every
 screen is laid out with them.

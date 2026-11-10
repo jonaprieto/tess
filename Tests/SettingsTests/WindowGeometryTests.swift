@@ -93,7 +93,8 @@ import Testing
   tiler.starting = false
   let pid = getpid()
   let worker = AppWorker(
-    .current, onSnapshot: { _, _, _ in }, onDrag: { _ in })
+    .current, onSnapshot: { _, _, _ in }, onDrag: { _ in },
+    onResize: { _ in })
   defer { worker.stop() }
   tiler.workers[pid] = worker
   tiler.world.monitors = [
@@ -141,7 +142,8 @@ import Testing
   tiler.starting = false
   let pid = getpid()
   let worker = AppWorker(
-    .current, onSnapshot: { _, _, _ in }, onDrag: { _ in })
+    .current, onSnapshot: { _, _, _ in }, onDrag: { _ in },
+    onResize: { _ in })
   defer { worker.stop() }
   tiler.workers[pid] = worker
   tiler.world.monitors = [

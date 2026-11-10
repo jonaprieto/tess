@@ -52,6 +52,33 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] {
   #expect(Command.grow(50).description == "grow +50")
 }
 
+@Test func aWindowResizedByHandMovesTheSplitsAtTheEdgesItMoved() {
+  // Monitor 1000x800, gaps 10: columns 1 and 2 are 485 wide, 2
+  // stacked over 3.
+  var w = world([[1], [2, 3]], focused: 1)
+  let was = w.frames(inner: 10, outer: 10)
+  // 2's left edge dragged 100 to the left, its bottom 100 down.
+  var to = was[2]!
+  to.origin.x -= 100
+  to.size.width += 100
+  to.size.height += 100
+  w.fit(2, to: to, inner: 10, outer: 10)
+  let f = w.frames(inner: 10, outer: 10)
+  #expect(f[1]?.width == 385)
+  #expect(f[2]?.width == 585)
+  #expect(f[2]?.height == was[2]!.height + 100)
+  #expect(f[3]?.maxY == was[3]!.maxY)
+  // An edge on the screen's side has no split to move.
+  var lone = world([[1]], focused: 1)
+  let before = lone
+  var wide = lone.frames(inner: 10, outer: 10)[1]!
+  wide.size.width += 200
+  lone.fit(1, to: wide, inner: 10, outer: 10)
+  #expect(
+    lone.frames(inner: 10, outer: 10)
+      == before.frames(inner: 10, outer: 10))
+}
+
 @Test func eachWindowGetsWhatItKeepsFromTheOnesWithRoomToGive() {
   var columns = world([[1], [2], [3]], focused: 1)
   columns.respect(

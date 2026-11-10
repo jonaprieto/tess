@@ -57,12 +57,13 @@ final class Grayscale {
   }
 
   /// `bounds` minus `holes`, which may overlap, each with a window's
-  /// rounded corners.
+  /// rounded corners: the border's, less the point it sits outside.
   static func mask(_ bounds: CGRect, holes: [CGRect]) -> CGPath {
-    holes.reduce(CGPath(rect: bounds, transform: nil)) {
+    let r = DecorationView.radius - 1
+    return holes.reduce(CGPath(rect: bounds, transform: nil)) {
       $0.subtracting(
         CGPath(
-          roundedRect: $1, cornerWidth: 12, cornerHeight: 12,
+          roundedRect: $1, cornerWidth: r, cornerHeight: r,
           transform: nil))
     }
   }

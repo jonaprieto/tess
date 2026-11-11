@@ -406,6 +406,17 @@ func lanes(_ w: World, _ m: Int = 0) -> [[WindowID]] {
   #expect(w.monitors[0].fullscreen == nil)
 }
 
+@Test func fullscreenOffKeepsTheSplitsAndOpensAccordions() {
+  var w = world([[1, 2], [3, 4]], focused: 2)
+  w.monitors[0].lanes[0].sizes = [2, 1]
+  w.toggleAccordion()
+  w.toggleFullscreen()
+  w.toggleFullscreen()
+  #expect(lanes(w) == [[1, 2], [3, 4]])
+  #expect(w.monitors[0].lanes[0].sizes == [2, 1])
+  #expect(w.monitors[0].lanes.allSatisfy { !$0.accordion })
+}
+
 @Test func clearMonitorSendsEverythingToTheNextOne() {
   var w = world([[1, 2], [3]], [[4]], focused: 1)
   w.clearMonitor()

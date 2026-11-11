@@ -256,10 +256,18 @@ extension World {
     monitors[p.m].lanes[p.l].accordion.toggle()
   }
 
+  /// Turning it off gives the screen back its lanes and splits, but
+  /// not its accordions, so every window there shows again.
   public mutating func toggleFullscreen() {
     guard let id = focused, let p = locate(id) else { return }
-    monitors[p.m].fullscreen =
-      monitors[p.m].fullscreen == id ? nil : id
+    guard monitors[p.m].fullscreen == id else {
+      monitors[p.m].fullscreen = id
+      return
+    }
+    monitors[p.m].fullscreen = nil
+    for l in monitors[p.m].lanes.indices {
+      monitors[p.m].lanes[l].accordion = false
+    }
   }
 
   /// The active monitor's windows, focused first and the rest in

@@ -37,7 +37,13 @@ enum Log {
     return h
   }
 
+  /// Under `swift test`, whose runs would otherwise land in the
+  /// user's logs between the real ones.
+  static let testing = ["xctest", "swiftpm-testing-helper"].contains(
+    ProcessInfo.processInfo.processName)
+
   static func write(_ message: String) {
+    if testing { return }
     let line = "\(time.string(from: Date())) \(message)\n"
     queue.async {
       if written > 5_000_000 {

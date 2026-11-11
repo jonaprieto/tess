@@ -29,6 +29,7 @@ enum Events {
     }()
 
   static func record(_ type: String, _ fields: [String: Any] = [:]) {
+    if Log.testing { return }
     var event = fields
     event["e"] = type
     lock.lock()

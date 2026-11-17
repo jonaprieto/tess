@@ -618,16 +618,34 @@ final class Tiler {
   {
     guard workers[pid] != nil else { return }
     let listed = Set(list.map(\.id))
-    let hadFocus = world.focused
+    var hadFocus = world.focused
     // Only windows that just went missing: known off-Space ones need
     // no new lookup.
-    let missing = infos.values.filter {
+    var missing = infos.values.filter {
       $0.pid == pid && !listed.contains($0.id)
         && !offSpace.contains($0.id)
     }.map(\.id)
+    let spaceChange = Date().timeIntervalSince(spaceChangedAt) < 1.5
+    // A native tab switch (Ghostty, Finder, Terminal) hides one
+    // window and shows another of the app at the same frame: the
+    // shown one takes the hidden one's place, not a new column.
+    if !missing.isEmpty, !spaceChange, !starting, !paused {
+      for info in list
+      where !world.contains(info.id) && kind(info) == .tile {
+        guard
+          let i = missing.firstIndex(where: {
+            world.locate($0) != nil
+              && infos[$0]?.frame.isNear(info.frame) == true
+          })
+        else { continue }
+        let old = missing.remove(at: i)
+        world.replace(old, with: info.id)
+        if hadFocus == old { hadFocus = info.id }
+        forget(old, "tab switched")
+      }
+    }
     if !missing.isEmpty {
       let live = Self.liveWindowIDs()
-      let spaceChange = Date().timeIntervalSince(spaceChangedAt) < 1.5
       for id in missing {
         if spaceChange && live.contains(id) {
           if offSpace.insert(id).inserted {

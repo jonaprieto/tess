@@ -16,6 +16,18 @@ extension World {
     focused = id
   }
 
+  /// `new` takes tiled window `old`'s place, size and focus, as when
+  /// an app's native tab bar swaps one window for another.
+  public mutating func replace(_ old: WindowID, with new: WindowID) {
+    guard let p = locate(old), !contains(new) else { return }
+    monitors[p.m].lanes[p.l].windows[p.w] = new
+    if monitors[p.m].fullscreen == old {
+      monitors[p.m].fullscreen = new
+    }
+    mru = mru.map { $0 == old ? new : $0 }
+    if focused == old { focused = new }
+  }
+
   /// Focus goes to the next window in the stack, else the previous
   /// one, else the lane that took this lane's place, else the one
   /// before it, else the most recently focused window.

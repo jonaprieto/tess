@@ -620,3 +620,15 @@ private func dropWorld() -> (World, [WindowID: CGRect]) {
   edited.jev = true
   #expect(try Config.load(Config.file(for: edited)).jev)
 }
+
+@Test func aReplacedWindowKeepsItsPlaceAndFocus() {
+  var w = world([])
+  w.monitors[0].lanes = [Lane([1]), Lane([2, 3])]
+  w.focused = 2
+  let sizes = w.monitors[0].lanes[1].sizes
+  w.replace(2, with: 4)
+  #expect(w.monitors[0].lanes[1].windows == [4, 3])
+  #expect(w.monitors[0].lanes[1].sizes == sizes)
+  #expect(w.focused == 4)
+  #expect(!w.mru.contains(2))
+}

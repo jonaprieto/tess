@@ -278,7 +278,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
             "awake until \($0.formatted(date: .omitted, time: .shortened))"
           )
         } ?? L("awake until turned off")
-      } ?? L("keep the Mac awake")
+      } ?? L("keep the Mac awake, lid closed too")
     menu.addItem(cup)
     let ribbon = item(
       L("Ribbon"), "rectangle.split.3x1", #selector(toggleRibbon),

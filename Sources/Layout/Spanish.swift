@@ -345,7 +345,8 @@ let spanish: [String: String] = [
   "here": "aquí",
   "in place of %@": "en lugar de %@",
   "in the empty place": "en el lugar vacío",
-  "keep the Mac awake": "mantén tu Mac despierta",
+  "keep the Mac awake, lid closed too":
+    "mantén tu Mac despierta, también con la tapa cerrada",
   "keeping the Mac awake": "manteniendo tu Mac despierta",
   "letter swap": "letra intercambiar",
   "login service": "servicio de inicio de sesión",

@@ -453,7 +453,7 @@ every key, the only way to get macOS's own `⌘Tab` back. Resume the same way.
 - `tess undo`, `tess redo`: the last layout change.
 - `tess volume 30` (or `+10`, `-10`, `mute`, `unmute`).
 - `tess wifi` (`on`, `off`, or the other way round).
-- `tess caffeine`: keep the Mac awake until run again. `caffeine 60` for an hour, `caffeine off`.
+- `tess caffeine`: keep the Mac awake until run again, lid closed included (low battery and heat still sleep it). `caffeine 60` for an hour, `caffeine off`.
 - `tess speedtest`: download and upload speed and latency, with macOS's own `networkQuality`,
   in about 20 seconds.
 - `tess zen`: Zen on or off. `tess break`: Zen's break now.

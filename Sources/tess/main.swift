@@ -25,10 +25,15 @@ func serve() -> Never {
     print("tess is already running")
     exit(0)
   }
+  // ponytail: a kill or crash skips atexit; the LaunchAgent restart
+  // lands here and lets the lid sleep the Mac again.
+  Tiler.lidSleep(true)
+  atexit { Tiler.lidSleep(true) }
   let app = NSApplication.shared
   app.setActivationPolicy(.accessory)
   Tiler.applyLanguage()
   let tiler = Tiler()
+  tiler.watchLid()
   let status = StatusItem(tiler)
   tiler.onChange = { status.refreshIcon() }
   tiler.onLayout = { status.refreshIcon() }

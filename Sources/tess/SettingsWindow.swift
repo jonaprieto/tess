@@ -485,7 +485,7 @@ struct AppsTab: View {
       AppList(
         title: L("Ignore"),
         help: L(
-          "tess never touches them (EdgeMark's panel, for one)."),
+          "tess never touches them."),
         ids: $model.ignore)
     }
     .formStyle(.grouped)

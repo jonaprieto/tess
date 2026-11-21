@@ -31,7 +31,7 @@ python3 -I - "$config" "${bundles[@]}" <<'EOF'
 import json, sys
 path, bundles = sys.argv[1], sys.argv[2:]
 config = json.load(open(path))
-config["ignore"] = config.get("ignore", ["io.github.ender-wang.EdgeMark"]) + bundles
+config["ignore"] = config.get("ignore", []) + bundles
 json.dump(config, open(path, "w"), indent=2)
 EOF
 [ $? -eq 0 ] || exit 1

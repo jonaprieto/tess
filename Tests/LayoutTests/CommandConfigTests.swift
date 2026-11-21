@@ -98,7 +98,7 @@ import Testing
 @Test func defaultsCoverTheSpec() throws {
   let c = Config.defaults
   #expect(c.inner == 10 && c.outer == 10)
-  #expect(c.ignore == ["io.github.ender-wang.EdgeMark"])
+  #expect(c.ignore.isEmpty)
   #expect(c.tile == ["com.anthropic.claudefordesktop"])
   #expect(c.float.contains("com.apple.finder"))
   let main = try #require(c.modes["main"])
@@ -163,7 +163,7 @@ import Testing
   edited.modes?["main"]?["alt-t"] = nil
   edited.modes?["main"]?["alt-y"] = "balance"
   edited.verbs?["ssh"] = "iTerm"
-  edited.ignore = ["io.github.ender-wang.EdgeMark", "com.example.app"]
+  edited.ignore = ["com.example.app"]
   let o = Config.overrides(edited, over: base)
   #expect(o.float == nil && o.tile == nil)
   #expect(o.modes?["main"]?.count == 2)

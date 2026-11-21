@@ -407,8 +407,8 @@ let spanish: [String: String] = [
   "tess %@ is up to date": "tess %@ está al día",
   "tess Settings": "Ajustes de tess",
   "tess is already updating": "tess ya se está actualizando",
-  "tess never touches them (EdgeMark's panel, for one).":
-    "tess nunca las toca (el panel de EdgeMark, por ejemplo).",
+  "tess never touches them.":
+    "tess nunca las toca.",
   "tess updated to %@": "tess actualizado a %@",
   "the Mac can sleep": "tu Mac ya puede dormir",
   "title author": "título autor",

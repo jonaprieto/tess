@@ -462,7 +462,7 @@ public struct Config: Equatable, Sendable {
       "one_shot": ["tess"],
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
-      "ignore": ["io.github.ender-wang.EdgeMark"],
+      "ignore": [],
       "history": ["com.brave.Browser", "com.apple.Safari"],
       "verbs": {"cd": "iTerm", "code": "Visual Studio Code", "chat": "https://chatgpt.com/?q=%s", "claude": "claude://claude.ai/new?q=%s",
                 "web": "search:history", "brave": "search:history", "file": "search:files", "f": "search:files",

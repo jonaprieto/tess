@@ -360,7 +360,7 @@ The config layers on top of the built-in one: lists replace, bindings and verbs 
 and `null` removes a default.
 
 - `float` lists apps that never tile, `tile` apps that always do, and `ignore` apps tess
-  leaves alone (EdgeMark is there by default).
+  leaves alone.
 - `terminal` is the app `t` in tess mode opens. `"one_shot": []` keeps tess mode on until esc.
 - `file_manager` is the app the picker reveals files in (cmd-enter) and opens folders with:
   `"Finder"` by default, or any app that takes a path, like `"Strata"`.
@@ -431,7 +431,7 @@ macOS entirely, its own fullscreen included. Both lists replace the defaults, so
 still want; `tess default-config` prints them:
 
 ```json
-{"ignore": ["io.github.ender-wang.EdgeMark", "com.example.app"]}
+{"ignore": ["com.example.app"]}
 ```
 
 Everything for a while. Pause Tiling in the menu, or `tess pause`, stops tiling and releases

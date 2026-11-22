@@ -243,6 +243,8 @@ final class Tiler {
 
   var drawn: Decorations.Drawn?
 
+  var screenLocked = false
+
   /// A ribbon's windows are sliding to where it scrolled: nothing
   /// else writes until they are there.
   var gliding = false
@@ -414,6 +416,33 @@ final class Tiler {
         self?.screensChanged()
         self?.sweep(all: true)
       }
+    }
+    for name in [
+      "com.apple.screenIsLocked", "com.apple.screenIsUnlocked"
+    ] {
+      CFNotificationCenterAddObserver(
+        CFNotificationCenterGetDistributedCenter(),
+        Unmanaged.passUnretained(self).toOpaque(),
+        { _, observer, name, _, _ in
+          guard let observer, let name else { return }
+          let locked =
+            name.rawValue as String == "com.apple.screenIsLocked"
+          MainActor.assumeIsolated {
+            let tiler = Unmanaged<Tiler>.fromOpaque(observer)
+              .takeUnretainedValue()
+            Events.record(locked ? "lock" : "unlock")
+            guard !locked else {
+              tiler.screenLocked = true
+              return tiler.refreshDecorations()
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+              tiler.screenLocked =
+                (CGSessionCopyCurrentDictionary() as? [String: Any])?[
+                  "CGSSessionScreenIsLocked"] != nil
+              tiler.refreshDecorations()
+            }
+          }
+        }, name as CFString, nil, .deliverImmediately)
     }
     NotificationCenter.default.addObserver(
       forName: NSApplication.didChangeScreenParametersNotification,

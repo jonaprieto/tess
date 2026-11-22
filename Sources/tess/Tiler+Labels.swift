@@ -159,6 +159,7 @@ extension Tiler {
       labels, windows: visible, alphabet: labelPool)
     let all = config.windowLabels == .always || labelsAreKeys
     guard config.windowLabels != .off, !paused, !starting,
+      !screenLocked,
       drag == nil, !gliding
     else {
       if drawn != nil { decorations.hide() }

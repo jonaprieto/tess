@@ -187,6 +187,13 @@ import Testing
       && Parse.address("localhost") == nil && Parse.address("") == nil
   )
   #expect(
+    Parse.typedAddress("www.google.com")?.absoluteString
+      == "https://www.google.com"
+      && Parse.typedAddress("github.com/a/b/pull/40") != nil
+      && Parse.typedAddress("https://x.org") != nil
+      && Parse.typedAddress("notes.md") == nil
+      && Parse.typedAddress("~/notes") == nil)
+  #expect(
     Config.defaults.verbs["brew"].flatMap {
       Parse.run($0, "install fzf")
     } == "brew install fzf")

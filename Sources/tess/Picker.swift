@@ -402,7 +402,12 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     }
     // A link verb's link on top, the rest still searched (`claude
     // code` finds Claude Code too).
-    if let l = link(q) ?? keys(q) ?? run(q) { shown.insert(l, at: 0) }
+    // An address typed as it is opens on Enter.
+    if let l = link(q) ?? keys(q) ?? run(q)
+      ?? Parse.typedAddress(q).flatMap(address)
+    {
+      shown.insert(l, at: 0)
+    }
     // Arithmetic (not a lone number) is worked out on top.
     if Double(q) == nil, let v = Parse.arithmetic(q).map(Parse.number)
     {
@@ -556,16 +561,8 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
       }
       .sorted { ($0.score, -$0.i) > ($1.score, -$1.i) }
       .map(\.item)
-    if let url = Parse.address(query),
-      let app = NSWorkspace.shared.urlForApplication(toOpen: url),
-      let browser = Bundle(url: app)?.bundleIdentifier
-    {
-      shown.insert(
-        Item(
-          kind: .url(url, browser: browser),
-          title: url.absoluteString, detail: L("open"),
-          icon: NSWorkspace.shared.icon(forFile: app.path), search: ""
-        ), at: 0)
+    if let a = Parse.address(query).flatMap(address) {
+      shown.insert(a, at: 0)
     }
     list.items = shown
     list.query = query
@@ -576,6 +573,17 @@ final class Picker: NSObject, NSWindowDelegate, NSTextFieldDelegate {
       ) : L("Nothing matches")
     list.selected = 0
     list.needsDisplay = true
+  }
+
+  /// The address opened by the browser that handles it.
+  private func address(_ url: URL) -> Item? {
+    guard let app = NSWorkspace.shared.urlForApplication(toOpen: url),
+      let browser = Bundle(url: app)?.bundleIdentifier
+    else { return nil }
+    return Item(
+      kind: .url(url, browser: browser),
+      title: url.absoluteString, detail: L("open"),
+      icon: NSWorkspace.shared.icon(forFile: app.path), search: "")
   }
 
   /// `verb text` for a `run:` verb: the command it makes, to run in a

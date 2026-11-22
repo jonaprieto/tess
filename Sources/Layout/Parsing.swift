@@ -300,6 +300,15 @@ public enum Parse {
     return url
   }
 
+  /// An address typed with no verb: one with a scheme, `www.` or a
+  /// path, so a file name (`notes.md`) stays a search.
+  public static func typedAddress(_ text: String) -> URL? {
+    let t = text.trimmingCharacters(in: .whitespaces)
+    guard t.contains("://") || t.hasPrefix("www.") || t.contains("/")
+    else { return nil }
+    return address(t)
+  }
+
   /// The Wi-Fi device in `networksetup -listallhardwareports`
   /// (`en0`).
   public static func wifiDevice(_ listing: String) -> String? {

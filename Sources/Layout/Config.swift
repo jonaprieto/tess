@@ -1,6 +1,6 @@
 import Foundation
 
-/// The built-in defaults with `~/.config/tess/config.json` on top:
+/// The built-in defaults with `~/.config/tesela/config.json` on top:
 /// gaps and app lists in the file replace the defaults, verbs and key
 /// bindings merge key by key, and a `null` removes a default. New
 /// defaults therefore reach an existing file.
@@ -11,7 +11,7 @@ public struct Config: Equatable, Sendable {
   public var float: [String] = []
   /// Bundle ids whose windows tile even without a fullscreen button.
   public var tile: [String] = []
-  /// Bundle ids tess never touches.
+  /// Bundle ids tesela never touches.
   public var ignore: [String] = []
   /// Browsers whose bookmarks and history the picker lists, first one
   /// first: it wins ties and pages several of them have. One left out
@@ -20,7 +20,7 @@ public struct Config: Equatable, Sendable {
   /// Picker verbs: `cd ~/x` opens the folder with the app named here;
   /// for a link with `%s`, `chat hello` opens the link with the text
   /// in its place; `search:files` (and the other `PickerSearch`
-  /// cases) runs one of tess's own searches on the text;
+  /// cases) runs one of tesela's own searches on the text;
   /// `keys:Slack:cmd-k` presses the shortcut in that app and types
   /// the text; `run:brew %s` runs the line in the terminal.
   public var verbs: [String: String] = [:]
@@ -69,7 +69,7 @@ public struct Config: Equatable, Sendable {
     case jump
     case off
   }
-  /// Mode -> key -> commands. `main` is where tess starts.
+  /// Mode -> key -> commands. `main` is where tesela starts.
   public var modes: [String: [KeySpec: [Command]]] = [:]
   /// The merged config as written, for the settings window.
   public var raw = Raw()
@@ -459,7 +459,7 @@ public struct Config: Equatable, Sendable {
       "empty_screens": true,
       "ribbon": false,
       "update_check": true,
-      "one_shot": ["tess"],
+      "one_shot": ["tesela"],
       "float": ["com.apple.systempreferences", "com.apple.ActivityMonitor", "com.apple.calculator", "com.apple.finder"],
       "tile": ["com.anthropic.claudefordesktop"],
       "ignore": [],
@@ -500,7 +500,7 @@ public struct Config: Equatable, Sendable {
           "alt-shift-3": "move-to-screen 3",
           "alt-tab": "focus-screen next",
           "alt-shift-tab": "focus-screen prev",
-          "alt-t": "mode tess",
+          "alt-t": "mode tesela",
           "alt-shift-r": "reload",
           "cmd-h": "nop",
           "cmd-alt-h": "nop",
@@ -514,7 +514,7 @@ public struct Config: Equatable, Sendable {
           "cmd-space": "pick",
           "alt-shift-backspace": "clear-screen"
         },
-        "tess": {
+        "tesela": {
           "h": "focus left",
           "j": "focus down",
           "k": "focus up",
@@ -555,7 +555,7 @@ public struct Config: Equatable, Sendable {
           "r": "mode resize",
           "esc": "mode main",
           "alt-f": "click",
-          "alt-t": "mode tess"
+          "alt-t": "mode tesela"
         },
         "resize": {
           "cmd-space": "pick",

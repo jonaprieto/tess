@@ -50,7 +50,7 @@ public enum Command: Equatable, Sendable {
   case speedtest
   /// The active screen becomes a ribbon, or stops being one.
   case ribbon
-  /// The latest release, installed if tess can do that itself.
+  /// The latest release, installed if tesela can do that itself.
   case update
   case exec(String), reload, mode(String), retile, rescue, pause,
     tree, nop
@@ -63,8 +63,8 @@ public enum Command: Equatable, Sendable {
   case clearMonitor
   /// The settings window.
   case settings, tutorial
-  /// tess's model and the machine, as JSON (also written to the event
-  /// log).
+  /// tesela's model and the machine, as JSON (also written to the
+  /// event log).
   case state
   /// Jump mode: every window's label and screen number as a key.
   case jump
@@ -78,8 +78,8 @@ public enum Command: Equatable, Sendable {
   case showAll
   /// A window by its id (what jump mode binds to labels).
   case focusWindow(UInt32), swapWith(UInt32)
-  /// A tab by its place among the tabs tess labeled (what tess mode
-  /// and jump mode bind to tab letters).
+  /// A tab by its place among the tabs tesela labeled (what tesela
+  /// mode and jump mode bind to tab letters).
   case focusTab(Int)
   /// Back to the layout before the last change made with a key, the
   /// CLI or the picker, and forward again.

@@ -1,7 +1,7 @@
 import AppKit
 import Layout
 import Testing
-@testable import tess
+@testable import tesela
 
 @MainActor
 @Test func overlaysFollowTheActualWindowWhenAResizeIsRefused() throws
@@ -132,7 +132,7 @@ import Testing
 }
 
 /// Slack closed with its button keeps the window; picked again, it
-/// comes back as one tess knows.
+/// comes back as one tesela knows.
 @MainActor
 @Test func aWindowPickedBackGoesWhereItWasAskedAndNotWhereItWas()
   throws

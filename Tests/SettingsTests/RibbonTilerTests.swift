@@ -1,7 +1,7 @@
 import AppKit
 import Layout
 import Testing
-@testable import tess
+@testable import tesela
 
 // Off every real screen, so no overlay of these tests shows up over
 // the windows in use.

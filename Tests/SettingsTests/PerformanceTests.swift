@@ -1,7 +1,7 @@
 import AppKit
 import Layout
 import Testing
-@testable import tess
+@testable import tesela
 
 @MainActor
 @Test func closingPickerReleasesResultsAndPlacementData() throws {

@@ -37,8 +37,8 @@ let spanish: [String: String] = [
   "1–%@ Screen": "1–%@ Pantalla",
   "25 min focus, 5 min break": "25 min de foco, 5 min de descanso",
   "Above %@": "Encima de %@",
-  "Accessibility access for this Tess binary (System Settings → Privacy & Security → Accessibility)":
-    "Acceso de Accesibilidad para este binario de Tess (Ajustes del Sistema → Privacidad y seguridad → Accesibilidad)",
+  "Accessibility access for this Tesela binary (System Settings → Privacy & Security → Accessibility)":
+    "Acceso de Accesibilidad para este binario de Tesela (Ajustes del Sistema → Privacidad y seguridad → Accesibilidad)",
   "Accordion": "Acordeón",
   "Add": "Agregar",
   "Add Binding": "Agregar atajo",
@@ -106,7 +106,7 @@ let spanish: [String: String] = [
   "Gaps": "Espacios",
   "General": "General",
   "Getting Started": "Primeros pasos",
-  "Getting Started with Tess": "Primeros pasos con Tess",
+  "Getting Started with Tesela": "Primeros pasos con Tesela",
   "Go to a tab": "Ir a una pestaña",
   "Go to a window": "Ir a una ventana",
   "Go to that screen": "Ir a esa pantalla",
@@ -131,8 +131,8 @@ let spanish: [String: String] = [
   "Keep awake": "Mantener tu Mac despierta",
   "Keep awake for %@ min": "Mantener tu Mac despierta %@ min",
   "Keys": "Teclas",
-  "Keys like alt-shift-h or cmd-alt-ctrl-shift-g; commands as in `tess default-config`.":
-    "Teclas como alt-shift-h o cmd-alt-ctrl-shift-g; comandos como en `tess default-config`.",
+  "Keys like alt-shift-h or cmd-alt-ctrl-shift-g; commands as in `tesela default-config`.":
+    "Teclas como alt-shift-h o cmd-alt-ctrl-shift-g; comandos como en `tesela default-config`.",
   "Language": "Idioma",
   "Layout": "Disposición",
   "Leave Zen": "Salir de Zen",
@@ -172,8 +172,8 @@ let spanish: [String: String] = [
   "Nothing matches": "Sin coincidencias",
   "OPTIONAL": "OPCIONAL",
   "Off": "Desactivado",
-  "Once a day tess asks GitHub for its latest version, and tells you when there is a newer one.":
-    "Una vez al día tess le pregunta a GitHub por su última versión y te avisa si hay una más nueva.",
+  "Once a day tesela asks GitHub for its latest version, and tells you when there is a newer one.":
+    "Una vez al día tesela le pregunta a GitHub por su última versión y te avisa si hay una más nueva.",
   "Open %@": "Abrir %@",
   "Open Log": "Abrir registro",
   "Open Picker…": "Abrir selector…",
@@ -189,7 +189,7 @@ let spanish: [String: String] = [
   "Previous window": "Ventana anterior",
   "Put %@ %@": "Poner %@ %@",
   "Quieter": "Bajar volumen",
-  "Quit tess": "Salir de tess",
+  "Quit tesela": "Salir de tesela",
   "Re-tile": "Volver a organizar",
   "Redid: %@": "Rehecho: %@",
   "Redo": "Rehacer",
@@ -199,8 +199,8 @@ let spanish: [String: String] = [
   "Rescue Windows": "Rescatar ventanas",
   "Rescue windows": "Rescatar ventanas",
   "Resize": "Redimensionar",
-  "Restart tess": "Reiniciar tess",
-  "Restart tess to finish": "Reinicia tess para terminar",
+  "Restart tesela": "Reiniciar tesela",
+  "Restart tesela to finish": "Reinicia tesela para terminar",
   "Restart…": "Reiniciar…",
   "Resume Tiling": "Reanudar tiling",
   "Revert": "Revertir",
@@ -236,19 +236,19 @@ let spanish: [String: String] = [
   "Swap windows": "Intercambiar ventanas",
   "Swap with %@": "Intercambiar con %@",
   "Taller": "Más alta",
-  "Terminal app: %@ — install it or set terminal in ~/.config/tess/config.json":
-    "App de terminal: %@: instálala o define terminal en ~/.config/tess/config.json",
-  "Tess Doctor": "Diagnóstico de Tess",
-  "Tess doctor — no settings are changed\n":
-    "Diagnóstico de Tess: no se cambia ningún ajuste\n",
-  "Tess service running — start with brew services start tess, or make install":
-    "Servicio de Tess en marcha: inícialo con brew services start tess o make install",
-  "Tess works with your laptop keyboard or any standard Mac keyboard. No NuPhy software, special layers or Hyper key is needed.\n\n⌘ means Command, ⌥ means Option, ⇧ means Shift, and ⌃ means Control.\n\nThis walkthrough changes no bindings or window layouts. Use Next and Back at your own pace.":
-    "Tess funciona con el teclado de tu portátil o cualquier teclado Mac estándar. No necesitas software de NuPhy, capas especiales ni tecla Hyper.\n\n⌘ es Command, ⌥ es Option, ⇧ es Shift y ⌃ es Control.\n\nEste recorrido no cambia atajos ni la disposición de las ventanas. Usa Siguiente y Volver a tu ritmo.",
+  "Terminal app: %@ — install it or set terminal in ~/.config/tesela/config.json":
+    "App de terminal: %@: instálala o define terminal en ~/.config/tesela/config.json",
+  "Tesela Doctor": "Diagnóstico de Tesela",
+  "Tesela doctor — no settings are changed\n":
+    "Diagnóstico de Tesela: no se cambia ningún ajuste\n",
+  "Tesela service running — start with brew services start tesela, or make install":
+    "Servicio de Tesela en marcha: inícialo con brew services start tesela o make install",
+  "Tesela works with your laptop keyboard or any standard Mac keyboard. No NuPhy software, special layers or Hyper key is needed.\n\n⌘ means Command, ⌥ means Option, ⇧ means Shift, and ⌃ means Control.\n\nThis walkthrough changes no bindings or window layouts. Use Next and Back at your own pace.":
+    "Tesela funciona con el teclado de tu portátil o cualquier teclado Mac estándar. No necesitas software de NuPhy, capas especiales ni tecla Hyper.\n\n⌘ es Command, ⌥ es Option, ⇧ es Shift y ⌃ es Control.\n\nEste recorrido no cambia atajos ni la disposición de las ventanas. Usa Siguiente y Volver a tu ritmo.",
   "The app the picker shows files in with ⌘↵ and opens folders with.":
     "La app donde el selector muestra archivos con ⌘↵ y abre carpetas.",
-  "The menu bar has Settings, Pause Tiling, Tutorial and Doctor.\n\nChoose Doctor to check permissions, configuration and the binaries each feature uses. You can also run tess doctor in a terminal. Missing optional tools do not stop window management.\n\nRun tess default-config to see the default bindings. Your overrides live in ~/.config/tess/config.json.":
-    "La barra de menús tiene Ajustes, Pausar tiling, Tutorial y Diagnóstico.\n\nElige Diagnóstico para revisar permisos, configuración y los binarios que usa cada función. También puedes ejecutar tess doctor en una terminal. Si faltan herramientas opcionales, la gestión de ventanas sigue funcionando.\n\nEjecuta tess default-config para ver los atajos predeterminados. Tus cambios viven en ~/.config/tess/config.json.",
+  "The menu bar has Settings, Pause Tiling, Tutorial and Doctor.\n\nChoose Doctor to check permissions, configuration and the binaries each feature uses. You can also run tesela doctor in a terminal. Missing optional tools do not stop window management.\n\nRun tesela default-config to see the default bindings. Your overrides live in ~/.config/tesela/config.json.":
+    "La barra de menús tiene Ajustes, Pausar tiling, Tutorial y Diagnóstico.\n\nElige Diagnóstico para revisar permisos, configuración y los binarios que usa cada función. También puedes ejecutar tesela doctor en una terminal. Si faltan herramientas opcionales, la gestión de ventanas sigue funcionando.\n\nEjecuta tesela default-config para ver los atajos predeterminados. Tus cambios viven en ~/.config/tesela/config.json.",
   "Their windows are never tiled.":
     "Sus ventanas nunca entran al tiling.",
   "Tile": "Aplicar tiling",
@@ -275,10 +275,10 @@ let spanish: [String: String] = [
     "Deshacer esto y todo lo que vino después",
   "Unmute": "Quitar silencio",
   "Update failed": "La actualización falló",
-  "Update tess": "Actualizar tess",
+  "Update tesela": "Actualizar tesela",
   "Update to %@": "Actualizar a %@",
-  "Use %@ to enter Tess mode. Letters on windows and tabs let you go directly to them. The key guide shows your current bindings.\n\nUse %@ to enter resize mode. Its guide shows which keys adjust width and height. Esc returns to the previous mode.\n\nTry these on your own windows after closing this walkthrough.":
-    "Usa %@ para entrar al modo tess. Las letras en ventanas y pestañas te llevan directo a ellas. La guía de teclas muestra tus atajos actuales.\n\nUsa %@ para entrar al modo Redimensionar. Su guía muestra qué teclas ajustan el ancho y el alto. Esc vuelve al modo anterior.\n\nPrueba esto con tus propias ventanas cuando cierres este recorrido.",
+  "Use %@ to enter Tesela mode. Letters on windows and tabs let you go directly to them. The key guide shows your current bindings.\n\nUse %@ to enter resize mode. Its guide shows which keys adjust width and height. Esc returns to the previous mode.\n\nTry these on your own windows after closing this walkthrough.":
+    "Usa %@ para entrar al modo tesela. Las letras en ventanas y pestañas te llevan directo a ellas. La guía de teclas muestra tus atajos actuales.\n\nUsa %@ para entrar al modo Redimensionar. Su guía muestra qué teclas ajustan el ancho y el alto. Esc vuelve al modo anterior.\n\nPrueba esto con tus propias ventanas cuando cierres este recorrido.",
   "Use empty screens": "Usar pantallas vacías",
   "Volume %@%": "Volumen %@%",
   "Where should “%@” go?": "¿Dónde va “%@”?",
@@ -402,14 +402,14 @@ let spanish: [String: String] = [
     "para intercambiar hace falta una ventana en tiling con el foco y otra en tiling",
   "swap: %@": "intercambiar: %@",
   "system": "sistema",
-  "tess %@ is out: update from the menu bar":
-    "Salió tess %@: actualízalo desde la barra de menús",
-  "tess %@ is up to date": "tess %@ está al día",
-  "tess Settings": "Ajustes de tess",
-  "tess is already updating": "tess ya se está actualizando",
-  "tess never touches them.":
-    "tess nunca las toca.",
-  "tess updated to %@": "tess actualizado a %@",
+  "tesela %@ is out: update from the menu bar":
+    "Salió tesela %@: actualízalo desde la barra de menús",
+  "tesela %@ is up to date": "tesela %@ está al día",
+  "tesela Settings": "Ajustes de tesela",
+  "tesela is already updating": "tesela ya se está actualizando",
+  "tesela never touches them.":
+    "tesela nunca las toca.",
+  "tesela updated to %@": "tesela actualizado a %@",
   "the Mac can sleep": "tu Mac ya puede dormir",
   "title author": "título autor",
   "update available": "actualización disponible",
@@ -417,8 +417,8 @@ let spanish: [String: String] = [
   "volume %@%": "volumen %@%",
   "volume changed": "volumen cambiado",
   "volume did not change": "el volumen no cambió",
-  "with Homebrew, then tess restarts":
-    "con Homebrew, y tess se reinicia",
+  "with Homebrew, then tesela restarts":
+    "con Homebrew, y tesela se reinicia",
   "zen off": "zen desactivado",
   "↵ Choose     ⌘↵ Reveal in %@     ↑↓ Navigate     ⇥ Complete     Esc Close":
     "↵ Elegir     ⌘↵ Mostrar en %@     ↑↓ Navegar     ⇥ Completar     Esc Cerrar",

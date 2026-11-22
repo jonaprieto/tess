@@ -111,7 +111,8 @@ import Testing
     c.modes["resize"]?[KeySpec(key: "esc", mods: [])] == [
       .mode("back")
     ])
-  #expect(c.modes["tess"]?[KeySpec(key: "s", mods: [])] == [.retile])
+  #expect(
+    c.modes["tesela"]?[KeySpec(key: "s", mods: [])] == [.retile])
   #expect(
     !main.keys.contains(KeySpec(key: "backtick", mods: [.ctrl])))
 }
@@ -186,12 +187,12 @@ import Testing
   )
 }
 
-@Test func altTEntersAndLocksTessMode() throws {
+@Test func altTEntersAndLocksTeselaMode() throws {
   let c = Config.defaults
   let altT = KeySpec(key: "t", mods: [.alt])
-  #expect(c.modes["main"]?[altT] == [.mode("tess")])
-  let wm = try #require(c.modes["tess"])
-  #expect(wm[altT] == [.mode("tess")])
+  #expect(c.modes["main"]?[altT] == [.mode("tesela")])
+  let wm = try #require(c.modes["tesela"])
+  #expect(wm[altT] == [.mode("tesela")])
   #expect(wm[KeySpec(key: "esc", mods: [])] == [.mode("main")])
   #expect(wm[KeySpec(key: "h", mods: [])] == [.focus(.left)])
   #expect(wm[KeySpec(key: "l", mods: [.shift])] == [.move(.right)])
@@ -270,8 +271,8 @@ import Testing
       .history == nil)
 }
 
-@Test func tessModeIsOneShotByDefault() throws {
-  #expect(Config.defaults.oneShot == ["tess"])
+@Test func teselaModeIsOneShotByDefault() throws {
+  #expect(Config.defaults.oneShot == ["tesela"])
   #expect(
     try Config.load(Data(#"{"one_shot": []}"#.utf8)).oneShot == [])
   #expect(throws: ParseError.self) {
@@ -293,7 +294,7 @@ import Testing
     try Config.load(Data(#"{"terminal": "Ghostty"}"#.utf8)).terminal
       == "Ghostty")
   #expect(
-    Config.defaults.modes["tess"]?[KeySpec(key: "t", mods: [])] == [
+    Config.defaults.modes["tesela"]?[KeySpec(key: "t", mods: [])] == [
       .terminal
     ])
 }

@@ -1,7 +1,7 @@
 import AppKit
 import Layout
 import Testing
-@testable import tess
+@testable import tesela
 
 // Off every real screen, so no overlay of these tests shows up over
 // the windows in use.
@@ -128,7 +128,7 @@ private func tiler(_ ids: [WindowID], focused: WindowID? = nil)
   var fds: [Int32] = [0, 0]
   #expect(socketpair(AF_UNIX, SOCK_STREAM, 0, &fds) == 0)
   defer { close(fds[0]) }
-  let sent = String(repeating: "tess ", count: 20_000)
+  let sent = String(repeating: "tesela ", count: 20_000)
   let writer = fds[1]
   DispatchQueue.global().async {
     Socket.writeAll(writer, sent)
@@ -503,7 +503,7 @@ private func item(_ kind: Picker.Kind) -> Picker.Item {
 }
 
 @MainActor
-@Test func thePickerOffersTessCommandsOnceSomethingIsTyped() {
+@Test func thePickerOffersTeselaCommandsOnceSomethingIsTyped() {
   let t = tiler([1], focused: 1)
   let commands = t.pickerItems().filter {
     if case .command = $0.kind { return $0.quiet }
@@ -571,7 +571,7 @@ private func item(_ kind: Picker.Kind) -> Picker.Item {
   let t = tiler([1, 2, 3], focused: 1)
   t.world.monitors[0].lanes[1].accordion = true
   let path = FileManager.default.temporaryDirectory
-    .appendingPathComponent("tess-map-\(UUID()).png").path
+    .appendingPathComponent("tesela-map-\(UUID()).png").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   #expect(t.execute(.debugMap(path)) == path)
   let image = try #require(NSImage(contentsOfFile: path))

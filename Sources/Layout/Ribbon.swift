@@ -16,9 +16,9 @@ public struct Strip: Equatable, Sendable {
 
 /// A ribbon: a screen whose columns keep their width and run on past
 /// its edge, with the screen a window onto them. Windows out of view
-/// are not hidden, which would strand them if tess stopped: they wait
-/// on a strip of the screen, each still showing a part, so they can
-/// be seen and clicked.
+/// are not hidden, which would strand them if tesela stopped: they
+/// wait on a strip of the screen, each still showing a part, so they
+/// can be seen and clicked.
 extension World {
   /// macOS keeps a window's title bar on screen, 32 to 52 points of
   /// it depending on the app, so parked along the bottom each is a

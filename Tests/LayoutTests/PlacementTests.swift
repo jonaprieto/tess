@@ -256,7 +256,7 @@ func
     w.dropZone(1, at: middle, frames: f, front: [2, 3]) == .swap(2))
 }
 
-@Test func aRestartKeepsTessFullscreen() {
+@Test func aRestartKeepsTeselaFullscreen() {
   // 2 fills monitor A edge to edge, in front of 1 and 3.
   var w = world([], [], focused: nil)
   let a = w.monitors[0].frame
@@ -300,8 +300,9 @@ func
       "Blog", "vveiln ✨"
     ])
   #expect(
-    titleParts("main.swift — tess — Visual Studio Code", app: "Code")
-      == ["main.swift", "tess"])
+    titleParts(
+      "main.swift — tesela — Visual Studio Code", app: "Code")
+      == ["main.swift", "tesela"])
   #expect(titleParts("Slack", app: "Slack").isEmpty)
 }
 

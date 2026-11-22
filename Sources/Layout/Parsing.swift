@@ -2,7 +2,7 @@ import Foundation
 
 /// Text that comes back from other programs (arXiv, folio, rg, the
 /// browsers), turned into plain values; the app adds icons and
-/// actions. tess's own picker searches, which a verb names as its
+/// actions. tesela's own picker searches, which a verb names as its
 /// value: `"file": "search:files"`.
 public enum PickerSearch: String, CaseIterable, Sendable {
   /// File names (fd and Spotlight), text in files (ripgrep), books

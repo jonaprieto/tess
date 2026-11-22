@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Linked into the binary (Package.swift), so macOS can ask once before tesela talks to a browser,
+     and the Info.plist of tesela.app (make install). -->
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>tesela</string>
+    <key>CFBundleIconFile</key>
+    <string>tesela</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>CFBundleIdentifier</key>
+    <string>com.jonaprieto.tesela</string>
+    <key>CFBundleName</key>
+    <string>tesela</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>tesela lists and selects browser tabs in its picker.</string>
+</dict>
+</plist>

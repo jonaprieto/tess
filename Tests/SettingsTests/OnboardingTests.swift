@@ -1,7 +1,7 @@
 import AppKit
 import Layout
 import Testing
-@testable import tess
+@testable import tesela
 
 /// `performClick` runs AppKit's event loop, and what it leaves there
 /// can stop the main run loop of the test process: `exit(0)`, with
@@ -13,7 +13,7 @@ private func click(_ button: NSButton) {
 
 @Test func doctorFindsOnlyExecutableFilesInTheServicePath() throws {
   let root = FileManager.default.temporaryDirectory
-    .appendingPathComponent("tess-doctor-\(UUID())")
+    .appendingPathComponent("tesela-doctor-\(UUID())")
   try FileManager.default.createDirectory(
     at: root, withIntermediateDirectories: true)
   defer { try? FileManager.default.removeItem(at: root) }
@@ -36,7 +36,8 @@ private func click(_ button: NSButton) {
   _ = NSApplication.shared
   let config = try Config.load(
     Data(
-      #"{"modes":{"main":{"alt-t":null,"alt-g":"mode tess"}}}"#.utf8))
+      #"{"modes":{"main":{"alt-t":null,"alt-g":"mode tesela"}}}"#.utf8
+    ))
   let steps = Tutorial.steps(config)
   #expect(steps[3].body.contains("⌥G"))
   #expect(!steps[3].body.contains("⌥T"))

@@ -1,6 +1,6 @@
 import AppKit
 import Testing
-@testable import tess
+@testable import tesela
 
 @MainActor
 private func recallKey(
@@ -35,7 +35,7 @@ private func openRecallPicker(
 @MainActor
 @Test func pickerRecallPersistsDeduplicatesAndStaysBounded() throws {
   _ = NSApplication.shared
-  let suite = "tess-picker-tests-\(UUID())"
+  let suite = "tesela-picker-tests-\(UUID())"
   let defaults = try #require(UserDefaults(suiteName: suite))
   defer { defaults.removePersistentDomain(forName: suite) }
   defaults.set(
@@ -114,7 +114,7 @@ private func openRecallPicker(
 @Test func folderCompletionKeepsPriorityOverRecall() throws {
   _ = NSApplication.shared
   let directory = FileManager.default.temporaryDirectory
-    .appendingPathComponent("tess-recall-\(UUID())")
+    .appendingPathComponent("tesela-recall-\(UUID())")
   let folder = directory.appendingPathComponent("alpha")
   try FileManager.default.createDirectory(
     at: folder, withIntermediateDirectories: true)

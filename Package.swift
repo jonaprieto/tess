@@ -6,7 +6,7 @@ let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
   .path
 
 let package = Package(
-  name: "tess",
+  name: "tesela",
   platforms: [.macOS(.v27)],
   targets: [
     // Pure model and rules: no AppKit, everything here is unit
@@ -14,17 +14,18 @@ let package = Package(
     .target(name: "Layout"),
     // AppKit/AX glue.
     .executableTarget(
-      name: "tess", dependencies: ["Layout"], exclude: ["Info.plist"],
+      name: "tesela", dependencies: ["Layout"],
+      exclude: ["Info.plist"],
       // A bare binary has no bundle; its Info.plist goes in a section
       // macOS reads.
       linkerSettings: [
         .unsafeFlags([
           "-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker",
           "__info_plist",
-          "-Xlinker", "\(root)/Sources/tess/Info.plist"
+          "-Xlinker", "\(root)/Sources/tesela/Info.plist"
         ])
       ]),
     .testTarget(name: "LayoutTests", dependencies: ["Layout"]),
-    .testTarget(name: "SettingsTests", dependencies: ["tess"])
+    .testTarget(name: "SettingsTests", dependencies: ["tesela"])
   ]
 )

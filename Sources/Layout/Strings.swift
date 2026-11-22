@@ -1,11 +1,11 @@
 import Foundation
 
-/// The languages tess speaks.
+/// The languages tesela speaks.
 public enum Language: String, CaseIterable, Sendable {
   case en, es
 
-  /// The first of `preferred` (macOS's list, like `es-419`) that tess
-  /// speaks, else English.
+  /// The first of `preferred` (macOS's list, like `es-419`) that
+  /// tesela speaks, else English.
   public static func first(of preferred: [String]) -> Language {
     preferred.lazy.compactMap {
       Language(rawValue: String($0.prefix(2)))

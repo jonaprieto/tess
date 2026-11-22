@@ -1,7 +1,7 @@
 import AppKit
 import Layout
 import Testing
-@testable import tess
+@testable import tesela
 
 private let bundles = [
   "com.apple.Chess", "com.apple.Dictionary", "com.apple.FontBook",
@@ -29,7 +29,7 @@ private func near(_ a: CGSize, _ b: CGSize) -> Bool {
 
 /// A ribbon of real windows, through what no model can answer for:
 /// AX, the window server, what macOS clamps, how fast apps follow.
-/// `make e2e` runs it, opening the apps and having the running tess
+/// `make e2e` runs it, opening the apps and having the running tesela
 /// leave them alone. This Tiler knows only those apps and never asks
 /// macOS for focus, so nothing in use is moved and the keyboard stays
 /// where it is. No key or click is sent.
@@ -68,8 +68,8 @@ func aRibbonOfRealWindows() async throws {
   func arrived() -> Bool {
     let real = truth()
     // An app may hold a window to a size of its own (Dictionary's has
-    // a tallest): that is `refused`, a thing tess already lives with.
-    // Where it goes is still tess's to say.
+    // a tallest): that is `refused`, a thing tesela already lives
+    // with. Where it goes is still tesela's to say.
     return !tiler.gliding
       && tiler.targets.allSatisfy { id, target in
         real[id].map {
@@ -233,8 +233,8 @@ func aRibbonOfRealWindows() async throws {
   #expect(
     there && lanes()[1] == order[0], "a move swaps and stays in view")
 
-  // tess starting over finds every window by where it is, parked ones
-  // included.
+  // tesela starting over finds every window by where it is, parked
+  // ones included.
   let found = lanes().compactMap { id in
     truth()[id].map { (id: id, frame: $0) }
   }

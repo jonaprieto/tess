@@ -2,7 +2,7 @@ import AppKit
 import Carbon
 import Layout
 import Testing
-@testable import tess
+@testable import tesela
 
 @MainActor
 @Test func unavailableCommandSpaceDoesNotDisableOtherBindings() throws

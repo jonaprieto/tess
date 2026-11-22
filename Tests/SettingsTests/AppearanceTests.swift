@@ -1,7 +1,7 @@
 import Layout
 import SwiftUI
 import Testing
-@testable import tess
+@testable import tesela
 
 @MainActor
 @Test func appearanceEditsSaveAndRevertWithoutLosingOtherSettings()

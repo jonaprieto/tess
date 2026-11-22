@@ -82,7 +82,7 @@ extension Command {
         : m.map { L("Keep awake for \($0) min") } ?? L("Keep awake")
     case .speedtest: L("Speed test")
     case .ribbon: L("Ribbon")
-    case .update: L("Update tess")
+    case .update: L("Update tesela")
     case .moveToMonitor(let n): L("Move to screen \(n)")
     case .exec(let line):
       line.hasPrefix("open -a ")
@@ -114,14 +114,14 @@ extension Command {
     }
   }
 
-  /// A mode's name in the menu bar and on its sheet: tess's own in
+  /// A mode's name in the menu bar and on its sheet: tesela's own in
   /// words, one from the config as it is written there.
   public static func modeName(_ mode: String) -> String {
     switch mode {
     case "main": L("Main")
     case "resize": L("Resize")
     case "jump": L("Jump")
-    case "tess": "tess"
+    case "tesela": "tesela"
     default: mode.prefix(1).uppercased() + mode.dropFirst()
     }
   }

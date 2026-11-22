@@ -1,22 +1,22 @@
 import AppKit
 import Layout
 import Testing
-@testable import tess
+@testable import tesela
 
 @Test func onlyACopyInHomebrewsCellarCountsAsHomebrew() throws {
   #expect(
-    Tiler.homebrew("/opt/homebrew/Cellar/tess/0.11.0/bin/tess")
+    Tiler.homebrew("/opt/homebrew/Cellar/tesela/0.11.0/bin/tesela")
       == "/opt/homebrew")
-  #expect(Tiler.homebrew("/Users/someone/tess/build/tess") == nil)
+  #expect(Tiler.homebrew("/Users/someone/tesela/build/tesela") == nil)
   #expect(
-    Tiler.homebrew("/Applications/tess.app/Contents/MacOS/tess")
+    Tiler.homebrew("/Applications/tesela.app/Contents/MacOS/tesela")
       == nil)
   #expect(Tiler.homebrew(nil) == nil)
   // Started by launchd through `opt`, a link into the Cellar.
   let root = try fakeHomebrew(installs: "0.11.0")
   defer { try? FileManager.default.removeItem(at: root) }
   #expect(
-    Tiler.homebrew(root.path + "/opt/tess/bin/tess")?.hasSuffix(
+    Tiler.homebrew(root.path + "/opt/tesela/bin/tesela")?.hasSuffix(
       root.lastPathComponent) == true)
 }
 
@@ -76,7 +76,7 @@ import Testing
 }
 
 /// A prefix whose `brew` writes down how it was called and whose
-/// installed tess is `installs`.
+/// installed tesela is `installs`.
 private func fakeHomebrew(installs: String, brewFails: Bool = false)
   throws -> URL
 {
@@ -84,7 +84,7 @@ private func fakeHomebrew(installs: String, brewFails: Bool = false)
     .appendingPathComponent(UUID().uuidString)
     .resolvingSymlinksInPath()
   let cellar = root.appendingPathComponent(
-    "Cellar/tess/\(installs)/bin")
+    "Cellar/tesela/\(installs)/bin")
   let fm = FileManager.default
   try fm.createDirectory(
     at: cellar, withIntermediateDirectories: true)
@@ -95,17 +95,17 @@ private func fakeHomebrew(installs: String, brewFails: Bool = false)
     at: root.appendingPathComponent("opt"),
     withIntermediateDirectories: true)
   try fm.createSymbolicLink(
-    atPath: root.appendingPathComponent("opt/tess").path,
-    withDestinationPath: "../Cellar/tess/\(installs)")
+    atPath: root.appendingPathComponent("opt/tesela").path,
+    withDestinationPath: "../Cellar/tesela/\(installs)")
   let brew = root.appendingPathComponent("bin/brew"),
-    tess = cellar.appendingPathComponent("tess")
+    tesela = cellar.appendingPathComponent("tesela")
   try
     "#!/bin/sh\necho \"$* [$HOMEBREW_NO_AUTO_UPDATE]\" >> \"\(root.path)/calls\"\nexit \(brewFails ? 1 : 0)\n"
     .write(
       to: brew, atomically: true, encoding: .utf8)
-  try "#!/bin/sh\necho \"tess \(installs)\"\n".write(
-    to: tess, atomically: true, encoding: .utf8)
-  for file in [brew, tess] {
+  try "#!/bin/sh\necho \"tesela \(installs)\"\n".write(
+    to: tesela, atomically: true, encoding: .utf8)
+  for file in [brew, tesela] {
     try fm.setAttributes(
       [.posixPermissions: 0o755], ofItemAtPath: file.path)
   }
@@ -137,7 +137,7 @@ private func install(
 @Suite(.serialized) struct HomebrewInstall {
   @MainActor
   @Test
-  func homebrewUpdatesAndTessRestartsOnlyOnceTheNewVersionIsThere()
+  func homebrewUpdatesAndTeselaRestartsOnlyOnceTheNewVersionIsThere()
     async throws
   {
     UserDefaults.standard.removeObject(forKey: "updatedTo")
@@ -152,11 +152,12 @@ private func install(
       contentsOf: root.appendingPathComponent("calls"),
       encoding: .utf8)
     #expect(
-      calls == "update --quiet []\nupgrade jonaprieto/tap/tess [1]\n")
+      calls
+        == "update --quiet []\nupgrade jonaprieto/tap/tesela [1]\n")
   }
 
   @MainActor
-  @Test func aReleaseHomebrewDoesNotHaveYetLeavesTessRunning()
+  @Test func aReleaseHomebrewDoesNotHaveYetLeavesTeselaRunning()
     async throws
   {
     UserDefaults.standard.removeObject(forKey: "updatedTo")
@@ -198,6 +199,6 @@ private func install(
     #expect(restarted == 1)
     #expect(
       tiler.overlay.downloads.first?.status
-        == "Restart tess to finish")
+        == "Restart tesela to finish")
   }
 }

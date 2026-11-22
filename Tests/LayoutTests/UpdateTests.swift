@@ -4,7 +4,8 @@ import Testing
 
 @Test func aReleaseIsItsTagWithoutTheV() {
   #expect(
-    Parse.release(#"{"tag_name": "v0.12.0", "name": "tess 0.12.0"}"#)
+    Parse.release(
+      #"{"tag_name": "v0.12.0", "name": "tesela 0.12.0"}"#)
       == "0.12.0")
   #expect(Parse.release(#"{"tag_name": "0.12.0"}"#) == "0.12.0")
   // What GitHub says when it will not answer.

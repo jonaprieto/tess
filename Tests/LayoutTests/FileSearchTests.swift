@@ -9,7 +9,7 @@ private func fileSearch(
 ) throws -> [String] {
   let manager = FileManager.default
   let bin = manager.temporaryDirectory
-    .appendingPathComponent("tess-file-search-\(UUID())")
+    .appendingPathComponent("tesela-file-search-\(UUID())")
   try manager.createDirectory(
     at: bin, withIntermediateDirectories: true)
   defer { try? manager.removeItem(at: bin) }

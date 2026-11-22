@@ -81,9 +81,9 @@ import Testing
 }
 
 @Test func modesAreLeftOnlyWithEsc() {
-  // tess mode goes back to main; resize goes back to the mode it was
-  // entered from.
-  for (mode, back) in [("tess", "main"), ("resize", "back")] {
+  // tesela mode goes back to main; resize goes back to the mode it
+  // was entered from.
+  for (mode, back) in [("tesela", "main"), ("resize", "back")] {
     let m = Config.defaults.modes[mode]!
     #expect(
       m[KeySpec(key: "esc", mods: [])] == [.mode(back)], "\(mode) esc"
@@ -92,7 +92,7 @@ import Testing
       m.values.filter { $0 == [.mode(back)] }.count == 1, "\(mode)")
   }
   #expect(Config.defaults.modes["service"] == nil)
-  let wm = Config.defaults.modes["tess"]!
+  let wm = Config.defaults.modes["tesela"]!
   let altSpace = KeySpec(key: "space", mods: [.alt])
   let cmdSpace = KeySpec(key: "space", mods: [.cmd])
   // The picker has a primary shortcut and a fallback; letters still

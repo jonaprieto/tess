@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// What tess needs to know about one window, read on its app's
+/// What tesela needs to know about one window, read on its app's
 /// thread.
 public struct WinInfo: Equatable, Sendable {
   public var id: WindowID

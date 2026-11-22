@@ -206,7 +206,7 @@ private func frames(_ w: World) -> [WindowID: CGRect] {
   #expect(frames(w) == plain.frames(inner: inner, outer: outer))
 }
 
-@Test func tessFullscreenStillFillsTheScreen() {
+@Test func teselaFullscreenStillFillsTheScreen() {
   var w = ribbon([[1], [2], [3]], focused: 3)
   w.reveal(inner: inner, outer: outer)
   w.toggleFullscreen()
@@ -335,7 +335,7 @@ private let south = (
   #expect(w.monitors[1].windows == [3, 4])
 }
 
-@Test func nothingIsLostWhenTessStartsOverOnAParkedRibbon() {
+@Test func nothingIsLostWhenTeselaStartsOverOnAParkedRibbon() {
   var w = ribbon([[1], [2], [3], [4]], focused: 2)
   w.reveal(inner: inner, outer: outer)
   let seen = frames(w).map { (id: $0.key, frame: $0.value) }.sorted {
@@ -640,7 +640,7 @@ private let south = (
   #expect(try Command.parse("ribbon") == [.ribbon])
   #expect(Command.ribbon.description == "ribbon")
   #expect(
-    Config.defaults.modes["tess"]?[KeySpec(key: "g", mods: [])] == [
+    Config.defaults.modes["tesela"]?[KeySpec(key: "g", mods: [])] == [
       .ribbon
     ])
 }

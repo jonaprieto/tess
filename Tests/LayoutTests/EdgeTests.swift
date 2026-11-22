@@ -612,7 +612,7 @@ private func dropWorld() -> (World, [WindowID: CGRect]) {
   #expect(label(.caffeine(30)) == L("Keep awake for 30 min"))
   #expect(label(.mode("main")) == L("Back"))
   #expect(label(.mode("back")) == L("Back"))
-  #expect(label(.mode("tess")) != L("Back"))
+  #expect(label(.mode("tesela")) != L("Back"))
 }
 
 @Test func turningJevOnIsSaved() throws {

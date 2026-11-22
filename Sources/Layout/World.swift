@@ -91,7 +91,7 @@ public struct World: Equatable, Sendable {
   public var monitors: [Monitor] = []
   /// Tracked but never positioned.
   public var floating: Set<WindowID> = []
-  /// A screen tess has not met starts as a ribbon.
+  /// A screen tesela has not met starts as a ribbon.
   public var ribbons = false
   public var focused: WindowID? {
     didSet {
@@ -100,7 +100,7 @@ public struct World: Equatable, Sendable {
       mru.insert(f, at: 0)
       guard let p = locate(f) else { return }
       activeMonitor = p.m
-      // Another window taking focus ends tess fullscreen on its
+      // Another window taking focus ends tesela fullscreen on its
       // monitor.
       if let fs = monitors[p.m].fullscreen, fs != f {
         monitors[p.m].fullscreen = nil

@@ -58,7 +58,7 @@ extension World {
   /// lanes' axis overlaps its first window's by half or more, and
   /// weights are the current sizes. A window off every screen gets a
   /// lane at the end of the active monitor. A window covering its
-  /// monitor edge to edge, which only tess fullscreen does, is
+  /// monitor edge to edge, which only tesela fullscreen does, is
   /// fullscreen again, its lane at the right end (so a restart keeps
   /// it). Accordion is not recovered. A ribbon keeps its order, and
   /// the gaps give it back each lane's length; after a restart its

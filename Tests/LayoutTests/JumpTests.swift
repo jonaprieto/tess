@@ -6,8 +6,8 @@ import Testing
   #expect(try Command.parse("jump") == [.jump])
   #expect(try Command.parse("focus-window 42") == [.focusWindow(42)])
   #expect(
-    try Command.parse("swap-with 7; mode tess") == [
-      .swapWith(7), .mode("tess")
+    try Command.parse("swap-with 7; mode tesela") == [
+      .swapWith(7), .mode("tesela")
     ])
   #expect(throws: ParseError.self) {
     try Command.parse("focus-window x")
@@ -35,7 +35,7 @@ import Testing
       Data(#"{"overlay": {"window_labels": "sometimes"}}"#.utf8))
   }
   #expect(
-    Config.defaults.modes["tess"]?[KeySpec(key: "g", mods: [])] == [
+    Config.defaults.modes["tesela"]?[KeySpec(key: "g", mods: [])] == [
       .ribbon
     ])
 }
@@ -84,18 +84,18 @@ import Testing
 }
 
 @Test func screenKeysFollowTheScreensThereAre() {
-  let tess = Config.defaults.modes["tess"]!
-  let two = forScreens(tess, 2)
+  let tesela = Config.defaults.modes["tesela"]!
+  let two = forScreens(tesela, 2)
   #expect(two[KeySpec(key: "2", mods: [])] == [.focusMonitor(2)])
   #expect(
     two[KeySpec(key: "3", mods: [])] == nil
       && two[KeySpec(key: "3", mods: [.shift])] == nil)
-  #expect(two.count == tess.count - 2)
-  #expect(forScreens(tess, 3) == tess)
+  #expect(two.count == tesela.count - 2)
+  #expect(forScreens(tesela, 3) == tesela)
 }
 
-@Test func lettersAreTheOnesTessModeLeavesFree() throws {
-  let pool = labelLetters(free: Config.defaults.modes["tess"]!)
+@Test func lettersAreTheOnesTeselaModeLeavesFree() throws {
+  let pool = labelLetters(free: Config.defaults.modes["tesela"]!)
   #expect(pool == "dqeyiocm")
   // No letter the picker's map uses for itself either (g jumps, f
   // floats).

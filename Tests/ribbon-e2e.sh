@@ -1,11 +1,11 @@
 #!/bin/bash
 # Runs aRibbonOfRealWindows, which moves real windows: only those of four apps it opens here and
-# quits after, and it stops if any of them is already open. Meanwhile the running tess ignores
+# quits after, and it stops if any of them is already open. Meanwhile the running tesela ignores
 # them, through its config, which comes back byte for byte however this ends.
 set -u
 cd "$(dirname "$0")/.."
 
-config="$HOME/.config/tess/config.json"
+config="$HOME/.config/tesela/config.json"
 backup="$config.e2e"
 names=("Chess" "Dictionary" "Font Book" "Weather")
 bundles=(com.apple.Chess com.apple.Dictionary com.apple.FontBook com.apple.weather)
@@ -22,7 +22,7 @@ finish() {
   sleep 1.5
   for name in "${names[@]}"; do pkill -x "$name"; done
   mv -f "$backup" "$config"
-  build/tess reload >/dev/null
+  build/tesela reload >/dev/null
 }
 cp -p "$config" "$backup"
 trap finish EXIT
@@ -35,8 +35,8 @@ config["ignore"] = config.get("ignore", []) + bundles
 json.dump(config, open(path, "w"), indent=2)
 EOF
 [ $? -eq 0 ] || exit 1
-# Without this the running tess would tile the test's windows in among those in use.
-build/tess reload >/dev/null || { echo "tess did not reload"; exit 1; }
+# Without this the running tesela would tile the test's windows in among those in use.
+build/tesela reload >/dev/null || { echo "tesela did not reload"; exit 1; }
 sleep 0.6
 for name in "${names[@]}"; do open -g -a "$name"; done
 sleep 3

@@ -88,7 +88,7 @@ private func phrases() throws -> Set<String> {
   #expect(percent.text(in: .en) == "Volume 2%")
 }
 
-@Test func theLanguageIsTheFirstOfMacOSsThatTessSpeaks() throws {
+@Test func theLanguageIsTheFirstOfMacOSsThatTeselaSpeaks() throws {
   #expect(Language.first(of: ["en-NO", "es-419"]) == .en)
   #expect(Language.first(of: ["nb-NO", "es-419", "en"]) == .es)
   #expect(Language.first(of: ["nb-NO"]) == .en)

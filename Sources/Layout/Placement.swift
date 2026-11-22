@@ -173,12 +173,12 @@ extension World {
   /// Where tiled window `id` dragged to `point` would land (`frames`:
   /// where the layout puts each window; `front`: windows front to
   /// back, so of windows sharing a place, as in an accordion or under
-  /// tess fullscreen, the one in front counts); nil off every screen.
-  /// Over another window, or in the gap beside it: near an edge along
-  /// the lanes, a lane of its own on that side; near an edge across
-  /// them, that window's lane on that side; the middle, they swap.
-  /// Over its own place, it stays. Over nothing on another screen,
-  /// the right end of that screen.
+  /// tesela fullscreen, the one in front counts); nil off every
+  /// screen. Over another window, or in the gap beside it: near an
+  /// edge along the lanes, a lane of its own on that side; near an
+  /// edge across them, that window's lane on that side; the middle,
+  /// they swap. Over its own place, it stays. Over nothing on another
+  /// screen, the right end of that screen.
   public func dropZone(
     _ id: WindowID, at point: CGPoint, frames: [WindowID: CGRect],
     front: [WindowID] = []

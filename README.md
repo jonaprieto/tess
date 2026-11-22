@@ -1,17 +1,17 @@
 <p align="center">
-  <img src="assets/hero.svg" alt="tess: keyboard-first tiling for macOS that never hides a window" width="100%">
+  <img src="assets/hero.svg" alt="tesela: keyboard-first tiling for macOS that never hides a window" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/jonaprieto/tess/actions/workflows/ci.yml"><img src="https://github.com/jonaprieto/tess/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
+  <a href="https://github.com/jonaprieto/tesela/actions/workflows/ci.yml"><img src="https://github.com/jonaprieto/tesela/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
 </p>
 
-tess keeps your Mac's windows in order. Every window gets its own place on the screen, and
+tesela keeps your Mac's windows in order. Every window gets its own place on the screen, and
 any of them is one keypress away. Open an app and it finds a spot, close one and the others
 fill the gap. There are no virtual workspaces, so a crash, a hang or an unplugged screen
 cannot strand a window off-screen.
 
-## Why tess
+## Why tesela
 
 - Windows arrange themselves. A new one takes a place, its neighbors make room, and an app
   that needs a minimum size gets it.
@@ -37,12 +37,12 @@ You need macOS 27 on Apple Silicon.
 
 ```sh
 brew tap jonaprieto/tap
-brew trust --formula jonaprieto/tap/tess jonaprieto/tap/folio
-brew install jonaprieto/tap/tess
-brew services start tess   # now and at login
+brew trust --formula jonaprieto/tap/tesela jonaprieto/tap/folio
+brew install jonaprieto/tap/tesela
+brew services start tesela   # now and at login
 ```
 
-macOS asks once for Accessibility. Then take the short walkthrough with `tess tutorial`,
+macOS asks once for Accessibility. Then take the short walkthrough with `tesela tutorial`,
 which you can repeat any time from the menu bar. It rearranges nothing.
 
 These keys are enough for your first day:
@@ -68,17 +68,17 @@ there is nothing to memorize.
 <details>
 <summary>Open it from Finder, build from source, or uninstall</summary>
 
-To open tess from Finder or Spotlight, copy the app. It opens Settings, or starts tess again
+To open tesela from Finder or Spotlight, copy the app. It opens Settings, or starts tesela again
 after Quit.
 
 ```sh
-cp -R "$(brew --prefix tess)/tess.app" /Applications/
+cp -R "$(brew --prefix tesela)/tesela.app" /Applications/
 ```
 
 From source:
 
 ```sh
-make install   # build, sign, start at login and after a crash; links ~/.local/bin/tess, adds tess.app
+make install   # build, sign, start at login and after a crash; links ~/.local/bin/tesela, adds tesela.app
 make test
 make hooks     # before each commit: formatted, and no compiler warnings (needs pre-commit)
 make format    # what the first of those checks
@@ -87,14 +87,14 @@ make format    # what the first of those checks
 `make install` also installs [Folio](https://github.com/jonaprieto/folio) through Homebrew if it
 is missing.
 
-To remove it: `brew services stop tess && brew uninstall tess`, or `make uninstall`.
+To remove it: `brew services stop tesela && brew uninstall tesela`, or `make uninstall`.
 
 </details>
 
 <details>
-<summary>Something not working? Run tess doctor</summary>
+<summary>Something not working? Run tesela doctor</summary>
 
-`tess doctor`, or Doctor… in the menu bar, checks macOS, Accessibility, your configuration,
+`tesela doctor`, or Doctor… in the menu bar, checks macOS, Accessibility, your configuration,
 the terminal app, and every binary each feature uses in the service's PATH, with how to
 install what is missing. It changes no settings, and missing required checks return exit
 code 1. Rerun it after granting Accessibility.
@@ -109,7 +109,7 @@ inside files and better file ranking.
 
 <img src="assets/jump.svg" alt="Jump mode: a letter on every window, a number on every screen" width="100%">
 
-`⌥T` is tess mode. Every window and tab in sight wears a letter, every screen its number, and
+`⌥T` is tesela mode. Every window and tab in sight wears a letter, every screen its number, and
 the letter takes you there. `shift` and a letter swaps that window with yours, a digit goes
 to that screen, and `shift` and a digit sends your window there. It lasts one command; press
 `⌥T` twice to keep it on until `esc`, with every action on a plain key: `h`, `shift-h`, `f`
@@ -144,7 +144,7 @@ The first word can also be a verb:
 - `brew install fzf`: run it in your terminal.
 
 It also computes `2 * (3 + 4)`, lists your Shortcuts, offers Sleep, Lock Screen, Log Out,
-Restart and Shut Down, and runs any tess command on the window you had focused. It remembers
+Restart and Shut Down, and runs any tesela command on the window you had focused. It remembers
 your last 100 queries on this Mac; Tab brings them back.
 
 <details>
@@ -170,7 +170,7 @@ browser history, with `TYPESAFE_API_KEY` from the environment or the login shell
 default.
 
 Verbs are config, merged key by key. A value is an app (`cd`), a link with `%s` (`chat`), one
-of tess's searches (`search:files`, `search:text`, `search:books`, `search:papers`,
+of tesela's searches (`search:files`, `search:text`, `search:books`, `search:papers`,
 `search:history`), `keys:App:shortcut` (`slack`), which brings the app forward, presses the
 shortcut and types the text, or `run:` and a command with `%s` (`brew`), run in the `terminal`
 app.
@@ -198,7 +198,7 @@ along it, what is out of view, and that window lit.
 
 <img src="assets/zen.svg" alt="Zen: the focused window fills its screen and the others go dark, with a pomodoro timer" width="100%">
 
-Zen (`⌥⇧Z`, `z` in tess mode, `tess zen`, or the menu) is a pomodoro that means it. For 25 minutes
+Zen (`⌥⇧Z`, `z` in tesela mode, `tesela zen`, or the menu) is a pomodoro that means it. For 25 minutes
 the focused window fills its screen and the others go dark, with a countdown in the menu bar.
 Then comes a 5 minute break: every screen goes black with the time left, and no key or click
 gets through until it is over. `break` starts one now, and the menu counts the breaks you
@@ -224,7 +224,7 @@ bar until you turn it off, and the picker reaches volume, Wi-Fi and a speed test
 <details>
 <summary>All default keys</summary>
 
-`alt` is ⌥ Option. `tess default-config` prints every binding, and keys for screens that are
+`alt` is ⌥ Option. `tesela default-config` prints every binding, and keys for screens that are
 not attached stay with your apps.
 
 Focus and move:
@@ -240,7 +240,7 @@ Focus and move:
 
 Layout:
 
-- `alt-enter` fullscreen within tess, `alt-slash` columns or rows, `alt-shift-slash` accordion.
+- `alt-enter` fullscreen within tesela, `alt-slash` columns or rows, `alt-shift-slash` accordion.
 - `alt-shift-minus/equal` (or `cmd-shift-minus/equal`) smaller or bigger: wider in columns and
   taller in rows, or the other way for windows stacked in the only column.
 - `alt-shift-0` balance, `alt-shift-space` float, `alt-r` resize mode (`h/l` width, `j/k`
@@ -248,12 +248,12 @@ Layout:
 
 Everything else:
 
-- `alt-t` tess mode, `alt-space` and `cmd-space` the picker, `alt-f` click mode.
+- `alt-t` tesela mode, `alt-space` and `cmd-space` the picker, `alt-f` click mode.
 - `alt-shift-a` show all apps, `alt-shift-c` close the window, `alt-shift-r` reload the config.
 - `alt-shift-z` Zen, `alt-shift-w` keep the Mac awake or let it sleep.
 - `cmd-h` and `cmd-alt-h` do nothing, so no window gets hidden by accident.
 
-In tess mode, on top of the same actions without a modifier: `t` a terminal window, `x` close
+In tesela mode, on top of the same actions without a modifier: `t` a terminal window, `x` close
 the window and pick what fills its place, `w` bring back lost windows, `s` re-tile, `r` resize
 mode, `b` balance, `f` fullscreen, `a` accordion, `v` columns or rows, `space` float, `u` and
 `shift-u` undo and redo, `z` Zen, `g` ribbon.
@@ -261,8 +261,8 @@ mode, `b` balance, `f` fullscreen, `a` accordion, `v` columns or rows, `space` f
 A keyboard with programmable keys can also send Hyper (⌃⌥⇧⌘) and bind it. This is optional:
 
 ```json
-{"modes": {"main": {"cmd-alt-ctrl-shift-t": "mode tess", "cmd-alt-ctrl-shift-g": "pick", "cmd-alt-ctrl-shift-r": "jump"},
-           "tess": {"cmd-alt-ctrl-shift-t": "mode tess", "cmd-alt-ctrl-shift-g": "pick"}}}
+{"modes": {"main": {"cmd-alt-ctrl-shift-t": "mode tesela", "cmd-alt-ctrl-shift-g": "pick", "cmd-alt-ctrl-shift-r": "jump"},
+           "tesela": {"cmd-alt-ctrl-shift-t": "mode tesela", "cmd-alt-ctrl-shift-g": "pick"}}}
 ```
 
 </details>
@@ -272,14 +272,14 @@ A keyboard with programmable keys can also send Hyper (⌃⌥⇧⌘) and bind it
 
 Each screen is a row of columns, each column a stack or an accordion.
 
-Fullscreen within tess fills the screen edge to edge in front of its other windows until
+Fullscreen within tesela fills the screen edge to edge in front of its other windows until
 `alt-enter` again, or another window there takes focus or opens, and it survives a restart. A
 floating window joins the tiling to go fullscreen, and moving or resizing one says it floats.
 macOS fullscreen (the green button, or a video's or call's own fullscreen) becomes fullscreen
-within tess, so the window never leaves for a Space of its own.
+within tesela, so the window never leaves for a Space of its own.
 
-Jump mode (`tess jump`, or a key bound to `jump`) is tess mode's letters without its other
-keys. What is hidden behind another window gets no letter. Letters are the ones tess mode
+Jump mode (`tesela jump`, or a key bound to `jump`) is tesela mode's letters without its other
+keys. What is hidden behind another window gets no letter. Letters are the ones tesela mode
 leaves free (`d q e y i o c m` by default), windows first, and a window keeps its letter
 while it lives.
 
@@ -302,7 +302,7 @@ column keeps its width and the screen scrolls along them, the way a paper strip 
 window. Columns out of view wait along the bottom of the screen with their title bars showing.
 Go to one with the keyboard, its letter, `⌘Tab` or a click, and the ribbon slides to it.
 
-`g` in tess mode, `tess ribbon` or Ribbon in the menu turns it on or off for the screen in use,
+`g` in tesela mode, `tesela ribbon` or Ribbon in the menu turns it on or off for the screen in use,
 each screen keeping its own. `"ribbon": true` starts every screen that way. Off again, the
 columns share the screen as before.
 
@@ -319,11 +319,11 @@ nothing lands on that screen.
 
 The strip keeps 52 points of the screen even when nothing waits on it, so windows are not
 resized each time one comes or goes. macOS keeps a window's title bar on screen, which is why
-that is its depth, and why windows waiting there are never lost: quit tess and they are still
+that is its depth, and why windows waiting there are never lost: quit tesela and they are still
 there to pick up. With a screen below, the strip moves to a free side, 20 points wide.
 
 Windows on the strip overlap once there are more than two, and macOS decides which is in front,
-but each keeps its letter in tess mode. They move without being resized, which spares apps from
+but each keeps its letter in tesela mode. They move without being resized, which spares apps from
 laying out again. With Reduce Motion on in macOS the ribbon goes straight there instead of
 sliding.
 
@@ -334,19 +334,19 @@ columns in view come first and those on the strip follow them.
 
 ## Stay up to date
 
-Once a day tess asks GitHub for its latest version. When there is a newer one you get a toast
-and a blue dot in the menu bar, and Update in the menu installs it. `tess update` does the same
-at any time. With Homebrew that is one click: `brew upgrade` runs and tess restarts on the new
+Once a day tesela asks GitHub for its latest version. When there is a newer one you get a toast
+and a blue dot in the menu bar, and Update in the menu installs it. `tesela update` does the same
+at any time. With Homebrew that is one click: `brew upgrade` runs and tesela restarts on the new
 version, which also ends Keep Awake and Zen. A build from source opens the release instead,
 since `git pull && make install` is yours to run.
 
-What changed in each version is in the [releases](https://github.com/jonaprieto/tess/releases).
+What changed in each version is in the [releases](https://github.com/jonaprieto/tesela/releases).
 
 ## Make it yours
 
-Settings in the menu bar, or `tess settings`, edits gaps, colors, labels, language, picker
+Settings in the menu bar, or `tesela settings`, edits gaps, colors, labels, language, picker
 verbs, app lists and keys. It saves only what differs from the defaults to
-`~/.config/tess/config.json`, so a config holds just what you change:
+`~/.config/tesela/config.json`, so a config holds just what you change:
 
 ```json
 {"gaps": {"inner": 6}, "terminal": "Ghostty", "language": "es",
@@ -359,9 +359,9 @@ verbs, app lists and keys. It saves only what differs from the defaults to
 The config layers on top of the built-in one: lists replace, bindings and verbs merge per key,
 and `null` removes a default.
 
-- `float` lists apps that never tile, `tile` apps that always do, and `ignore` apps tess
+- `float` lists apps that never tile, `tile` apps that always do, and `ignore` apps tesela
   leaves alone.
-- `terminal` is the app `t` in tess mode opens. `"one_shot": []` keeps tess mode on until esc.
+- `terminal` is the app `t` in tesela mode opens. `"one_shot": []` keeps tesela mode on until esc.
 - `file_manager` is the app the picker reveals files in (cmd-enter) and opens folders with:
   `"Finder"` by default, or any app that takes a path, like `"Strata"`.
 - `history` lists the browsers whose bookmarks and history the picker reads, first one first
@@ -370,9 +370,9 @@ and `null` removes a default.
 - `"empty_screens": false` stops new windows going to an empty screen, and Settings and a
   mode's keys to the screen with the fewest windows.
 - `"ribbon": true` starts every screen as a ribbon.
-- `"update_check": false` stops the daily question to GitHub. `tess update` still works.
-- `"language": "es"` or `"en"`. Left out, tess follows macOS: the first of its languages it
-  speaks, else English. Commands, config keys, `tess --help`, `tess tree` and the logs stay in
+- `"update_check": false` stops the daily question to GitHub. `tesela update` still works.
+- `"language": "es"` or `"en"`. Left out, tesela follows macOS: the first of its languages it
+  speaks, else English. Commands, config keys, `tesela --help`, `tesela tree` and the logs stay in
   English.
 - `"jev": true` turns on plain-language search in the picker.
 
@@ -394,26 +394,26 @@ Under `overlay`:
 <details>
 <summary>Get macOS behavior back</summary>
 
-tess takes over a few things macOS does. In `~/.config/tess/config.json`, `null` gives a key
-back; run `tess reload` after editing.
+tesela takes over a few things macOS does. In `~/.config/tesela/config.json`, `null` gives a key
+back; run `tesela reload` after editing.
 
-Hide apps with `⌘H` and `⌘⌥H`. tess turns these off so no window leaves the layout by accident:
+Hide apps with `⌘H` and `⌘⌥H`. tesela turns these off so no window leaves the layout by accident:
 
 ```json
 {"modes": {"main": {"cmd-h": null, "cmd-alt-h": null}}}
 ```
 
-tess has no key to hide a single window. `⌘M` minimizes it as usual, `⌥⇧Space` floats it and
+tesela has no key to hide a single window. `⌘M` minimizes it as usual, `⌥⇧Space` floats it and
 `⌥⇧C` closes it.
 
 Spotlight on `⌘Space`. Remove the key in every mode, then turn its shortcut back on in System
 Settings. The picker stays on `⌥Space`:
 
 ```json
-{"modes": {"main": {"cmd-space": null}, "tess": {"cmd-space": null}, "resize": {"cmd-space": null}}}
+{"modes": {"main": {"cmd-space": null}, "tesela": {"cmd-space": null}, "resize": {"cmd-space": null}}}
 ```
 
-Type with `⌥`. `⌥N` starts an ñ on many layouts, and tess uses it for the next window. The same
+Type with `⌥`. `⌥N` starts an ñ on many layouts, and tesela uses it for the next window. The same
 works for any key an app or your typing needs, such as `alt-tab`:
 
 ```json
@@ -428,13 +428,13 @@ Zoom in apps with `⌘+`, which is `⌘⇧=`. Resizing stays on `⌥⇧=` and `�
 
 Let an app be. `float` keeps its windows out of the tiling, and `ignore` hands the app back to
 macOS entirely, its own fullscreen included. Both lists replace the defaults, so keep what you
-still want; `tess default-config` prints them:
+still want; `tesela default-config` prints them:
 
 ```json
 {"ignore": ["com.example.app"]}
 ```
 
-Everything for a while. Pause Tiling in the menu, or `tess pause`, stops tiling and releases
+Everything for a while. Pause Tiling in the menu, or `tesela pause`, stops tiling and releases
 every key, the only way to get macOS's own `⌘Tab` back. Resume the same way.
 
 </details>
@@ -442,25 +442,25 @@ every key, the only way to get macOS's own `⌘Tab` back. Resume the same way.
 <details>
 <summary>Command line</summary>
 
-`tess <command>` runs any command a key can, for example `tess focus left` or
-`tess move-to-screen 2`, and typed in the picker they work too. Also:
+`tesela <command>` runs any command a key can, for example `tesela focus left` or
+`tesela move-to-screen 2`, and typed in the picker they work too. Also:
 
-- `tess tree`: screens, columns and windows, and what is not tiled.
-- `tess state`: the model and the machine as JSON.
-- `tess halves`, `columns`, `rows`, `grid`: arrange this screen.
-- `tess rescue`: bring back windows that are mostly off-screen.
-- `tess pause`: stop tiling until run again (also in the menu).
-- `tess undo`, `tess redo`: the last layout change.
-- `tess volume 30` (or `+10`, `-10`, `mute`, `unmute`).
-- `tess wifi` (`on`, `off`, or the other way round).
-- `tess caffeine`: keep the Mac awake until run again, lid closed included (low battery and heat still sleep it). `caffeine 60` for an hour, `caffeine off`.
-- `tess speedtest`: download and upload speed and latency, with macOS's own `networkQuality`,
+- `tesela tree`: screens, columns and windows, and what is not tiled.
+- `tesela state`: the model and the machine as JSON.
+- `tesela halves`, `columns`, `rows`, `grid`: arrange this screen.
+- `tesela rescue`: bring back windows that are mostly off-screen.
+- `tesela pause`: stop tiling until run again (also in the menu).
+- `tesela undo`, `tesela redo`: the last layout change.
+- `tesela volume 30` (or `+10`, `-10`, `mute`, `unmute`).
+- `tesela wifi` (`on`, `off`, or the other way round).
+- `tesela caffeine`: keep the Mac awake until run again, lid closed included (low battery and heat still sleep it). `caffeine 60` for an hour, `caffeine off`.
+- `tesela speedtest`: download and upload speed and latency, with macOS's own `networkQuality`,
   in about 20 seconds.
-- `tess zen`: Zen on or off. `tess break`: Zen's break now.
-- `tess ribbon`: the screen in use becomes a ribbon, or stops being one.
-- `tess update`: install the latest version.
-- `tess doctor`, `tess tutorial`, `tess settings`.
-- `tess reload`, `tess default-config`, `tess --version`.
+- `tesela zen`: Zen on or off. `tesela break`: Zen's break now.
+- `tesela ribbon`: the screen in use becomes a ribbon, or stops being one.
+- `tesela update`: install the latest version.
+- `tesela doctor`, `tesela tutorial`, `tesela settings`.
+- `tesela reload`, `tesela default-config`, `tesela --version`.
 
 </details>
 
@@ -469,18 +469,18 @@ every key, the only way to get macOS's own `⌘Tab` back. Resume the same way.
 
 Accessibility is asked at first start. Automation for Brave and Safari is asked the first time
 the picker reads tabs. Browser history also needs Full Disk Access (System Settings, Privacy &
-Security) for the tess binary: `$(brew --prefix)/opt/tess/bin/tess` from Homebrew, or
-`~/tess/build/tess` from source. Without it the picker still lists tabs and Brave bookmarks.
+Security) for the tesela binary: `$(brew --prefix)/opt/tesela/bin/tesela` from Homebrew, or
+`~/tesela/build/tesela` from source. Without it the picker still lists tabs and Brave bookmarks.
 Log Out, Restart and Shut Down may ask once for Automation of loginwindow.
 
 Logs stay on this Mac, and picker queries are not recorded. Asking GitHub for the latest version
 sends nothing but the request (`"update_check": false` turns it off).
 
-- `~/Library/Logs/tess/events.jsonl`: one JSON object per line for everything that changes:
+- `~/Library/Logs/tesela/events.jsonl`: one JSON object per line for everything that changes:
   apps and windows opening and closing, focus, every command and where it came from, the layout
   after it, screens, Spaces, modes, picks and config reloads. A snapshot of the model and the
   machine is written at start, on screen changes and every ten minutes. Rotated at 20 MB.
-- `~/Library/Logs/tess.log`: short human-readable notes.
+- `~/Library/Logs/tesela.log`: short human-readable notes.
 
 </details>
 
@@ -488,8 +488,8 @@ sends nothing but the request (`"update_check": false` turns it off).
 <summary>Good to know</summary>
 
 - macOS Spaces other than native fullscreen are not modeled.
-- macOS shows a new window where its app puts it before tess can move it, for a blink.
-- An app's minimum size is learned once per run of tess, so that first placement moves twice.
+- macOS shows a new window where its app puts it before tesela can move it, for a blink.
+- An app's minimum size is learned once per run of tesela, so that first placement moves twice.
 - Windows can overlap when the minimum sizes on a screen do not all fit.
 
 </details>

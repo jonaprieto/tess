@@ -1,6 +1,6 @@
 import AppKit
 import Testing
-@testable import tess
+@testable import tesela
 
 @MainActor
 @Test func pickerConsumesHandledKeysAndPassesTypingThrough() throws {

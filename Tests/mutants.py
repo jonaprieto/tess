@@ -2,7 +2,7 @@
 """Mutates Sources/Layout on a copy of the repo and reports what no test notices.
 
 The copy has Layout and its tests only, so each mutant builds in seconds;
-Sources/tess goes along because a test reads it. Takes a sample size, or
+Sources/tesela goes along because a test reads it. Takes a sample size, or
 runs every mutant. Mutants that crash the tests leave crash reports behind.
 """
 
@@ -48,7 +48,7 @@ def test():
 
 
 root = os.getcwd()
-work = tempfile.mkdtemp(prefix="tess-mutants-")
+work = tempfile.mkdtemp(prefix="tesela-mutants-")
 shutil.copytree(f"{root}/Sources", f"{work}/Sources")
 shutil.copytree(f"{root}/Tests/LayoutTests", f"{work}/Tests/LayoutTests")
 open(f"{work}/Package.swift", "w").write(PACKAGE)

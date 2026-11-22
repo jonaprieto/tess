@@ -43,9 +43,10 @@ import Testing
 
 @Test func rgLinesBecomeMatches() {
   #expect(
-    Parse.rg("./tess/Sources/x.swift:12:   let a: Int = 1")
+    Parse.rg("./tesela/Sources/x.swift:12:   let a: Int = 1")
       == Parse.Match(
-        path: "tess/Sources/x.swift", line: 12, text: "let a: Int = 1"
+        path: "tesela/Sources/x.swift", line: 12,
+        text: "let a: Int = 1"
       ))
   #expect(Parse.rg("garbage") == nil)
 }

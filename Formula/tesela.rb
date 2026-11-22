@@ -1,8 +1,8 @@
 class Tesela < Formula
   desc "Keyboard-first tiling window manager for macOS that never hides a window"
   homepage "https://github.com/jonaprieto/tesela"
-  url "https://github.com/jonaprieto/tesela/releases/download/v0.15.0/tesela-0.15.0-macos-arm64.tar.gz"
-  sha256 "ceb9006ffc9f1f29047a2325efe190d50d2404460a698f39960431c9b62cf8f2"
+  url "https://github.com/jonaprieto/tesela/releases/download/v0.16.0/tesela-0.16.0-macos-arm64.tar.gz"
+  sha256 "1731b14cc08856599e0e2a03f144bfa03b629a47fcb4fad99b7f32d68d8fed03"
   license "MIT"
 
   depends_on arch: :arm64

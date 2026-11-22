@@ -35,8 +35,9 @@ private func openRecallPicker(
 @MainActor
 @Test func pickerRecallPersistsDeduplicatesAndStaysBounded() throws {
   _ = NSApplication.shared
-  let suite = "tesela-picker-tests-\(UUID())"
+  let suite = "tesela-picker-tests"
   let defaults = try #require(UserDefaults(suiteName: suite))
+  defaults.removePersistentDomain(forName: suite)
   defer { defaults.removePersistentDomain(forName: suite) }
   defaults.set(
     (0..<100).map { "book query \($0)" },

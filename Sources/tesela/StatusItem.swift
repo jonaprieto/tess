@@ -294,10 +294,6 @@ final class StatusItem: NSObject, NSMenuDelegate {
         L("Settings…"), "gearshape", #selector(openSettings),
         key: ",", mods: [.command]))
     menu.addItem(
-      item(
-        L("Tutorial…"), "questionmark.circle", #selector(openTutorial)
-      ))
-    menu.addItem(
       item(L("Doctor…"), "stethoscope", #selector(openDoctor)))
     menu.addItem(.separator())
     menu.addItem(
@@ -541,9 +537,6 @@ final class StatusItem: NSObject, NSMenuDelegate {
   }
   @objc private func openLog() { NSWorkspace.shared.open(Log.url) }
   @objc private func openSettings() { tiler.openSettings() }
-  @objc private func openTutorial() {
-    _ = tiler.run([.tutorial], source: "menu")
-  }
   @objc private func openDoctor() { tiler.doctor.show() }
   @objc private func rescue() { tiler.menuRescue() }
   @objc private func retile() { tiler.menuRetile() }

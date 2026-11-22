@@ -99,7 +99,6 @@ extension Command {
     case .closeReplace: L("Close, pick a replacement")
     case .clearMonitor: L("Clear this screen")
     case .settings: L("Settings")
-    case .tutorial: L("Getting Started")
     case .jump: L("Jump to a window")
     case .click: L("Click by label")
     case .showAll: L("Show all apps")

@@ -146,20 +146,6 @@ final class Tiler {
   /// changes.
   var picking = false
   lazy var doctor = DoctorWindow()
-  var returnToTutorial = false
-  lazy var tutorial: Tutorial = {
-    let tutorial = Tutorial()
-    tutorial.onPicker = { [weak self] in
-      guard let self else { return }
-      self.returnToTutorial = true
-      let result = self.run([.pick("")], source: "tutorial")
-      if result.hasPrefix("error: ") {
-        self.returnToTutorial = false
-        self.toast(String(result.dropFirst(7)))
-      }
-    }
-    return tutorial
-  }()
 
   /// The tabs labeled while letters are keys, and their letters;
   /// `tabsAsked` drops answers to an earlier ask.

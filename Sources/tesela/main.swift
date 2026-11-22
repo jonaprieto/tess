@@ -7,7 +7,6 @@ let usage = """
 
     tesela serve            run it (the LaunchAgent does this)
     tesela doctor           check permissions, configuration and external binaries
-    tesela tutorial         open the newcomer walkthrough
     tesela <command>        send a command to the running tesela, e.g. `tesela focus left`
     tesela tree             print screens, columns and windows
     tesela state            print the model and the machine as JSON

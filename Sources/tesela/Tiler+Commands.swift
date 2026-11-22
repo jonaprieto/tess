@@ -75,7 +75,7 @@ extension Tiler {
 
   func execute(_ c: Command) -> String {
     if paused,
-      ![.pause, .tree, .reload, .tutorial, .update].contains(c)
+      ![.pause, .tree, .reload, .update].contains(c)
     {
       return "error: \(L("paused"))"
     }
@@ -153,7 +153,6 @@ extension Tiler {
     case .pick(let text): togglePicker(text)
     case .debugMap(let path): return writeDebugMap(path)
     case .settings: openSettings()
-    case .tutorial: tutorial.show(config)
     case .jump: startJump()
     case .click: startClick()
     case .clickKey(let k): clickKey(k)

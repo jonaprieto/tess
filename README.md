@@ -42,8 +42,7 @@ brew install jonaprieto/tap/tesela
 brew services start tesela   # now and at login
 ```
 
-macOS asks once for Accessibility. Then take the short walkthrough with `tesela tutorial`,
-which you can repeat any time from the menu bar. It rearranges nothing.
+macOS asks once for Accessibility. `tesela doctor` checks the setup.
 
 These keys are enough for your first day:
 
@@ -459,7 +458,7 @@ every key, the only way to get macOS's own `⌘Tab` back. Resume the same way.
 - `tesela zen`: Zen on or off. `tesela break`: Zen's break now.
 - `tesela ribbon`: the screen in use becomes a ribbon, or stops being one.
 - `tesela update`: install the latest version.
-- `tesela doctor`, `tesela tutorial`, `tesela settings`.
+- `tesela doctor`, `tesela settings`.
 - `tesela reload`, `tesela default-config`, `tesela --version`.
 
 </details>

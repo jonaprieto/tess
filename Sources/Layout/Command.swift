@@ -62,7 +62,7 @@ public enum Command: Equatable, Sendable {
   /// Send every window on the active monitor to the next one.
   case clearMonitor
   /// The settings window.
-  case settings, tutorial
+  case settings
   /// tesela's model and the machine, as JSON (also written to the
   /// event log).
   case state
@@ -105,7 +105,6 @@ public enum Command: Equatable, Sendable {
     "state": .state, "jump": .jump,
     "click": .click,
     "show-all": .showAll,
-    "tutorial": .tutorial,
     "undo": .undo, "redo": .redo, "zen": .zen, "break": .zenBreak,
     "terminal": .terminal,
     "wifi": .wifi(nil), "caffeine": .caffeine(nil),

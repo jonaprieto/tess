@@ -77,14 +77,8 @@ extension Tiler {
   func pickerClosed(cancelled: Bool, refocus: Bool = true) {
     picking = false
     setMode(mode)
-    let showTutorial = returnToTutorial && cancelled
-    returnToTutorial = false
     if cancelled {
       Events.record("picker.close", ["why": "cancelled"])
-    }
-    if showTutorial {
-      tutorial.resume()
-      return
     }
     // tesela was the active app for the picker: hand the keyboard
     // back, unless the pick brings something forward itself.

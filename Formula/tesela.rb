@@ -21,9 +21,8 @@ class Tesela < Formula
         brew services start tesela
       macOS asks once for Accessibility access. Browser history in the picker
       also needs Full Disk Access for #{opt_bin}/tesela.
-      Check setup and open the newcomer walkthrough:
+      Check setup:
         tesela doctor
-        tesela tutorial
       To open it from Finder or Spotlight (Settings, or tesela again after Quit):
         cp -R #{opt_prefix}/tesela.app /Applications/
       Coming from tess, keep your settings with:

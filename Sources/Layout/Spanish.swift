@@ -18,7 +18,6 @@ let spanish: [String: String] = [
     "%@ atajo(s) de teclado por corregir",
   "%@ mode": "Modo %@",
   "%@ mode locked": "Modo %@ fijado",
-  "%@ of %@": "%@ de %@",
   "%@ opened on screen %@": "%@ se abrió en la pantalla %@",
   "%@ required check(s) missing. Optional tools only affect their named features.":
     "Faltan %@ comprobación(es) obligatoria(s). Las herramientas opcionales solo afectan a sus funciones.",
@@ -44,8 +43,6 @@ let spanish: [String: String] = [
   "Add Binding": "Agregar atajo",
   "Add Running App": "Agregar app abierta",
   "Add Verb": "Agregar verbo",
-  "After choosing a window or app, the picker shows your screens. Enter places it beside the focused window. A number chooses a screen; G just goes to it; F floats it.\n\nA letter swaps with that window; Option + letter goes beside it. Esc returns to the results, then Esc closes the picker.":
-    "Después de elegir una ventana o app, el selector muestra tus pantallas. Enter la coloca al lado de la ventana con foco. Un número elige una pantalla; G solo va hacia ella; F la hace flotante.\n\nUna letra la intercambia con esa ventana; Option + letra la pone al lado. Esc vuelve a los resultados y otro Esc cierra el selector.",
   "Appearance": "Apariencia",
   "Apple Shortcuts": "Atajos de Apple",
   "Apps": "Apps",
@@ -62,7 +59,6 @@ let spanish: [String: String] = [
     "No se comprueban la automatización del navegador, el acceso total al disco ni la disponibilidad de descargas por red.",
   "Check for updates": "Buscar actualizaciones",
   "Choose": "Elegir",
-  "Choose where it goes": "Elige dónde va",
   "Clear This Screen": "Despejar esta pantalla",
   "Clear this screen": "Despejar esta pantalla",
   "Click by label": "Clic por etiqueta",
@@ -79,7 +75,6 @@ let spanish: [String: String] = [
   "Configuration: %@": "Configuración: %@",
   "Could not open": "No se pudo abrir",
   "Doctor…": "Diagnóstico…",
-  "Done": "Listo",
   "Download failed": "Falló la descarga",
   "Downloading %@": "Descargando %@",
   "Downloading…": "Descargando…",
@@ -88,7 +83,6 @@ let spanish: [String: String] = [
   "Every window, always": "Todas las ventanas, siempre",
   "F Float": "F Flotante",
   "File manager": "Gestor de archivos",
-  "Find a window or app": "Encuentra una ventana o app",
   "Float": "Hacer flotante",
   "Floating": "Flotante",
   "Floating · %@ returns to tiling":
@@ -105,8 +99,6 @@ let spanish: [String: String] = [
   "G Go": "G Ir",
   "Gaps": "Espacios",
   "General": "General",
-  "Getting Started": "Primeros pasos",
-  "Getting Started with Tesela": "Primeros pasos con Tesela",
   "Go to a tab": "Ir a una pestaña",
   "Go to a window": "Ir a una ventana",
   "Go to that screen": "Ir a esa pantalla",
@@ -117,7 +109,6 @@ let spanish: [String: String] = [
   "Grayscale strength": "Intensidad del gris",
   "Grid": "Cuadrícula",
   "Halves": "Mitades",
-  "Help when you need it": "Ayuda cuando la necesites",
   "Hidden": "Oculta",
   "History": "Historial",
   "Homebrew does not have %@ yet": "Homebrew aún no tiene %@",
@@ -150,7 +141,6 @@ let spanish: [String: String] = [
   "Mode": "Modo",
   "More": "Más",
   "Move": "Mover",
-  "Move around with the keyboard": "Muévete con el teclado",
   "Move down": "Mover abajo",
   "Move left": "Mover a la izquierda",
   "Move right": "Mover a la derecha",
@@ -162,11 +152,8 @@ let spanish: [String: String] = [
   "New terminal": "Nueva terminal",
   "New windows open on an empty screen when there is one; Settings and a mode's keys show on the screen with the fewest windows.":
     "Las ventanas nuevas se abren en una pantalla vacía si la hay; Ajustes y las teclas de un modo se muestran en la pantalla con menos ventanas.",
-  "Next": "Siguiente",
   "Next screen": "Pantalla siguiente",
   "Next window": "Ventana siguiente",
-  "No search verbs are configured.":
-    "No hay verbos de búsqueda configurados.",
   "No window on screen": "Sin ventana en pantalla",
   "Nothing found": "No se encontró nada",
   "Nothing matches": "Sin coincidencias",
@@ -177,8 +164,6 @@ let spanish: [String: String] = [
   "Open %@": "Abrir %@",
   "Open Log": "Abrir registro",
   "Open Picker…": "Abrir selector…",
-  "Open the picker with ⌘Space when available, or %@. Spotlight may need its ⌘Space shortcut disabled first.\n\nChoose Try the Picker, type an app name, then press Esc to return here. Use ↑/↓ to browse. Enter continues to placement.\n\nThis is the real picker: confirming a placement can move a window. Canceling leaves its layout unchanged.":
-    "Abre el selector con ⌘Space cuando esté disponible, o con %@. Puede que primero tengas que desactivar el atajo ⌘Space de Spotlight.\n\nElige Probar el selector, escribe el nombre de una app y pulsa Esc para volver aquí. Usa ↑/↓ para navegar. Enter continúa a la ubicación.\n\nEste es el selector real: confirmar una ubicación puede mover una ventana. Cancelar deja la disposición como estaba.",
   "Opening": "Abriendo",
   "Overlays": "Superposiciones",
   "Pause": "Pausar",
@@ -214,9 +199,6 @@ let spanish: [String: String] = [
   "Save": "Guardar",
   "Saved": "Guardado",
   "Screen %@": "Pantalla %@",
-  "Search and recall": "Busca y recupera",
-  "Search examples for your configuration:\n%@\n\nAfter confirming a query, type its prefix and press Tab to complete it. Tab in an empty field recalls the latest query. Enter still chooses a result.\n\nBook/paper downloads show their title and progress. Results depend on installed tools and network access.":
-    "Ejemplos de búsqueda para tu configuración:\n%@\n\nTras confirmar una búsqueda, su prefijo y Tab la completan. Tab en un campo vacío recupera la última. Enter elige un resultado.\n\nLas descargas muestran título y progreso. Los resultados dependen de tus herramientas y tu red.",
   "Search windows, tabs, apps or commands":
     "Buscar ventanas, pestañas, apps o comandos",
   "Searching…": "Buscando…",
@@ -243,20 +225,14 @@ let spanish: [String: String] = [
     "Diagnóstico de Tesela: no se cambia ningún ajuste\n",
   "Tesela service running — start with brew services start tesela, or make install":
     "Servicio de Tesela en marcha: inícialo con brew services start tesela o make install",
-  "Tesela works with your laptop keyboard or any standard Mac keyboard. No NuPhy software, special layers or Hyper key is needed.\n\n⌘ means Command, ⌥ means Option, ⇧ means Shift, and ⌃ means Control.\n\nThis walkthrough changes no bindings or window layouts. Use Next and Back at your own pace.":
-    "Tesela funciona con el teclado de tu portátil o cualquier teclado Mac estándar. No necesitas software de NuPhy, capas especiales ni tecla Hyper.\n\n⌘ es Command, ⌥ es Option, ⇧ es Shift y ⌃ es Control.\n\nEste recorrido no cambia atajos ni la disposición de las ventanas. Usa Siguiente y Volver a tu ritmo.",
   "The app the picker shows files in with ⌘↵ and opens folders with.":
     "La app donde el selector muestra archivos con ⌘↵ y abre carpetas.",
-  "The menu bar has Settings, Pause Tiling, Tutorial and Doctor.\n\nChoose Doctor to check permissions, configuration and the binaries each feature uses. You can also run tesela doctor in a terminal. Missing optional tools do not stop window management.\n\nRun tesela default-config to see the default bindings. Your overrides live in ~/.config/tesela/config.json.":
-    "La barra de menús tiene Ajustes, Pausar tiling, Tutorial y Diagnóstico.\n\nElige Diagnóstico para revisar permisos, configuración y los binarios que usa cada función. También puedes ejecutar tesela doctor en una terminal. Si faltan herramientas opcionales, la gestión de ventanas sigue funcionando.\n\nEjecuta tesela default-config para ver los atajos predeterminados. Tus cambios viven en ~/.config/tesela/config.json.",
   "Their windows are never tiled.":
     "Sus ventanas nunca entran al tiling.",
   "Tile": "Aplicar tiling",
   "Tiled": "En mosaico",
   "Tiled even without a fullscreen button.":
     "Entran al tiling aunque no tengan botón de pantalla completa.",
-  "Try the Picker": "Probar el selector",
-  "Tutorial…": "Tutorial…",
   "Type a title and an author's surname":
     "Escribe un título y el apellido de un autor",
   "Type a title and an author's surname (arXiv first)":
@@ -277,8 +253,6 @@ let spanish: [String: String] = [
   "Update failed": "La actualización falló",
   "Update tesela": "Actualizar tesela",
   "Update to %@": "Actualizar a %@",
-  "Use %@ to enter Tesela mode. Letters on windows and tabs let you go directly to them. The key guide shows your current bindings.\n\nUse %@ to enter resize mode. Its guide shows which keys adjust width and height. Esc returns to the previous mode.\n\nTry these on your own windows after closing this walkthrough.":
-    "Usa %@ para entrar al modo tesela. Las letras en ventanas y pestañas te llevan directo a ellas. La guía de teclas muestra tus atajos actuales.\n\nUsa %@ para entrar al modo Redimensionar. Su guía muestra qué teclas ajustan el ancho y el alto. Esc vuelve al modo anterior.\n\nPrueba esto con tus propias ventanas cuando cierres este recorrido.",
   "Use empty screens": "Usar pantallas vacías",
   "Volume %@%": "Volumen %@%",
   "Where should “%@” go?": "¿Dónde va “%@”?",
@@ -289,7 +263,6 @@ let spanish: [String: String] = [
   "Wi-Fi on or off": "Activar o desactivar Wi-Fi",
   "Wider": "Más ancha",
   "Window, tab or app": "Ventana, pestaña o app",
-  "Your keyboard is enough": "Tu teclado es suficiente",
   "a newer build is on disk":
     "hay una compilación más nueva en disco",
   "a window": "una ventana",
@@ -334,14 +307,10 @@ let spanish: [String: String] = [
   "file search": "búsqueda de archivos",
   "file-result ranking (Spotlight works without it)":
     "orden de resultados de archivos (Spotlight funciona sin esto)",
-  "find books": "buscar libros",
-  "find files by name": "buscar archivos por nombre",
-  "find papers": "buscar artículos",
   "floating": "flotante",
   "fullscreen": "pantalla completa",
   "fullscreen off": "pantalla completa desactivada",
   "g go": "g ir",
-  "hello": "hola",
   "here": "aquí",
   "in place of %@": "en lugar de %@",
   "in the empty place": "en el lugar vacío",
@@ -363,7 +332,6 @@ let spanish: [String: String] = [
   "no window %@": "no existe la ventana %@",
   "no window focused": "ninguna ventana tiene el foco",
   "no window to click in": "no hay ventana donde hacer clic",
-  "notes": "notas",
   "nothing to click": "nada donde hacer clic",
   "nothing to redo": "nada que rehacer",
   "nothing to undo": "nada que deshacer",
@@ -411,7 +379,6 @@ let spanish: [String: String] = [
     "tesela nunca las toca.",
   "tesela updated to %@": "tesela actualizado a %@",
   "the Mac can sleep": "tu Mac ya puede dormir",
-  "title author": "título autor",
   "update available": "actualización disponible",
   "verb": "verbo",
   "volume %@%": "volumen %@%",
